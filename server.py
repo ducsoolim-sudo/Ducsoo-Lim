@@ -62,7 +62,7 @@ def board_hash(board: list[int]) -> str:
 
 def try_move(board: list[int], index: int, color: int, seen: set[str]) -> tuple[list[int], int]:
     if index < 0 or index >= N * N or board[index] != 0:
-        raise ValueError("이미 돌이 있거나 바둑판 밖입니다.")
+        raise ValueError("This point is occupied or outside the board.")
     result = board.copy()
     result[index] = color
     taken: set[int] = set()
@@ -75,9 +75,9 @@ def try_move(board: list[int], index: int, color: int, seen: set[str]) -> tuple[
         result[stone] = 0
     _, own_libs = group_and_liberties(result, index)
     if not own_libs:
-        raise ValueError("자충수는 둘 수 없습니다.")
+        raise ValueError("Suicide moves are not allowed.")
     if board_hash(result) in seen:
-        raise ValueError("패 또는 반복되는 국면으로 착수할 수 없습니다.")
+        raise ValueError("Ko: a previous board position cannot be repeated.")
     return result, len(taken)
 
 
@@ -122,6 +122,7 @@ def area_score(board: list[int], dead: set[int]) -> dict:
 
 class Room:
     def __init__(self, code: str, public: bool = False, solo: bool = False):
+        self.game_id = secrets.token_urlsafe(12)
         self.code = code
         self.public = public and not solo
         self.solo = solo
@@ -152,9 +153,9 @@ class Room:
         for role in ("black", "white"):
             if self.players[role] is None:
                 token = secrets.token_urlsafe(24)
-                self.players[role] = {"token": token, "name": name[:16] or ("흑" if role == "black" else "백")}
+                self.players[role] = {"token": token, "name": name[:16] or ("Black" if role == "black" else "White")}
                 if self.solo:
-                    self.players["white"] = {"token": secrets.token_urlsafe(24), "name": name[:16] + " · 백"}
+                    self.players["white"] = {"token": secrets.token_urlsafe(24), "name": name[:16] + " · White"}
                 if self.players["black"] and self.players["white"] and self.status == "waiting":
                     self.status = "playing"
                 return role, token
@@ -166,6 +167,7 @@ class Room:
     def state(self) -> dict:
         return {
             "room": self.code,
+            "gameId": self.game_id,
             "solo": self.solo,
             "spectators": sum(role == "spectator" for role in self.clients.values()),
             "board": self.board,
@@ -198,22 +200,22 @@ class Room:
 
     def act(self, role: str, action: dict):
         if role not in ("black", "white"):
-            raise ValueError("관전자는 착수할 수 없습니다.")
+            raise ValueError("Spectators cannot play moves.")
         if self.solo:
             if role != "black":
-                raise ValueError("1인 모드 소유자만 조작할 수 있습니다.")
+                raise ValueError("Only the solo player can control this game.")
             role = "black" if self.turn == 1 else "white"
         kind = action.get("type")
         if kind in ("move", "pass"):
             if self.status != "playing":
-                raise ValueError("대국 중에만 착수할 수 있습니다.")
+                raise ValueError("Moves are only allowed during play.")
             expected = "black" if self.turn == 1 else "white"
             if role != expected:
-                raise ValueError("상대방 차례입니다.")
+                raise ValueError("It is your opponent's turn.")
             if kind == "move":
                 index = action.get("index")
                 if type(index) is not int:
-                    raise ValueError("착수 위치가 올바르지 않습니다.")
+                    raise ValueError("Invalid move position.")
                 self.board, captured = try_move(self.board, index, self.turn, self.history)
                 self.history.add(board_hash(self.board))
                 self.captures[role] += captured
@@ -230,10 +232,10 @@ class Room:
                 self.approvals.clear()
         elif kind == "dead":
             if self.status != "scoring":
-                raise ValueError("계가 중에만 사석을 지정할 수 있습니다.")
+                raise ValueError("Dead stones can only be marked during scoring.")
             index = action.get("index")
             if type(index) is not int or not 0 <= index < N * N or not self.board[index]:
-                raise ValueError("돌을 눌러 사석으로 표시하세요.")
+                raise ValueError("Select a stone to mark its group as dead.")
             group, _ = group_and_liberties(self.board, index)
             if group.issubset(self.dead):
                 self.dead.difference_update(group)
@@ -242,28 +244,29 @@ class Room:
             self.approvals.clear()
         elif kind == "approve":
             if self.status != "scoring":
-                raise ValueError("계가 중에만 결과에 동의할 수 있습니다.")
+                raise ValueError("The score can only be accepted during scoring.")
             self.approvals.update(("black", "white") if self.solo else (role,))
             if len(self.approvals) == 2:
                 self.result = {"reason": "score", **area_score(self.board, self.dead)}
                 self.status = "finished"
         elif kind == "resume":
             if self.status != "scoring":
-                raise ValueError("지금은 대국을 재개할 수 없습니다.")
+                raise ValueError("This game cannot be resumed right now.")
             self.status = "playing"
             self.passes = 0
             self.dead.clear()
             self.approvals.clear()
         elif kind == "resign":
             if self.status not in ("playing", "scoring"):
-                raise ValueError("대국 중에만 기권할 수 있습니다.")
+                raise ValueError("You can only resign an active game.")
             self.result = {"reason": "resign", "winner": "white" if role == "black" else "black"}
             self.status = "finished"
         elif kind == "rematch":
             if self.status != "finished":
-                raise ValueError("대국이 종료된 후 신청할 수 있습니다.")
+                raise ValueError("A rematch is available after the game ends.")
             self.rematch.update(("black", "white") if self.solo else (role,))
             if len(self.rematch) == 2:
+                self.game_id = secrets.token_urlsafe(12)
                 self.board = [0] * (N * N)
                 self.history = {board_hash(self.board)}
                 self.turn = 1
@@ -277,12 +280,12 @@ class Room:
                 self.rematch.clear()
                 self.result = None
         else:
-            raise ValueError("알 수 없는 요청입니다.")
+            raise ValueError("Unknown action.")
 
 
 def new_room(public: bool = False, solo: bool = False) -> Room:
     if len(ROOMS) >= MAX_ROOMS:
-        raise web.HTTPServiceUnavailable(text="대국장이 혼잡합니다. 잠시 후 다시 시도해 주세요.")
+        raise web.HTTPServiceUnavailable(text="The server is busy. Please try again shortly.")
     code = "".join(secrets.choice(ALPHABET) for _ in range(7))
     while code in ROOMS:
         code = "".join(secrets.choice(ALPHABET) for _ in range(7))
@@ -292,11 +295,11 @@ def new_room(public: bool = False, solo: bool = False) -> Room:
 
 
 def request_name(data: dict) -> str:
-    name = data.get("name", "대국자")
+    name = data.get("name", "Player")
     if not isinstance(name, str):
-        name = "대국자"
+        name = "Player"
     name = " ".join(name.strip().split())[:16]
-    return name or "대국자"
+    return name or "Player"
 
 
 async def input_json(request) -> dict:
@@ -315,7 +318,7 @@ def check_rate(request):
     while timestamps and now - timestamps[0] > RATE_WINDOW:
         timestamps.popleft()
     if len(timestamps) >= RATE_LIMIT:
-        raise web.HTTPTooManyRequests(text="대국방 생성 요청이 너무 많습니다.")
+        raise web.HTTPTooManyRequests(text="Too many game requests. Please wait a moment.")
     timestamps.append(now)
 
 
@@ -330,7 +333,7 @@ def lobby_snapshot():
     return {
         "online": online,
         "rooms": len(ROOMS),
-        "playing": sum(r.status in ("playing", "scoring") for r in ROOMS.values()),
+        "playing": len(playing),
         "waiting": len(waiting),
         "list": [{
             "room": r.code,
@@ -392,7 +395,7 @@ async def websocket_handler(request):
     socket = web.WebSocketResponse(heartbeat=25, max_msg_size=2048)
     client_count = sum(len(r.clients) for r in ROOMS.values())
     if client_count >= MAX_CLIENTS:
-        raise web.HTTPServiceUnavailable(text="동시 접속 제한에 도달했습니다.")
+        raise web.HTTPServiceUnavailable(text="The connection limit has been reached.")
     await socket.prepare(request)
     room: Room | None = None
     role = "spectator"
@@ -411,18 +414,18 @@ async def websocket_handler(request):
             try:
                 data = json.loads(event.data)
                 if not isinstance(data, dict):
-                    raise ValueError("잘못된 메시지입니다.")
+                    raise ValueError("Invalid message.")
                 if room is None:
                     if data.get("type") != "join":
-                        raise ValueError("먼저 방에 입장하세요.")
+                        raise ValueError("Join a game first.")
                     code = str(data.get("room", "")).upper()
                     room = ROOMS.get(code)
                     if not room:
-                        raise ValueError("방을 찾을 수 없습니다. 새 대국방을 만들어 주세요.")
+                        raise ValueError("Game not found. Please start a new game.")
                     token = data.get("token") if isinstance(data.get("token"), str) else None
-                    name = data.get("name", "대국자")
+                    name = data.get("name", "Player")
                     if not isinstance(name, str):
-                        name = "대국자"
+                        name = "Player"
                     if data.get("mode") == "watch":
                         role, token = "spectator", None
                     else:
@@ -430,7 +433,7 @@ async def websocket_handler(request):
                     if role == "spectator" and sum(
                         r == "spectator" for r in room.clients.values()
                     ) >= MAX_SPECTATORS_PER_ROOM:
-                        raise ValueError("이 대국방의 관전 정원이 찼습니다.")
+                        raise ValueError("This game has reached its spectator limit.")
                     room.clients[socket] = role
                     await socket.send_json({"type": "welcome", "role": role, "token": token, "room": code})
                     await room.broadcast()
@@ -481,6 +484,6 @@ def make_app():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8080"))
-    print(f"13줄 바둑: http://localhost:{port}")
+    print(f"13GO: http://localhost:{port}")
     web.run_app(make_app(), host="0.0.0.0", port=port)
 

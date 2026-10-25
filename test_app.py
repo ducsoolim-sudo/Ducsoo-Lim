@@ -6,6 +6,10 @@ import server as s
 from aiohttp.test_utils import TestClient, TestServer
 
 class Rules(unittest.TestCase):
+    def test_rematch_has_new_game_id(self):
+        r=self.room();old=r.game_id;r.act('black',{'type':'resign'});r.act('black',{'type':'rematch'})
+        self.assertNotEqual(old,r.game_id)
+        self.assertEqual(r.state()['gameId'],r.game_id)
     def test_pass_then_move_resets_sequence(self):
         r=self.room(False);r.act('black',{'type':'pass'});self.assertEqual(r.passes,1)
         r.act('white',{'type':'move','index':84});self.assertEqual(r.passes,0)
@@ -64,6 +68,16 @@ class API(unittest.IsolatedAsyncioTestCase):
     async def test_health_and_home(self):
         self.assertTrue((await (await self.client.get('/health')).json())['ok'])
         html=await (await self.client.get('/')).text();self.assertIn('13GO',html);self.assertIn('id="solo"',html);self.assertNotIn('十三',html)
+        import re
+        self.assertIsNone(re.search('[가-힣]',html))
+        self.assertNotIn('id="create"',html)
+        self.assertIn('My Page',html);self.assertIn('Watch',html)
+    async def test_spectator_cannot_play(self):
+        created=await (await self.client.post('/api/match',json={'name':'Player'})).json()
+        ws=await self.client.ws_connect('/ws');await ws.send_json({'type':'join','room':created['room'],'mode':'watch'})
+        self.assertEqual((await ws.receive_json())['role'],'spectator');state=(await ws.receive_json())['state'];self.assertIsNone(state['players']['white'])
+        await ws.send_json({'type':'move','index':0});error=await ws.receive_json();self.assertEqual(error['type'],'error');self.assertIn('Spectators',error['message'])
+        self.assertEqual(s.ROOMS[created['room']].moves,0);await ws.close()
     async def test_match_and_lobby(self):
         a=await (await self.client.post('/api/match',json={'name':'A'})).json();b=await (await self.client.post('/api/match',json={'name':'B'})).json()
         self.assertEqual(a['room'],b['room']);self.assertEqual(b['role'],'white')
