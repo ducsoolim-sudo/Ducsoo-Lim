@@ -27,6 +27,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
 .lobby-room button{flex:0 0 auto;width:auto;font-size:12px;padding:8px 10px}
 .lobby-header{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .lobby-header button{border:0;background:transparent;color:#e9d8ad;font-size:12px;padding:7px 0}
+.board-controls{padding:0 18px 14px}.board-controls .side-label{margin:0 0 8px}.board-controls .control-hint{margin:8px 0 0}
 </style>
 </head>
 <body>
@@ -38,6 +39,13 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
   <main class="layout">
     <section class="panel board-panel" aria-label="13줄 바둑판">
       <div class="board-head"><div><div class="kicker">THE BOARD / 13GO</div><div id="status" class="bigstatus">대국방을 만들어 주세요</div></div><span id="moveCount" class="rounds">13 × 13</span></div>
+      <div class="board-controls">
+        <p class="side-label">대국 조작 · 연속 두 번 패스하면 계가</p>
+        <div id="playActions" class="actions split"><button id="pass" class="button secondary" disabled>패스 · 한 수 쉼</button><button id="resign" class="button ghost" disabled>기권</button></div>
+        <div id="scoreActions" class="actions hidden"><p class="notice">사석으로 처리할 돌을 누르세요. 두 사람이 결과에 동의해야 대국이 끝납니다.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">계가 결과 동의</button><button id="resume" class="button ghost">계속 두기</button></div>
+        <div id="finishActions" class="actions hidden"><div id="finalResult" class="result"></div><button id="rematch" class="button primary">다시 대국 신청</button></div>
+        <p id="gameHint" class="control-hint">흑이 먼저 둡니다. 두 번 연속 한 수 쉬면 계가합니다.</p>
+      </div>
       <div class="board-wrap"><canvas id="board" width="720" height="720" aria-label="바둑판, 교차점을 눌러 착수" role="img"></canvas></div>
       <div class="mini-player-row">
         <div id="blackCard" class="player"><span class="stone black"></span><div class="player-detail"><div class="player-label">흑 · 먼저 둡니다</div><div id="blackName" class="player-name">대기 중</div><div id="blackCaptures" class="player-capture">따낸 돌 0</div></div></div>
@@ -66,13 +74,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
         <div id="lobbyRooms" aria-live="polite"><p class="note">공개 대국방을 불러오는 중입니다.</p></div>
         <p class="control-hint">공개 대국은 관전할 수 있습니다. 한 대국당 두 사람만 착수합니다.</p>
       </section>
-      <section class="panel pad">
-        <p class="side-label">대국 조작 · CONTROLS</p>
-        <div id="playActions" class="actions split"><button id="pass" class="button secondary" disabled>한 수 쉼</button><button id="resign" class="button ghost" disabled>기권</button></div>
-        <div id="scoreActions" class="actions hidden"><p class="notice">사석으로 처리할 돌을 누르세요. 두 사람이 결과에 동의해야 대국이 끝납니다.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">계가 결과 동의</button><button id="resume" class="button ghost">계속 두기</button></div>
-        <div id="finishActions" class="actions hidden"><div id="finalResult" class="result"></div><button id="rematch" class="button primary">다시 대국 신청</button></div>
-        <p id="gameHint" class="control-hint">흑이 먼저 둡니다. 두 번 연속 한 수 쉬면 계가합니다.</p>
-      </section>
+
       <section class="panel pad full-mobile">
         <p class="side-label">간단한 규칙 · HOW TO PLAY</p>
         <p class="rule"><strong>13줄 전용</strong> · 흑백 번갈아 착수 · 단수 후 따냄 · 자충수 및 반복 국면 착수 금지 · 기권 가능</p>
@@ -192,7 +194,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
     $('scoreActions').classList.toggle('hidden',game.status!=='scoring');
     $('finishActions').classList.toggle('hidden',game.status!=='finished');
     const myTurn=myRole===game.turn && active;
-    $('pass').disabled=!myTurn;$('resign').disabled=!(myRole==='black'||myRole==='white'||false)||!(active||game.status==='scoring');
+    $('pass').disabled=!myTurn;$('pass').textContent=game.passes===1?'패스 · 누르면 계가':'패스 · 한 수 쉼';$('resign').disabled=!(myRole==='black'||myRole==='white'||false)||!(active||game.status==='scoring');
     $('gameHint').textContent=game.status==='waiting'?'친구가 초대 링크를 열면 자동으로 시작됩니다.':game.status==='playing'?'바둑판의 교차점을 눌러 돌을 놓습니다.':'두 사람이 계가 결과에 동의하면 종료됩니다.';
     if(game.status==='waiting')$('status').textContent='상대방을 기다리는 중';
     else if(game.status==='playing')$('status').textContent=game.turn===myRole?'내 차례입니다':`${roles[game.turn]} 차례입니다`;
@@ -204,10 +206,11 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
     $('rematch').disabled=!(myRole==='black'||myRole==='white')||game.rematch.includes(myRole);
     $('rematch').textContent=game.rematch.includes(myRole)?'재대국 신청 완료 · 대기 중':'같은 상대와 다시 대국';
     $('inviteHint').textContent=game.status==='waiting'?'방 코드를 공유하거나 초대 링크를 친구에게 보내세요.':myRole==='spectator'?'이 방의 두 대국자가 착수하는 것을 관전합니다.':'초대 링크로 대국 상황을 공유할 수 있습니다.';
+    if(game.status==='playing'&&game.passes===1)$('status').textContent=roles[game.turn==='black'?'white':'black']+' 패스 · '+roles[game.turn]+' 차례';
     if(game.solo){
       $('codeBox').classList.add('hidden');
       $('blackName').textContent='나 · 흑';$('whiteName').textContent='나 · 백';
-      $('status').textContent=active?'1인 테스트 · '+roles[game.turn]+' 차례':$('status').textContent;
+      $('status').textContent=active?'1인 테스트 · '+roles[game.turn]+' 차례'+(game.passes===1?' · 직전 패스':''):$('status').textContent;
       $('inviteHint').textContent='상대 없이 흑백을 번갈아 두며 테스트합니다.';
       $('gameHint').textContent='두 번 연속 한 수 쉬면 계가합니다. 혼자 결과 확정과 재시작을 할 수 있습니다.';
       $('approve').textContent='계가 결과 확정';$('rematch').textContent='새로 테스트하기';

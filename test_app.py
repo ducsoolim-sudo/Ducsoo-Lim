@@ -6,6 +6,15 @@ import server as s
 from aiohttp.test_utils import TestClient, TestServer
 
 class Rules(unittest.TestCase):
+    def test_pass_then_move_resets_sequence(self):
+        r=self.room(False);r.act('black',{'type':'pass'});self.assertEqual(r.passes,1)
+        r.act('white',{'type':'move','index':84});self.assertEqual(r.passes,0)
+        r.act('black',{'type':'pass'});self.assertEqual(r.status,'playing')
+        r.act('white',{'type':'pass'});self.assertEqual(r.status,'scoring')
+    def test_same_player_cannot_pass_twice(self):
+        r=self.room(False);r.act('black',{'type':'pass'})
+        with self.assertRaises(ValueError):r.act('black',{'type':'pass'})
+        self.assertEqual((r.passes,r.status),(1,'playing'))
     def room(self, solo=True):
         r=s.Room('TEST', solo=solo); r.claim(None,'Tester')
         if not solo: r.claim(None,'Other')
