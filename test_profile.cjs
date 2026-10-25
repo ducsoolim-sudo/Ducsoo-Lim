@@ -1,8 +1,8 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
 const html=fs.readFileSync(require('path').join(__dirname,'index.html'),'utf8');
 const code=html.match(/<script>([\s\S]*?)<\/script>/)[1];
-function setup(){
-  const values=new Map(),elements=new Map();
+function setup(seedName){
+  const values=new Map(seedName?[['13go:nickname',seedName]]:[]),elements=new Map();
   class Element{constructor(){this.value='';this.textContent='';this.children=[];this.disabled=false;this.attrs={};this.classList={toggle(){},add(){},remove(){}}}append(...x){this.children.push(...x)}replaceChildren(...x){this.children=x}setAttribute(k,v){this.attrs[k]=v}addEventListener(){}getContext(){return new Proxy({createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}})}getBoundingClientRect(){return {left:0,top:0,width:720,height:720}}click(){}}
   const document={hidden:false,getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement(){return new Element()}};
   class WS{static OPEN=1;constructor(){WS.last=this;this.readyState=1}send(){}close(){}message(x){this.onmessage({data:JSON.stringify(x)})}}
@@ -17,3 +17,4 @@ t.e('profileNickname').value='Global Player';t.e('saveProfile').onclick();assert
 t.values.set('13go:history','invalid json');t.e('navProfile').onclick();assert.equal(t.e('statGames').textContent,0);console.log('PASS malformed browser history handled');
 assert(!/[가-힣]/.test(html));assert(!html.includes('id="create"'));console.log('PASS English UI and private-room button removed');
 
+t=setup('\ub300\uad6d\uc790');t.e('navProfile').onclick();assert.equal(t.e('profileName').textContent,'Player');console.log('PASS legacy default name migrated to English');

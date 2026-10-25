@@ -75,7 +75,9 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
   const roles={black:'Black',white:'White',spectator:'Spectator'};
   let game=null,myRole='spectator',room=params.get('room')?.toUpperCase()||'',watching=params.get('watch')==='1',socket=null,hover=-1,toastTimeout=null,reconnectTimeout=null,retry=0,page='play';
   const storage={get(key){try{return localStorage.getItem(key)}catch{return null}},set(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}};
-  $('nickname').value=storage.get('13go:nickname')||'';
+  const savedName=storage.get('13go:nickname');
+  $('nickname').value=savedName==='\ub300\uad6d\uc790'?'Player':savedName||'';
+  if(savedName==='\ub300\uad6d\uc790')storage.set('13go:nickname','Player');
   function myName(){const name=$('nickname').value.trim().slice(0,16)||'Player';storage.set('13go:nickname',name);return name}
   function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('show'),3300)}
   function connection(text,ready=false){$('connection').textContent=text;$('light').classList.toggle('ready',ready)}
