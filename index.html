@@ -3,21 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#121b18">
-<title>십삼로 | 친구와 두는 13줄 바둑</title>
+<meta name="theme-color" content="#0c1424">
+<title>13GO | 친구와 두는 13줄 바둑</title>
 <style>
-:root{--bg:#101a17;--surface:#192622;--border:#34463d;--muted:#9cad9f;--cream:#f5e7c8;--mint:#b6d0bb;--red:#f9ad8f;--gold:#e8bb73}
-*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;color:#eaf1e7;background:radial-gradient(ellipse 100% 35% at 50% 0%,#284336 0%,transparent 80%),var(--bg);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;min-height:100dvh}
+:root{--bg:#0c1424;--surface:#172237;--border:#35455e;--muted:#a9b6cc;--cream:#f5e7c8;--mint:#b6d0bb;--red:#f9ad8f;--gold:#e8bb73}
+*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;color:#eaf1e7;background:radial-gradient(ellipse 100% 35% at 50% 0%,#243651 0%,transparent 80%),var(--bg);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;min-height:100dvh}
 button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible{outline:2px solid #e8bb73;outline-offset:3px}button:disabled{opacity:.4;cursor:not-allowed}
 .shell{max-width:1160px;margin:auto;padding:24px 20px 64px}.brand{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 3px 28px}.brand-left{display:flex;align-items:center;gap:13px}.logo{width:48px;height:48px;border-radius:16px;background:#e9d7b0;display:grid;place-items:center;color:#28372b;font:700 25px Georgia,serif;box-shadow:0 9px 30px #0004}.brand h1{font-size:24px;font-weight:750;letter-spacing:-1px;line-height:1.1;margin:0}.brand p{margin:5px 0 0;color:var(--muted);font-size:12px;letter-spacing:.8px}.online{display:flex;align-items:center;gap:7px;padding:7px 12px;color:#bfd1c3;font-size:12px;border:1px solid #445c4d;border-radius:99px;white-space:nowrap}.light{width:7px;height:7px;background:#d79b72;border-radius:100%;box-shadow:0 0 0 4px #bf7d4922}.light.ready{background:#84ce95;box-shadow:0 0 0 4px #84ce9522}
-.layout{display:grid;grid-template-columns:minmax(0,680px) minmax(268px,1fr);gap:24px;align-items:start}.board-panel{min-width:0}.panel{background:linear-gradient(150deg,#1c2c25,#15231f);border:1px solid #384b40;border-radius:20px;box-shadow:0 12px 45px #0002}.board-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px 12px}.kicker{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#a8c4ae;font-weight:700}.bigstatus{font-size:21px;font-weight:730;letter-spacing:-.7px;margin-top:3px}.rounds{color:#d6cbaf;font-size:13px}.board-wrap{padding:8px 15px 16px}canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;touch-action:manipulation;border-radius:10px;box-shadow:inset 0 1px 3px #ffffff22,0 8px 23px #0004;cursor:crosshair}
-.mini-player-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 18px 18px}.player{border:1px solid #3e5147;background:#23362c;border-radius:12px;padding:11px 12px;display:flex;gap:11px;align-items:center;min-width:0}.player.turn{outline:1px solid #d6ba82;background:#304032}.stone{border-radius:50%;width:29px;height:29px;flex:none}.stone.black{background:radial-gradient(circle at 32% 25%,#696e6a,#1a1c1b 52%,#030403 90%);box-shadow:1px 2px 4px #0008}.stone.white{background:radial-gradient(circle at 34% 24%,#fff,#fafaf6 50%,#b6b5a7 98%);box-shadow:1px 2px 4px #0007}.player-detail{min-width:0;flex:1}.player-label{color:#b9cabe;font-size:11px}.player-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;font-weight:700}.player-capture{font-size:11px;color:#b6c7b9;margin-top:3px}
-.sidebar{display:flex;flex-direction:column;gap:16px}.pad{padding:22px}.side-label{font-size:11px;color:#9bb8a4;letter-spacing:1.5px;font-weight:800;margin:0 0 10px}.room-code{display:flex;align-items:center;justify-content:space-between;gap:9px;background:#0f1c17;padding:13px 14px;border:1px dashed #536759;border-radius:11px;margin:13px 0;font-size:22px;letter-spacing:3px;font-weight:800;color:#f6e3bd}.room-code span:last-child{font-size:10px;letter-spacing:0;color:#aac1ac;font-weight:500}.note{color:#aebfb0;font-size:13px;line-height:1.75;margin:0 0 16px}.button{border:0;border-radius:12px;padding:13px 14px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .12s,background .12s;width:100%}.button:active{transform:scale(.98)}.primary{background:#e8d7ae;color:#213025}.primary:hover{background:#f7e5be}.secondary{background:#304438;color:#dceadd;border:1px solid #486050}.secondary:hover{background:#3a5144}.ghost{background:transparent;color:#c8d7c9;border:1px solid #4b5b4e}.subtle{background:transparent;border:0;color:#adc7af;padding:10px;width:100%;font-size:13px}.actions{display:grid;gap:9px}.actions.split{grid-template-columns:1fr 1fr}.control-hint{margin:12px 0 0;color:#a6bca9;font-size:12px;line-height:1.6}.rule{color:#bdcbbd;font-size:13px;line-height:1.7;margin:0}.rule strong{color:#f1dfbc}.sep{height:1px;background:#384e40;margin:18px 0}.badge{display:inline-block;border-radius:100px;padding:4px 9px;font-weight:700;font-size:11px;background:#354a3e;color:#c4d9c7}.result{background:#0e1c16;padding:14px;border-radius:12px;border:1px solid #425e49;margin:10px 0 15px}.result .numbers{display:flex;justify-content:space-between;gap:5px;font-variant-numeric:tabular-nums;color:#f1e0bc}.result p{font-size:12px;color:#afc3b3;margin:5px 0 0}.hidden{display:none!important}.notice{color:#d9c8a3;font-size:13px;line-height:1.6}.foot{text-align:center;color:#81998a;font-size:11px;margin:26px 0 0;line-height:1.8}.toast{position:fixed;bottom:max(22px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);padding:12px 18px;max-width:min(90vw,430px);border:1px solid #687661;background:#263a2e;color:#f2ead3;border-radius:12px;box-shadow:0 8px 40px #0008;font-size:13px;opacity:0;pointer-events:none;transition:all .2s;z-index:10}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.layout{display:grid;grid-template-columns:minmax(0,680px) minmax(268px,1fr);gap:24px;align-items:start}.board-panel{min-width:0}.panel{background:linear-gradient(150deg,#1a2941,#111d30);border:1px solid #384b40;border-radius:20px;box-shadow:0 12px 45px #0002}.board-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px 12px}.kicker{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#a8c4ae;font-weight:700}.bigstatus{font-size:21px;font-weight:730;letter-spacing:-.7px;margin-top:3px}.rounds{color:#d6cbaf;font-size:13px}.board-wrap{padding:8px 15px 16px}canvas{display:block;width:100%;height:auto;aspect-ratio:1/1;touch-action:manipulation;border-radius:10px;box-shadow:inset 0 1px 3px #ffffff22,0 8px 23px #0004;cursor:crosshair}
+.mini-player-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 18px 18px}.player{border:1px solid #3e5147;background:#1d2d45;border-radius:12px;padding:11px 12px;display:flex;gap:11px;align-items:center;min-width:0}.player.turn{outline:1px solid #d6ba82;background:#34415a}.stone{border-radius:50%;width:29px;height:29px;flex:none}.stone.black{background:radial-gradient(circle at 32% 25%,#696e6a,#1a1c1b 52%,#030403 90%);box-shadow:1px 2px 4px #0008}.stone.white{background:radial-gradient(circle at 34% 24%,#fff,#fafaf6 50%,#b6b5a7 98%);box-shadow:1px 2px 4px #0007}.player-detail{min-width:0;flex:1}.player-label{color:#b9cabe;font-size:11px}.player-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;font-weight:700}.player-capture{font-size:11px;color:#b6c7b9;margin-top:3px}
+.sidebar{display:flex;flex-direction:column;gap:16px}.pad{padding:22px}.side-label{font-size:11px;color:#9bb8a4;letter-spacing:1.5px;font-weight:800;margin:0 0 10px}.room-code{display:flex;align-items:center;justify-content:space-between;gap:9px;background:#101a2d;padding:13px 14px;border:1px dashed #536759;border-radius:11px;margin:13px 0;font-size:22px;letter-spacing:3px;font-weight:800;color:#f6e3bd}.room-code span:last-child{font-size:10px;letter-spacing:0;color:#aac1ac;font-weight:500}.note{color:#aebfb0;font-size:13px;line-height:1.75;margin:0 0 16px}.button{border:0;border-radius:12px;padding:13px 14px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .12s,background .12s;width:100%}.button:active{transform:scale(.98)}.primary{background:#e3bd73;color:#172237}.primary:hover{background:#f7e5be}.secondary{background:#293c59;color:#dceadd;border:1px solid #486050}.secondary:hover{background:#354c6e}.ghost{background:transparent;color:#c8d7c9;border:1px solid #4b5b4e}.subtle{background:transparent;border:0;color:#adc7af;padding:10px;width:100%;font-size:13px}.actions{display:grid;gap:9px}.actions.split{grid-template-columns:1fr 1fr}.control-hint{margin:12px 0 0;color:#a6bca9;font-size:12px;line-height:1.6}.rule{color:#bdcbbd;font-size:13px;line-height:1.7;margin:0}.rule strong{color:#f1dfbc}.sep{height:1px;background:#384e40;margin:18px 0}.badge{display:inline-block;border-radius:100px;padding:4px 9px;font-weight:700;font-size:11px;background:#354a3e;color:#c4d9c7}.result{background:#0d1829;padding:14px;border-radius:12px;border:1px solid #425e49;margin:10px 0 15px}.result .numbers{display:flex;justify-content:space-between;gap:5px;font-variant-numeric:tabular-nums;color:#f1e0bc}.result p{font-size:12px;color:#afc3b3;margin:5px 0 0}.hidden{display:none!important}.notice{color:#d9c8a3;font-size:13px;line-height:1.6}.foot{text-align:center;color:#81998a;font-size:11px;margin:26px 0 0;line-height:1.8}.toast{position:fixed;bottom:max(22px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);padding:12px 18px;max-width:min(90vw,430px);border:1px solid #687661;background:#243651;color:#f2ead3;border-radius:12px;box-shadow:0 8px 40px #0008;font-size:13px;opacity:0;pointer-events:none;transition:all .2s;z-index:10}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media(max-width:850px){.layout{grid-template-columns:minmax(0,1fr)}.sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.full-mobile{grid-column:1/-1}}
 @media(max-width:570px){.shell{padding:17px 10px 42px}.brand{padding:0 8px 16px}.brand h1{font-size:20px}.logo{width:42px;height:42px;font-size:23px;border-radius:13px}.online{padding:6px 9px;font-size:10px}.layout{gap:14px}.board-head{padding:14px 13px 8px}.bigstatus{font-size:18px}.board-wrap{padding:5px 6px 11px}.panel{border-radius:15px}.mini-player-row{gap:8px;padding:0 10px 11px}.player{padding:9px 7px;gap:7px}.stone{width:23px;height:23px}.player-name{font-size:12px}.sidebar{display:flex;gap:14px}.pad{padding:19px}.foot{margin-top:18px}}
-.nickname{display:block;width:100%;border:1px solid #516654;background:#0e1c16;color:#f3ecd9;padding:11px 13px;border-radius:10px;font:inherit;margin:4px 0 12px}
+.nickname{display:block;width:100%;border:1px solid #516654;background:#0d1829;color:#f3ecd9;padding:11px 13px;border-radius:10px;font:inherit;margin:4px 0 12px}
 .lobby-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0}
-.lobby-stat{border:1px solid #3d5948;background:#15261d;border-radius:9px;padding:10px 4px;text-align:center}
+.lobby-stat{border:1px solid #3d5948;background:#15233a;border-radius:9px;padding:10px 4px;text-align:center}
 .lobby-stat strong{display:block;font-size:18px;color:#f5e2bc;font-variant-numeric:tabular-nums}
 .lobby-stat span{display:block;font-size:10px;color:#a8c1ac}
 .lobby-room{border-top:1px solid #375041;padding:10px 0;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -32,12 +32,12 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
 <body>
 <div class="shell">
   <header class="brand">
-    <div class="brand-left"><div class="logo">十三</div><div><h1>십삼로 <span style="font-size:12px;font-weight:500;color:#aac1ad">13×13</span></h1><p>누구나 함께하는 온라인 13줄 바둑</p></div></div>
+    <div class="brand-left"><div class="logo">13</div><div><h1>13GO <span style="font-size:12px;font-weight:500;color:#aac1ad">13×13</span></h1><p>누구나 함께하는 온라인 13줄 바둑</p></div></div>
     <span class="online"><span id="light" class="light"></span><span id="connection">접속 준비</span></span>
   </header>
   <main class="layout">
     <section class="panel board-panel" aria-label="13줄 바둑판">
-      <div class="board-head"><div><div class="kicker">THE BOARD / 十三路</div><div id="status" class="bigstatus">대국방을 만들어 주세요</div></div><span id="moveCount" class="rounds">13 × 13</span></div>
+      <div class="board-head"><div><div class="kicker">THE BOARD / 13GO</div><div id="status" class="bigstatus">대국방을 만들어 주세요</div></div><span id="moveCount" class="rounds">13 × 13</span></div>
       <div class="board-wrap"><canvas id="board" width="720" height="720" aria-label="바둑판, 교차점을 눌러 착수" role="img"></canvas></div>
       <div class="mini-player-row">
         <div id="blackCard" class="player"><span class="stone black"></span><div class="player-detail"><div class="player-label">흑 · 먼저 둡니다</div><div id="blackName" class="player-name">대기 중</div><div id="blackCaptures" class="player-capture">따낸 돌 0</div></div></div>
@@ -50,6 +50,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
         <p id="myRole" class="note" style="margin-bottom:5px">닉네임을 입력하고 자동 대국이나 친구 초대를 시작하세요.</p>
         <label class="side-label" for="nickname">내 닉네임 (최대 16자)</label>
         <input id="nickname" class="nickname" maxlength="16" placeholder="대국자" autocomplete="nickname">
+        <button id="solo" class="button primary" style="margin-bottom:9px">혼자 테스트하기 · 1인 모드</button>
         <button id="match" class="button primary" style="margin-bottom:9px">⚡ 지금 상대 찾기 · 자동 대국</button>
         <div id="codeBox" class="room-code hidden"><span id="code">XXXXXXX</span><span>초대 코드</span></div>
         <div class="actions"><button id="create" class="button secondary">＋ 친구 전용 대국방 만들기</button><button id="share" class="button secondary hidden">↗ 초대 링크 공유</button></div>
@@ -80,7 +81,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
       </section>
     </aside>
   </main>
-  <p class="foot">십삼로 · 13줄 바둑 공개 대국장 · 친구 초대 · 실시간 관전<br>시범 운영 버전: 서버 재시작 시 진행 중인 대국은 초기화됩니다.</p>
+  <p class="foot">13GO · 13줄 바둑 공개 대국장 · 친구 초대 · 실시간 관전<br>시범 운영 버전: 서버 재시작 시 진행 중인 대국은 초기화됩니다.</p>
 </div>
 <div id="toast" class="toast" role="status"></div>
 <script>
@@ -131,7 +132,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
       if(!response.ok)throw new Error(await response.text());
       const created=await response.json();
       enterRoom(created.room,created.token);
-      toast(created.matched?'상대가 연결되었습니다. 대국을 시작하세요!':'대국방이 만들어졌습니다. 상대방을 기다립니다.');
+      toast(data.solo?'1인 모드입니다. 흑백을 번갈아 두세요.':created.matched?'상대가 연결되었습니다. 대국을 시작하세요!':'대국방이 만들어졌습니다. 상대방을 기다립니다.');
       loadLobby();
     }catch(error){toast(error.message?.slice(0,90)||'대국방을 만들지 못했습니다.');}
     finally{button.disabled=false;}
@@ -169,7 +170,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
   async function share(){
     if(!room)return;
     const url=invitation();
-    try{if(navigator.share){await navigator.share({title:'십삼로 13줄 바둑 대국',text:'온라인에서 13줄 바둑 한 판 두시죠!',url});return}}
+    try{if(navigator.share){await navigator.share({title:'13GO 13줄 바둑 대국',text:'온라인에서 13줄 바둑 한 판 두시죠!',url});return}}
     catch(e){if(e.name==='AbortError')return}
     try{await navigator.clipboard.writeText(url);toast('초대 링크를 복사했습니다.')}catch{window.prompt('이 링크를 복사해 친구에게 보내세요.',url)}
   }
@@ -179,6 +180,8 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
     $('create').textContent=room?'＋ 친구 전용 새 방 만들기':'＋ 친구 전용 대국방 만들기';
     if(!game){$('status').textContent=room?'서버에 연결하는 중':'대국방을 만들어 주세요';return}
     const black=game.players.black,white=game.players.white;
+    if(game.solo && myRole!=='spectator')myRole=game.turn;
+    if(game.solo){$('myRole').textContent='1인 테스트 · 흑백을 혼자 번갈아 둡니다.'; $('share').classList.add('hidden');}
     $('blackName').textContent=black?(black.name+(black.connected?' ●':' · 오프라인')):'대기 중';
     $('whiteName').textContent=white?(white.name+(white.connected?' ●':' · 오프라인')):'상대방 대기 중';
     $('blackCaptures').textContent=`따낸 돌 ${game.captures.black}`;$('whiteCaptures').textContent=`따낸 돌 ${game.captures.white}`;
@@ -201,6 +204,14 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
     $('rematch').disabled=!(myRole==='black'||myRole==='white')||game.rematch.includes(myRole);
     $('rematch').textContent=game.rematch.includes(myRole)?'재대국 신청 완료 · 대기 중':'같은 상대와 다시 대국';
     $('inviteHint').textContent=game.status==='waiting'?'방 코드를 공유하거나 초대 링크를 친구에게 보내세요.':myRole==='spectator'?'이 방의 두 대국자가 착수하는 것을 관전합니다.':'초대 링크로 대국 상황을 공유할 수 있습니다.';
+    if(game.solo){
+      $('codeBox').classList.add('hidden');
+      $('blackName').textContent='나 · 흑';$('whiteName').textContent='나 · 백';
+      $('status').textContent=active?'1인 테스트 · '+roles[game.turn]+' 차례':$('status').textContent;
+      $('inviteHint').textContent='상대 없이 흑백을 번갈아 두며 테스트합니다.';
+      $('gameHint').textContent='두 번 연속 한 수 쉬면 계가합니다. 혼자 결과 확정과 재시작을 할 수 있습니다.';
+      $('approve').textContent='계가 결과 확정';$('rematch').textContent='새로 테스트하기';
+    }
   }
   function renderScore(){
     const s=game.score;if(!s)return;
@@ -271,6 +282,7 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
     if(myRole!==game.turn){toast(myRole==='spectator'?'관전 중입니다.':'상대방 차례입니다.');return}
     send('move',{index});
   });
+  $('solo').addEventListener('click',()=>postRoom('/api/rooms',{solo:true},$('solo')));
   $('create').addEventListener('click',create);$('match').addEventListener('click',match);$('share').addEventListener('click',share);$('refreshLobby').addEventListener('click',loadLobby);
   $('pass').addEventListener('click',()=>send('pass'));
   $('resign').addEventListener('click',()=>{if(confirm('정말 기권하시겠습니까?'))send('resign')});
@@ -284,3 +296,4 @@ button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}butto
 </script>
 </body>
 </html>
+

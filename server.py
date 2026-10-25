@@ -1,4 +1,4 @@
-"""십삼로: small real-time 13x13 Go server. Run: python server.py"""
+"""13GO: small real-time 13x13 Go server. Run: python server.py"""
 from __future__ import annotations
 
 import asyncio
@@ -121,9 +121,10 @@ def area_score(board: list[int], dead: set[int]) -> dict:
 
 
 class Room:
-    def __init__(self, code: str, public: bool = False):
+    def __init__(self, code: str, public: bool = False, solo: bool = False):
         self.code = code
-        self.public = public
+        self.public = public and not solo
+        self.solo = solo
         self.board = [0] * (N * N)
         self.history: set[str] = {board_hash(self.board)}
         self.turn = 1
@@ -146,10 +147,14 @@ class Room:
             player = self.players[role]
             if player and token and secrets.compare_digest(player["token"], token):
                 return role, player["token"]
+        if self.solo and self.players["black"]:
+            return "spectator", None
         for role in ("black", "white"):
             if self.players[role] is None:
                 token = secrets.token_urlsafe(24)
                 self.players[role] = {"token": token, "name": name[:16] or ("흑" if role == "black" else "백")}
+                if self.solo:
+                    self.players["white"] = {"token": secrets.token_urlsafe(24), "name": name[:16] + " · 백"}
                 if self.players["black"] and self.players["white"] and self.status == "waiting":
                     self.status = "playing"
                 return role, token
@@ -161,6 +166,7 @@ class Room:
     def state(self) -> dict:
         return {
             "room": self.code,
+            "solo": self.solo,
             "spectators": sum(role == "spectator" for role in self.clients.values()),
             "board": self.board,
             "turn": "black" if self.turn == 1 else "white",
@@ -193,6 +199,10 @@ class Room:
     def act(self, role: str, action: dict):
         if role not in ("black", "white"):
             raise ValueError("관전자는 착수할 수 없습니다.")
+        if self.solo:
+            if role != "black":
+                raise ValueError("1인 모드 소유자만 조작할 수 있습니다.")
+            role = "black" if self.turn == 1 else "white"
         kind = action.get("type")
         if kind in ("move", "pass"):
             if self.status != "playing":
@@ -233,7 +243,7 @@ class Room:
         elif kind == "approve":
             if self.status != "scoring":
                 raise ValueError("계가 중에만 결과에 동의할 수 있습니다.")
-            self.approvals.add(role)
+            self.approvals.update(("black", "white") if self.solo else (role,))
             if len(self.approvals) == 2:
                 self.result = {"reason": "score", **area_score(self.board, self.dead)}
                 self.status = "finished"
@@ -252,7 +262,7 @@ class Room:
         elif kind == "rematch":
             if self.status != "finished":
                 raise ValueError("대국이 종료된 후 신청할 수 있습니다.")
-            self.rematch.add(role)
+            self.rematch.update(("black", "white") if self.solo else (role,))
             if len(self.rematch) == 2:
                 self.board = [0] * (N * N)
                 self.history = {board_hash(self.board)}
@@ -270,13 +280,13 @@ class Room:
             raise ValueError("알 수 없는 요청입니다.")
 
 
-def new_room(public: bool = False) -> Room:
+def new_room(public: bool = False, solo: bool = False) -> Room:
     if len(ROOMS) >= MAX_ROOMS:
         raise web.HTTPServiceUnavailable(text="대국장이 혼잡합니다. 잠시 후 다시 시도해 주세요.")
     code = "".join(secrets.choice(ALPHABET) for _ in range(7))
     while code in ROOMS:
         code = "".join(secrets.choice(ALPHABET) for _ in range(7))
-    room = Room(code, public=public)
+    room = Room(code, public=public, solo=solo)
     ROOMS[code] = room
     return room
 
@@ -348,7 +358,7 @@ async def lobby(request):
 async def create_room(request):
     check_rate(request)
     data = await input_json(request)
-    room = new_room(public=bool(data.get("public", False)))
+    room = new_room(public=bool(data.get("public", False)), solo=data.get("solo") is True)
     role, token = room.claim(None, request_name(data))
     assert role == "black"
     return web.json_response({"room": room.code, "token": token, "role": role})
@@ -473,3 +483,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8080"))
     print(f"13줄 바둑: http://localhost:{port}")
     web.run_app(make_app(), host="0.0.0.0", port=port)
+
