@@ -63,7 +63,7 @@ class API(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         s.ROOMS.clear();s.REQUEST_TIMES.clear();s.ROOT.joinpath('static').mkdir(exist_ok=True)
         s.ROOT.joinpath('static/index.html').write_text(s.ROOT.joinpath('index.html').read_text(encoding='utf-8'),encoding='utf-8')
-        self.client=TestClient(TestServer(s.make_app()));await self.client.start_server()
+        self.client=TestClient(TestServer(s.make_app(s.RoomStore(path=':memory:', database_url=''))));await self.client.start_server()
     async def asyncTearDown(self):await self.client.close()
     async def test_health_and_home(self):
         self.assertTrue((await (await self.client.get('/health')).json())['ok'])

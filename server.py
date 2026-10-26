@@ -11,9 +11,17 @@ from collections import deque
 from pathlib import Path
 
 from aiohttp import web, WSMsgType
+from storage import RoomStore, StaleRoom
+import copy
+import logging
 
 N = 13
 KOMI = 6.5
+VERSION = "1.1.0"
+MAIN_SECONDS = 300.0
+INCREMENT = 3.0
+DISCONNECT_GRACE = 90.0
+REVIEW_SECONDS = 120.0
 ROOT = Path(__file__).resolve().parent
 ROOMS: dict[str, "Room"] = {}
 # The first deployment uses a single aiohttp worker. Multiple workers require a
@@ -122,6 +130,7 @@ def area_score(board: list[int], dead: set[int]) -> dict:
 
 class Room:
     def __init__(self, code: str, public: bool = False, solo: bool = False):
+        self.revision = 0
         self.game_id = secrets.token_urlsafe(12)
         self.code = code
         self.public = public and not solo
@@ -141,10 +150,87 @@ class Room:
         self.approvals: set[str] = set()
         self.rematch: set[str] = set()
         self.result: dict | None = None
-        self.modified = time.monotonic()
+        self.modified = time.time()
+        self.created = time.time()
+        self.remaining = {"black": MAIN_SECONDS, "white": MAIN_SECONDS}
+        self.turn_started = None
+        self.review_deadline = None
+        self.absent_since = {"black": None, "white": None}
+
+    def snapshot(self):
+        data = copy.deepcopy({k: v for k, v in self.__dict__.items() if k != "clients"})
+        for key in ("history", "dead", "approvals", "rematch"):
+            data[key] = list(data[key])
+        return data
+
+    def restore(self, data):
+        for key, value in copy.deepcopy(data).items():
+            if key != "clients":
+                setattr(self, key, value)
+        for key in ("history", "dead", "approvals", "rematch"):
+            setattr(self, key, set(getattr(self, key)))
+
+    @classmethod
+    def from_snapshot(cls, data):
+        room = cls(data["code"])
+        room.restore(data)
+        return room
+
+    def clock(self, now=None):
+        now = time.time() if now is None else now
+        remaining = self.remaining.copy()
+        role = "black" if self.turn == 1 else "white"
+        if self.status == "playing" and self.turn_started is not None:
+            remaining[role] = max(0.0, remaining[role] - max(0.0, now - self.turn_started))
+        return {"remaining": remaining, "running": role if self.status == "playing" and self.turn_started is not None else None,
+                "increment": INCREMENT, "serverTime": now, "reviewDeadline": self.review_deadline}
+
+    def tick(self, now=None):
+        now = time.time() if now is None else now
+        if self.solo or self.status not in ("playing", "scoring"):
+            return False
+        if self.status == "playing" and self.turn_started is not None:
+            role = "black" if self.turn == 1 else "white"
+            if self.clock(now)["remaining"][role] <= 0:
+                self.remaining[role] = 0
+                self.result = {"reason": "time", "winner": "white" if role == "black" else "black"}
+                self.status = "finished"
+                self.turn_started = None
+                return True
+        if self.status == "scoring" and self.review_deadline and now >= self.review_deadline:
+            if len(self.approvals) == 1:
+                self.result = {"reason": "review_timeout", "winner": next(iter(self.approvals))}
+                self.status = "finished"
+            else:
+                self.status = "cancelled"
+            return True
+        for role in ("black", "white"):
+            other = "white" if role == "black" else "black"
+            absent = self.absent_since[role]
+            if absent is not None and now - absent >= DISCONNECT_GRACE and self.connected(other):
+                if self.turn_started is None and self.moves == 0:
+                    self.status = "cancelled"
+                else:
+                    self.result = {"reason": "disconnect", "winner": other}
+                    self.status = "finished"
+                    self.turn_started = None
+                return True
+        return False
+
+    def connection_changed(self):
+        now = time.time()
+        if self.solo:
+            return
+        for role in ("black", "white"):
+            if self.connected(role):
+                self.absent_since[role] = None
+            elif self.players[role] and self.absent_since[role] is None:
+                self.absent_since[role] = now
+        if self.status == "playing" and self.turn_started is None and self.moves == 0 and all(self.connected(r) for r in ("black", "white")):
+            self.turn_started = now
 
     def claim(self, token: str | None, name: str) -> tuple[str, str | None]:
-        self.modified = time.monotonic()
+        self.modified = time.time()
         for role in ("black", "white"):
             player = self.players[role]
             if player and token and secrets.compare_digest(player["token"], token):
@@ -168,6 +254,7 @@ class Room:
     def state(self) -> dict:
         return {
             "room": self.code,
+            "queueSince": self.created,
             "gameId": self.game_id,
             "solo": self.solo,
             "spectators": sum(role == "spectator" for role in self.clients.values()),
@@ -180,6 +267,9 @@ class Room:
             "passes": self.passes,
             "moves": self.moves,
             "sgf": self.sgf(),
+            "clock": None if self.solo else self.clock(),
+            "disconnectGrace": DISCONNECT_GRACE,
+            "absentSince": self.absent_since,
             "lastMove": self.last_move,
             "dead": sorted(self.dead),
             "approvals": sorted(self.approvals),
@@ -196,7 +286,7 @@ class Room:
             headers += prop + "[" + escape((self.players[role] or {}).get("name", role)) + "]"
         if self.result:
             winner = "B" if self.result["winner"] == "black" else "W"
-            margin = "R" if self.result["reason"] == "resign" else str(self.result["margin"])
+            margin = str(self.result["margin"]) if self.result["reason"] == "score" else "T" if self.result["reason"] == "time" else "R"
             headers += "RE[" + winner + "+" + margin + "]"
         for color, index in self.move_record:
             point = "" if index is None else chr(97 + index % N) + chr(97 + index // N)
@@ -204,7 +294,7 @@ class Room:
         return headers + ")"
 
     async def broadcast(self):
-        self.modified = time.monotonic()
+        self.modified = time.time()
         data = {"type": "state", "state": self.state()}
         for client in tuple(self.clients):
             if client.closed:
@@ -223,6 +313,14 @@ class Room:
                 raise ValueError("Only the solo player can control this game.")
             role = "black" if self.turn == 1 else "white"
         kind = action.get("type")
+        now = time.time()
+        if self.tick(now):
+            return
+        if kind == "cancel":
+            if self.status != "waiting":
+                raise ValueError("An opponent has already joined. Please continue the game.")
+            self.status = "cancelled"
+            return
         if kind in ("move", "pass"):
             if self.status != "playing":
                 raise ValueError("Moves are only allowed during play.")
@@ -241,11 +339,16 @@ class Room:
             else:
                 self.passes += 1
                 self.last_move = None
+            if not self.solo:
+                self.remaining[role] = self.clock(now)["remaining"][role] + INCREMENT
+                self.turn_started = now
             self.move_record.append((self.turn, index if kind == "move" else None))
             self.moves += 1
             self.turn *= -1
             if self.passes == 2:
                 self.status = "scoring"
+                self.turn_started = None
+                self.review_deadline = None if self.solo else now + REVIEW_SECONDS
                 self.dead.clear()
                 self.approvals.clear()
         elif kind == "dead":
@@ -271,6 +374,8 @@ class Room:
             if self.status != "scoring":
                 raise ValueError("This game cannot be resumed right now.")
             self.status = "playing"
+            self.turn_started = None if self.solo else now
+            self.review_deadline = None
             self.passes = 0
             self.dead.clear()
             self.approvals.clear()
@@ -298,6 +403,9 @@ class Room:
                 self.approvals.clear()
                 self.rematch.clear()
                 self.result = None
+                self.remaining = {"black": MAIN_SECONDS, "white": MAIN_SECONDS}
+                self.turn_started = None if self.solo else now
+                self.review_deadline = None
         else:
             raise ValueError("Unknown action.")
 
@@ -332,7 +440,7 @@ async def input_json(request) -> dict:
 def check_rate(request):
     # Do not trust X-Forwarded-For from untrusted clients.
     ip = request.remote or "unknown"
-    now = time.monotonic()
+    now = time.time()
     timestamps = REQUEST_TIMES.setdefault(ip, deque())
     while timestamps and now - timestamps[0] > RATE_WINDOW:
         timestamps.popleft()
@@ -344,7 +452,7 @@ def check_rate(request):
 def lobby_snapshot():
     public = [room for room in ROOMS.values() if room.public]
     waiting = [r for r in public if r.status == "waiting" and
-               (r.connected("black") or time.monotonic() - r.modified < 30)]
+               (r.connected("black") or time.time() - r.modified < 30)]
     playing = [r for r in public if r.status in ("playing", "scoring")]
     # Only active connections count as being online, not reserved seats.
     online = sum(len(room.clients) for room in ROOMS.values())
@@ -366,11 +474,17 @@ def lobby_snapshot():
 
 
 async def index(request):
-    return web.FileResponse(ROOT / "static" / "index.html")
+    return web.FileResponse(ROOT / "index.html" if (ROOT / "index.html").exists() else ROOT / "static" / "index.html")
 
 
 async def health(request):
-    return web.json_response({"ok": True, "version": "1.0.0", "rooms": len(ROOMS)})
+    try:
+        async with asyncio.timeout(2):
+            async with request.app[LOCK]:
+                await request.app[STORE].ping()
+    except Exception:
+        return web.json_response({"ok": False, "version": VERSION}, status=503)
+    return web.json_response({"ok": True, "version": VERSION, "rooms": len(ROOMS), "storage": request.app[STORE].backend})
 
 
 async def lobby(request):
@@ -380,34 +494,38 @@ async def lobby(request):
 async def create_room(request):
     check_rate(request)
     data = await input_json(request)
-    room = new_room(public=bool(data.get("public", False)), solo=data.get("solo") is True)
-    role, token = room.claim(None, request_name(data))
-    assert role == "black"
+    async with request.app[LOCK]:
+        room = new_room(public=bool(data.get("public", False)), solo=data.get("solo") is True)
+        role, token = room.claim(None, request_name(data))
+        try:
+            await request.app[STORE].save(room)
+        except Exception:
+            ROOMS.pop(room.code, None)
+            raise web.HTTPServiceUnavailable(text="Unable to save this game. Please try again.")
     return web.json_response({"room": room.code, "token": token, "role": role})
 
 
 async def match_room(request):
-    """Match any newcomer into a publicly visible waiting room.
-
-    Seat reservation and room selection are synchronous within one event loop,
-    so concurrent HTTP requests cannot claim the same color.
-    """
     check_rate(request)
     data = await input_json(request)
-    now = time.monotonic()
-    candidates = [r for r in ROOMS.values()
-                  if r.public and r.status == "waiting"
-                  and r.players["black"] is not None
-                  and r.players["white"] is None
-                  and (r.connected("black") or now - r.modified < 30)]
-    if candidates:
-        # Prefer an opponent who is actively connected.
-        room = min(candidates, key=lambda r: (not r.connected("black"), r.modified))
-    else:
-        room = new_room(public=True)
-    role, token = room.claim(None, request_name(data))
-    return web.json_response({"room": room.code, "token": token,
-                              "role": role, "matched": role == "white"})
+    async with request.app[LOCK]:
+        now = time.time()
+        candidates = [r for r in ROOMS.values() if r.public and r.status == "waiting"
+                      and r.players["black"] is not None and r.players["white"] is None
+                      and (r.connected("black") or now - r.modified < 30)]
+        room = min(candidates, key=lambda r: (not r.connected("black"), r.modified)) if candidates else new_room(public=True)
+        before = room.snapshot()
+        role, token = room.claim(None, request_name(data))
+        room.connection_changed()
+        try:
+            await request.app[STORE].save(room)
+        except Exception as exc:
+            room.restore(exc.snapshot if isinstance(exc, StaleRoom) else before)
+            if not room.players["black"]:
+                ROOMS.pop(room.code, None)
+            raise web.HTTPServiceUnavailable(text="Unable to save this game. Please try again.")
+        await room.broadcast()
+    return web.json_response({"room": room.code, "token": token, "role": role, "matched": role == "white"})
 
 
 async def websocket_handler(request):
@@ -423,7 +541,7 @@ async def websocket_handler(request):
         async for event in socket:
             if event.type != WSMsgType.TEXT:
                 continue
-            now = time.monotonic()
+            now = time.time()
             while last_messages and now - last_messages[0] > 5:
                 last_messages.popleft()
             if len(last_messages) >= 30:
@@ -434,69 +552,120 @@ async def websocket_handler(request):
                 data = json.loads(event.data)
                 if not isinstance(data, dict):
                     raise ValueError("Invalid message.")
-                if room is None:
-                    if data.get("type") != "join":
-                        raise ValueError("Join a game first.")
-                    code = str(data.get("room", "")).upper()
-                    room = ROOMS.get(code)
-                    if not room:
-                        raise ValueError("Game not found. Please start a new game.")
-                    token = data.get("token") if isinstance(data.get("token"), str) else None
-                    name = data.get("name", "Player")
-                    if not isinstance(name, str):
-                        name = "Player"
-                    if data.get("mode") == "watch":
-                        role, token = "spectator", None
+                async with request.app[LOCK]:
+                    if room is None:
+                        if data.get("type") != "join":
+                            raise ValueError("Join a game first.")
+                        code = str(data.get("room", "")).upper()
+                        candidate = ROOMS.get(code)
+                        if not candidate:
+                            raise ValueError("Game not found. Please start a new game.")
+                        before = candidate.snapshot()
+                        token = data.get("token") if isinstance(data.get("token"), str) else None
+                        name = request_name(data)
+                        if data.get("mode") == "watch" or candidate.status == "cancelled":
+                            role, token = "spectator", None
+                        else:
+                            role, token = candidate.claim(token, name)
+                        if role == "spectator" and sum(r == "spectator" for r in candidate.clients.values()) >= MAX_SPECTATORS_PER_ROOM:
+                            candidate.restore(before)
+                            raise ValueError("This game has reached its spectator limit.")
+                        candidate.clients[socket] = role
+                        candidate.connection_changed()
+                        try:
+                            await request.app[STORE].save(candidate)
+                        except Exception as exc:
+                            candidate.clients.pop(socket, None)
+                            candidate.restore(exc.snapshot if isinstance(exc, StaleRoom) else before)
+                            await socket.send_json({"type": "error", "message": "Unable to save this game. Reconnect shortly."})
+                            continue
+                        room = candidate
+                        await socket.send_json({"type": "welcome", "role": role, "token": token, "room": code})
+                        await room.broadcast()
                     else:
-                        role, token = room.claim(token, name)
-                    if role == "spectator" and sum(
-                        r == "spectator" for r in room.clients.values()
-                    ) >= MAX_SPECTATORS_PER_ROOM:
-                        raise ValueError("This game has reached its spectator limit.")
-                    room.clients[socket] = role
-                    await socket.send_json({"type": "welcome", "role": role, "token": token, "room": code})
-                    await room.broadcast()
-                else:
-                    room.act(role, data)
-                    await room.broadcast()
+                        before = room.snapshot()
+                        room.act(role, data)
+                        try:
+                            await request.app[STORE].save(room)
+                        except Exception as exc:
+                            room.restore(exc.snapshot if isinstance(exc, StaleRoom) else before)
+                            await socket.send_json({"type": "error", "message": "Move not saved. Please try again."})
+                            continue
+                        await room.broadcast()
             except (ValueError, json.JSONDecodeError) as exc:
                 await socket.send_json({"type": "error", "message": str(exc)})
     finally:
         if room:
-            room.clients.pop(socket, None)
-            await room.broadcast()
+            async with request.app[LOCK]:
+                room.clients.pop(socket, None)
+                room.connection_changed()
+                try:
+                    await request.app[STORE].save(room)
+                except Exception:
+                    logging.exception("Unable to save disconnection state")
+                await room.broadcast()
     return socket
 
 
 async def cleanup_loop(app):
     try:
         while True:
-            await asyncio.sleep(60)
-            now = time.monotonic()
-            for code, room in list(ROOMS.items()):
-                stale_seconds = 600 if room.status == "waiting" else 86400
-                if not room.clients and now - room.modified > stale_seconds:
-                    ROOMS.pop(code, None)
+            await asyncio.sleep(1)
+            async with app[LOCK]:
+                now = time.time()
+                for code, room in list(ROOMS.items()):
+                    before = room.snapshot()
+                    if room.tick(now):
+                        try:
+                            await app[STORE].save(room)
+                        except Exception as exc:
+                            room.restore(exc.snapshot if isinstance(exc, StaleRoom) else before)
+                            logging.exception("Unable to save timeout")
+                            continue
+                        await room.broadcast()
+                    # Keep finished room links for 30 days, active rooms for 7 days.
+                    stale = 180 if room.status in ("waiting", "cancelled") else 30 * 86400 if room.status == "finished" else 7 * 86400
+                    if not room.clients and now - room.modified > stale:
+                        try:
+                            await app[STORE].delete(code)
+                        except Exception:
+                            continue
+                        ROOMS.pop(code, None)
     except asyncio.CancelledError:
         pass
 
 
+STORE = web.AppKey("store", RoomStore)
+LOCK = web.AppKey("room_lock", asyncio.Lock)
+
+
 async def cleanup_context(app):
+    store = app[STORE]
+    await store.open()
+    ROOMS.clear()
+    for payload in await store.load():
+        room = Room.from_snapshot(payload)
+        room.connection_changed()
+        ROOMS[room.code] = room
     task = asyncio.create_task(cleanup_loop(app))
     yield
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
+    await store.close()
 
 
-def make_app():
+def make_app(store=None):
     app = web.Application(client_max_size=2048)
+    app[STORE] = store or RoomStore()
+    app[LOCK] = asyncio.Lock()
     app.router.add_get("/", index)
     app.router.add_post("/api/rooms", create_room)
     app.router.add_post("/api/match", match_room)
     app.router.add_get("/api/lobby", lobby)
     app.router.add_get("/health", health)
     app.router.add_get("/ws", websocket_handler)
-    app.router.add_static("/static/", ROOT / "static", show_index=False)
+    if (ROOT / "static").exists():
+        app.router.add_static("/static/", ROOT / "static", show_index=False)
     app.cleanup_ctx.append(cleanup_context)
     return app
 
