@@ -82,6 +82,42 @@ class API(unittest.IsolatedAsyncioTestCase):
         a=await (await self.client.post('/api/match',json={'name':'A'})).json();b=await (await self.client.post('/api/match',json={'name':'B'})).json()
         self.assertEqual(a['room'],b['room']);self.assertEqual(b['role'],'white')
         lobby=await (await self.client.get('/api/lobby')).json();self.assertEqual(lobby['playing'],1)
+    async def test_two_players_reconnect_score_and_sgf(self):
+        a=await (await self.client.post('/api/match',json={'name':'A]\\test'})).json()
+        b=await (await self.client.post('/api/match',json={'name':'B'})).json()
+        async def join(player):
+            ws=await self.client.ws_connect('/ws')
+            await ws.send_json({'type':'join',**player})
+            welcome=await ws.receive_json()
+            self.assertEqual(welcome['role'],player['role'])
+            await ws.receive_json()
+            return ws
+        async def state(ws):
+            while True:
+                event=await ws.receive_json(timeout=2)
+                if event['type']=='state':return event['state']
+        wa=await join(a);wb=await join(b);await state(wa)
+        for ws,action in ((wa,{'type':'move','index':0}), (wb,{'type':'move','index':14}), (wa,{'type':'pass'}), (wb,{'type':'pass'})):
+            await ws.send_json(action)
+            left,right=await state(wa),await state(wb)
+            self.assertEqual(left,right)
+        self.assertEqual(left['status'],'scoring')
+        await wa.close();await state(wb)
+        wa=await join(a);await state(wb)
+        for ws in (wa,wb):
+            await ws.send_json({'type':'approve'})
+            left,right=await state(wa),await state(wb)
+            self.assertEqual(left,right)
+        self.assertEqual(left['status'],'finished')
+        self.assertIn(';B[aa];W[bb];B[];W[]',left['sgf'])
+        self.assertIn('RE[',left['sgf'])
+        self.assertIn('PB[A\\]\\\\test]',left['sgf'])
+        for ws in (wa,wb):
+            await ws.send_json({'type':'rematch'})
+            left,right=await state(wa),await state(wb)
+        self.assertEqual(left['moves'],0)
+        self.assertNotIn(';B[',left['sgf'])
+        await wa.close();await wb.close()
     async def test_solo_websocket(self):
         created=await (await self.client.post('/api/rooms',json={'solo':True,'public':True})).json()
         ws=await self.client.ws_connect('/ws');await ws.send_json({'type':'join',**created})

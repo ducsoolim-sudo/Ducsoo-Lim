@@ -135,6 +135,7 @@ class Room:
         self.captures = {"black": 0, "white": 0}
         self.passes = 0
         self.moves = 0
+        self.move_record: list[tuple[int, int | None]] = []
         self.last_move: int | None = None
         self.dead: set[int] = set()
         self.approvals: set[str] = set()
@@ -178,6 +179,7 @@ class Room:
             "captures": self.captures,
             "passes": self.passes,
             "moves": self.moves,
+            "sgf": self.sgf(),
             "lastMove": self.last_move,
             "dead": sorted(self.dead),
             "approvals": sorted(self.approvals),
@@ -185,6 +187,21 @@ class Room:
             "score": area_score(self.board, self.dead) if self.status == "scoring" else None,
             "result": self.result,
         }
+
+    def sgf(self) -> str:
+        def escape(value):
+            return str(value).replace("\\", "\\\\").replace("]", "\\]").replace("\r", " ").replace("\n", " ")
+        headers = "(;GM[1]FF[4]CA[UTF-8]AP[13GO]SZ[13]KM[6.5]RU[Chinese]"
+        for role, prop in (("black", "PB"), ("white", "PW")):
+            headers += prop + "[" + escape((self.players[role] or {}).get("name", role)) + "]"
+        if self.result:
+            winner = "B" if self.result["winner"] == "black" else "W"
+            margin = "R" if self.result["reason"] == "resign" else str(self.result["margin"])
+            headers += "RE[" + winner + "+" + margin + "]"
+        for color, index in self.move_record:
+            point = "" if index is None else chr(97 + index % N) + chr(97 + index // N)
+            headers += ";" + ("B" if color == 1 else "W") + "[" + point + "]"
+        return headers + ")"
 
     async def broadcast(self):
         self.modified = time.monotonic()
@@ -224,6 +241,7 @@ class Room:
             else:
                 self.passes += 1
                 self.last_move = None
+            self.move_record.append((self.turn, index if kind == "move" else None))
             self.moves += 1
             self.turn *= -1
             if self.passes == 2:
@@ -274,6 +292,7 @@ class Room:
                 self.captures = {"black": 0, "white": 0}
                 self.passes = 0
                 self.moves = 0
+                self.move_record.clear()
                 self.last_move = None
                 self.dead.clear()
                 self.approvals.clear()
@@ -351,7 +370,7 @@ async def index(request):
 
 
 async def health(request):
-    return web.json_response({"ok": True, "rooms": len(ROOMS)})
+    return web.json_response({"ok": True, "version": "1.0.0", "rooms": len(ROOMS)})
 
 
 async def lobby(request):

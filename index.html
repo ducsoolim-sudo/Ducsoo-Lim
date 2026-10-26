@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0c1424">
 <meta name="description" content="13GO: play 13×13 Go, watch live games, and follow your progress.">
-<title>13GO — Small board. Big game.</title>
+<title>13GO v1.0 — Small board. Big game.</title>
 <style>
 
 :root{--bg:#0c1424;--surface:#172237;--border:#35455e;--muted:#a9b6cc;--cream:#f5e7c8;--mint:#b6d0bb;--red:#f9ad8f;--gold:#e8bb73}
@@ -52,7 +52,7 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
       <div class="board-controls">
         <div id="playActions" class="actions split"><button id="pass" class="button primary" disabled>Pass</button><button id="resign" class="button ghost" disabled>Resign</button></div>
         <div id="scoreActions" class="actions hidden"><p id="scoringHint" class="notice">Select dead groups, then both players accept the score.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">Accept score</button><button id="resume" class="button ghost">Resume play</button></div>
-        <div id="finishActions" class="actions hidden"><div id="finalResult" class="result"></div><button id="rematch" class="button primary">Request rematch</button></div>
+        <div id="finishActions" class="actions hidden"><div id="finalResult" class="result"></div><button id="downloadSgf" class="button secondary">Download SGF</button><button id="rematch" class="button primary">Request rematch</button></div>
         <p id="gameHint" class="control-hint">Black plays first. Two consecutive passes start scoring.</p>
       </div>
       <div class="board-wrap"><canvas id="board" width="720" height="720" aria-label="Go board. Select an intersection to play." role="img"></canvas></div>
@@ -66,7 +66,7 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
   </main>
   <section id="watchPage" role="tabpanel" aria-labelledby="navWatch" class="hidden"><div class="page-head"><span class="tag">A front-row seat</span><h2>Watch live Go</h2><p>Follow public 13×13 games as they unfold. No seat required.</p></div><div class="panel pad"><div class="watch-tools"><strong id="watchCount">Public games</strong><button id="refreshWatch" class="button secondary">Refresh games</button></div><div id="watchRooms" aria-live="polite"></div></div></section>
   <section id="profilePage" role="tabpanel" aria-labelledby="navProfile" class="hidden"><div class="page-head"><span class="tag">Your journey on the board</span><h2>My Page</h2><p>Your results, your progress, your next game.</p></div><div class="profile-layout"><section class="panel pad profile-card"><div id="avatar" class="avatar">P</div><div><h3 id="profileName" class="profile-title">Player</h3><span class="badge">Guest player · Unranked</span></div><div class="profile-form"><div class="sep"></div><label for="profileNickname" class="side-label">Display name</label><input id="profileNickname" class="nickname" maxlength="16" placeholder="Player"><button id="saveProfile" class="button primary">Save name</button><p class="profile-note">Saved in this browser on this device. No account required. Completed games are recorded while you are connected. Solo practice and watched games do not affect your win rate.</p><p id="practiceCount" class="profile-note">0 solo sessions completed</p></div></section><div><div class="profile-stats"><div class="profile-stat"><strong id="statGames">0</strong><span>Games played</span></div><div class="profile-stat"><strong id="statWins">0</strong><span>Wins</span></div><div class="profile-stat"><strong id="statLosses">0</strong><span>Losses</span></div><div class="profile-stat"><strong id="statRate">—</strong><span>Win rate</span></div></div><section class="panel pad history-panel"><div class="section-head"><h3>Recent games</h3><button id="exportHistory" class="button ghost">Export history</button></div><p id="historyEmpty" class="note" style="margin-top:20px">Your story starts with your first game. Find a match to begin.</p><div class="table-wrap"><table id="historyTable" class="history hidden"><thead><tr><th>Result</th><th>Opponent</th><th>Color</th><th>Details</th><th>Date</th></tr></thead><tbody id="historyRows"></tbody></table></div></section></div></div></section>
-  <p class="foot">13GO · 13×13 Go for everyone · Public games & live spectators<br>Free preview: active games reset when the server restarts. Guest records stay in this browser.</p>
+  <p class="foot">13GO v1.0 · 13×13 Go for everyone · Public games & live spectators<br>Active games reset when the server restarts. Guest records stay in this browser.</p>
 </div><div id="toast" class="toast" role="status"></div>
 <script>
 (() => {
@@ -92,7 +92,7 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
     if(game.solo){const sessions=readPractice();if(!sessions.includes(game.gameId)){sessions.push(game.gameId);storage.set('13go:practice',JSON.stringify(sessions))}return}
     const records=readHistory();if(records.some(r=>r.id===game.gameId))return;
     const opponent=game.players[myRole==='black'?'white':'black']?.name||'Player';
-    records.unshift({id:game.gameId,room:game.room,opponent,color:myRole,won:game.result.winner===myRole,reason:game.result.reason,margin:game.result.margin??null,moves:game.moves,date:new Date().toISOString()});
+    records.unshift({id:game.gameId,room:game.room,opponent,color:myRole,won:game.result.winner===myRole,reason:game.result.reason,margin:game.result.margin??null,moves:game.moves,sgf:game.sgf||null,date:new Date().toISOString()});
     if(!storage.set('13go:history',JSON.stringify(records)))toast('Your browser could not save this result.');
     if(page==='profile')renderProfile();
   }
@@ -102,8 +102,10 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
     $('statGames').textContent=records.length;$('statWins').textContent=wins;$('statLosses').textContent=records.length-wins;$('statRate').textContent=records.length?Math.round(wins/records.length*100)+'%':'—';
     $('practiceCount').textContent=readPractice().length+' solo sessions completed';$('historyEmpty').classList.toggle('hidden',records.length>0);$('historyTable').classList.toggle('hidden',!records.length);$('exportHistory').disabled=!records.length;
     const rows=$('historyRows');rows.replaceChildren();
-    for(const record of records.slice(0,50)){const tr=document.createElement('tr');const cells=[record.won?'WIN':'LOSS',record.opponent,roles[record.color]||record.color,record.reason==='resign'?'Resignation':(record.margin??'')+' points',new Date(record.date).toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'})];for(const [i,value] of cells.entries()){const td=document.createElement('td');td.textContent=value;if(i===0)td.className=record.won?'win':'loss';tr.append(td)}rows.append(tr)}
+    for(const record of records.slice(0,50)){const tr=document.createElement('tr');const cells=[record.won?'WIN':'LOSS',record.opponent,roles[record.color]||record.color,record.reason==='resign'?'Resignation':(record.margin??'')+' points',new Date(record.date).toLocaleDateString('en',{month:'short',day:'numeric',year:'numeric'})];for(const [i,value] of cells.entries()){const td=document.createElement('td');td.textContent=value;if(i===0)td.className=record.won?'win':'loss';tr.append(td)}if(record.sgf){const td=document.createElement('td'),button=document.createElement('button');button.className='button ghost';button.textContent='SGF';button.onclick=()=>downloadSgf(record.sgf,record.id);td.append(button);tr.append(td)}rows.append(tr)}
   }
+  function downloadSgf(text,id){if(!text){toast('No move record is available for this game.');return}const blob=new Blob([text],{type:'application/x-go-sgf;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='13go-'+id+'.sgf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+  $('downloadSgf').onclick=()=>downloadSgf(game?.sgf,game?.gameId);
   function send(type,extras={}){if(socket?.readyState!==WebSocket.OPEN){toast('Please check your connection.');return}socket.send(JSON.stringify({type,...extras}))}
   function connect(){
     if(!room)return;if(socket){socket.onclose=null;socket.close()}
