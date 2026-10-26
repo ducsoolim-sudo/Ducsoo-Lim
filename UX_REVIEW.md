@@ -87,3 +87,13 @@ to play either color. The current turn comes from authoritative server state.
 Added frontend eight-turn regression and real websocket integration checks for
 alternating black/white stones, reconnect, pass and subsequent white move.
 35 Python tests and frontend checks pass before preview deployment.
+
+## Graphite / porcelain identity — 2026-10-27
+
+Second specialist review responded to the user's request for a wholly new, modern
+premium logo and interface. Removed the old raster logo, navy/gold badge and
+card-based home. Added a custom path-based 13GO SVG wordmark, graphite backdrop,
+porcelain board, quiet hairlines, typographic menu rows and restrained pale accent.
+Home has no playable board: the paired-stone artwork is decorative and hidden
+from accessibility. Essential controls retain readable text and focus outlines.
+The solo one-tap behavior and turn validation remain unchanged.
