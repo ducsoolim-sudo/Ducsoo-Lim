@@ -70,3 +70,20 @@ and hold public deployment until the new version is ready.
   startup and returning without abandoning a game.
 - These are source and DOM/behavior checks, not a real phone visual verification.
   No public deployment, Render setting change or production merge was performed.
+
+## Visual redesign and solo input — 2026-10-27
+
+Design specialist review requested by the user recommended paper/ink/moss,
+a primary Play card and two smaller Watch/My Page cards, coherent SVG icons,
+quiet player cards and minimal board chrome. Replaced stacked CSS with one
+stylesheet implementing that system. Existing brand artwork is retained.
+
+Solo play now defaults to immediate one-tap placement. Confirmation is optional
+and has its own preference, separate from online games. Quick play hides the
+inactive placement buttons so tapping is not confused with an uncommitted preview.
+Seat identity remains stable; permission checks explicitly allow the solo owner
+to play either color. The current turn comes from authoritative server state.
+
+Added frontend eight-turn regression and real websocket integration checks for
+alternating black/white stones, reconnect, pass and subsequent white move.
+35 Python tests and frontend checks pass before preview deployment.

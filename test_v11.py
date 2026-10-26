@@ -150,4 +150,31 @@ class DurabilityTests(unittest.IsolatedAsyncioTestCase):
             await ws.close()
         finally:await client.close()
 
+
+class SoloIntegrationTests(unittest.IsolatedAsyncioTestCase):
+    async def test_solo_alternates_over_websocket_and_reconnect(self):
+        s.ROOMS.clear();s.REQUEST_TIMES.clear()
+        client=TestClient(TestServer(s.make_app(s.RoomStore(path=':memory:',database_url=''))))
+        await client.start_server()
+        try:
+            seat=await (await client.post('/api/rooms',json={'solo':True})).json()
+            ws=await client.ws_connect('/ws');await ws.send_json({'type':'join',**seat})
+            welcome=await ws.receive_json();await ws.receive_json()
+            self.assertEqual(welcome['role'],'black')
+            for i in range(8):
+                await ws.send_json({'type':'move','index':i})
+                message=await ws.receive_json();self.assertEqual(message['type'],'state')
+                state=message['state']
+                self.assertEqual(state['board'][:i+1],[1 if j%2==0 else -1 for j in range(i+1)])
+                self.assertEqual(state['turn'],'white' if i%2==0 else 'black')
+            await ws.close()
+            ws=await client.ws_connect('/ws');await ws.send_json({'type':'join',**seat})
+            await ws.receive_json();state=(await ws.receive_json())['state']
+            self.assertEqual(state['moves'],8)
+            await ws.send_json({'type':'pass'});self.assertEqual((await ws.receive_json())['state']['turn'],'white')
+            await ws.send_json({'type':'move','index':20});state=(await ws.receive_json())['state']
+            self.assertEqual(state['board'][20],-1);self.assertEqual(state['turn'],'black')
+            await ws.close()
+        finally:await client.close()
+
 if __name__=='__main__':unittest.main()
