@@ -56,3 +56,12 @@ v1.0 is deployed at https://thirteen-go-online.onrender.com/.
 v1.1 is implemented and locally tested. Production database connection,
 Deployment and live restart verification remain pending the Render database connection.
 See UX_REVIEW.md for the mobile comparison, implemented changes and verification limits.
+
+## Isolated interface preview
+
+The `test-menu-v11` branch is deployed to a separate free web service. Only that
+service sets `GO13_PREVIEW=true` and `ROOM_DB_PATH=/tmp/go13-preview.sqlite3`.
+This explicitly allows disposable SQLite storage on Render, without connecting
+to production Postgres. Rooms can reset on sleep, restart or redeploy. Production
+still refuses to start without `DATABASE_URL`. The preview HTML is marked Test
+and noindex. This is a functional game preview, not durability acceptance testing.

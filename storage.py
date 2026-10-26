@@ -25,7 +25,7 @@ class RoomStore:
             await self.connection.execute('CREATE TABLE IF NOT EXISTS go13_rooms (code TEXT PRIMARY KEY, payload TEXT NOT NULL, updated DOUBLE PRECISION NOT NULL, revision INTEGER NOT NULL DEFAULT 0)')
             await self.connection.execute('CREATE TABLE IF NOT EXISTS go13_games (game_id TEXT PRIMARY KEY, payload TEXT NOT NULL, updated DOUBLE PRECISION NOT NULL)')
         else:
-            if os.getenv('RENDER') == 'true':
+            if os.getenv('RENDER') == 'true' and os.getenv('GO13_PREVIEW') != 'true':
                 raise RuntimeError('DATABASE_URL is required on Render to preserve games across deploys.')
             self.connection = sqlite3.connect(self.path)
             self.connection.execute('PRAGMA journal_mode=WAL')

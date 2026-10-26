@@ -474,7 +474,12 @@ def lobby_snapshot():
 
 
 async def index(request):
-    return web.FileResponse(ROOT / "index.html" if (ROOT / "index.html").exists() else ROOT / "static" / "index.html")
+    path = ROOT / "index.html" if (ROOT / "index.html").exists() else ROOT / "static" / "index.html"
+    if os.getenv("GO13_PREVIEW") == "true":
+        html = path.read_text().replace("<title>13GO v1.1", "<title>13GO Test v1.1")
+        html = html.replace('<section id="homePage" aria-label="Home">', '<section id="homePage" aria-label="Home"><p style="text-align:center;color:#a9b6cc;font-size:12px">Test v1.1 · Temporary games</p>')
+        return web.Response(text=html, content_type="text/html", headers={"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store"})
+    return web.FileResponse(path)
 
 
 async def health(request):

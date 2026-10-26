@@ -48,3 +48,25 @@ Connect and verify the existing PostgreSQL instance, deploy v1.1, then test on a
 phone. Next: in-app replay, then rating-based matching as the active player pool grows.
 Keep the installation-free entry and simple primary navigation. Do not add social
 feeds or tournaments before matching and game completion are reliable.
+
+## Menu-first redesign — 2026-10-27 (not deployed)
+
+User direction: keep the first screen to Play, Watch and My Page, minimize text,
+and hold public deployment until the new version is ready.
+
+- New visitors see a centered three-button home screen with no board, statistics
+  or introductory copy. Play opens a small matching/practice screen.
+- Display name and rules are optional, inside a collapsed disclosure. Practice
+  explicitly says Both colors so it is not mistaken for an AI opponent.
+- Matching shows elapsed waiting time and Cancel without an empty board.
+- An actual game or spectator session opens the board; setup/sidebar is hidden.
+  Player cards keep names, stone colors and clocks; redundant labels are hidden.
+- Primary color is reserved for placement, with Pass and Resign secondary.
+  Contextual scoring/reconnect deadlines remain visible below the board.
+- Home navigation preserves the socket and game. Return to game restores the
+  board. Saved room links bypass Home on startup.
+- Existing frontend tests and 32 Python tests pass. Added navigation regressions
+  cover fresh entry, all three destinations, waiting/matched states, saved room
+  startup and returning without abandoning a game.
+- These are source and DOM/behavior checks, not a real phone visual verification.
+  No public deployment, Render setting change or production merge was performed.
