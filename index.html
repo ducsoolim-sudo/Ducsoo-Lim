@@ -38,6 +38,8 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
 .profile-layout>*{min-width:0}.table-wrap{max-width:100%}.profile-stats{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:850px){.profile-layout{grid-template-columns:minmax(0,1fr)}.profile-card{grid-template-columns:64px minmax(0,1fr)}.profile-form{min-width:0}}
 .brand-art{display:block;flex:0 0 auto}.brand-lockup{position:relative;width:260px;height:92px;overflow:hidden;border-radius:12px}.brand-lockup img{position:absolute;display:block;width:208.706%;max-width:none;height:auto;left:-52.94%;top:-86.67%}.brand-art p{margin:6px 0 0 8px}@media(max-width:570px){.brand-lockup{width:220px;height:78px}.brand-art p{font-size:11px}}
 .clock{font-variant-numeric:tabular-nums;font-weight:800;font-size:24px;margin-top:8px;color:var(--gold,#e5bd70)}.clock.urgent{color:#ff8f8f}.queue-status{padding:14px;border:1px solid #667d91;border-radius:12px;margin-top:12px}.queue-status p{margin:0 0 12px}.clock-note{font-size:12px;line-height:1.6;color:#a9bbcd}
+.placement-controls{border:1px solid #526887;border-radius:12px;padding:12px;margin-bottom:12px;background:#15233a}.confirm-option{display:flex;align-items:center;gap:10px;min-height:44px;font-size:13px;color:#d8e3f2}.confirm-option input{width:20px;height:20px;accent-color:var(--gold);flex:none}.placement-controls .control-hint{min-height:22px;margin:0 0 10px}.placement-controls .button,.board-controls .button{min-height:46px}.mini-player-row{padding-bottom:8px}.board-panel canvas:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+@media(max-width:570px){.shell{padding-top:10px}.brand{padding-bottom:10px;gap:10px}.brand-lockup{width:165px;height:58px}.brand-art p{display:none}.board-head{padding-top:10px}.bigstatus{font-size:16px}.kicker{display:none}.mini-player-row{padding-bottom:4px}.player{padding:7px;gap:6px}.player-label{font-size:10px}.clock{font-size:22px;line-height:1.15;margin-top:3px}.player-capture{font-size:10px}.board-wrap{padding-bottom:8px}.board-controls{padding-bottom:12px}.placement-controls{padding:8px 10px}.placement-controls .actions{gap:8px}.placement-controls .button{padding:10px}.confirm-option{min-height:36px}.placement-controls .control-hint{font-size:12px}.brand-right{gap:8px}}
 </style>
 </head>
 <body>
@@ -50,14 +52,19 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
     <section class="panel board-panel" aria-label="13 by 13 Go board">
       <div class="board-head"><div><div class="kicker">THE BOARD / 13GO</div><div id="status" class="bigstatus">Your next game starts here</div></div><span id="moveCount" class="rounds">13 × 13</span></div>
       <div id="watchBanner" class="watch-banner hidden">Spectator mode · Watch every move live.</div>
+      <div class="mini-player-row"><div id="blackCard" class="player"><span class="stone black"></span><div class="player-detail"><div class="player-label">BLACK · plays first</div><div id="blackName" class="player-name">Waiting</div><div id="blackClock" class="clock" aria-label="Black time">5:00</div><div id="blackCaptures" class="player-capture">Captured 0</div></div></div><div id="whiteCard" class="player"><span class="stone white"></span><div class="player-detail"><div class="player-label">WHITE · 6.5 komi</div><div id="whiteName" class="player-name">Waiting</div><div id="whiteClock" class="clock" aria-label="White time">5:00</div><div id="whiteCaptures" class="player-capture">Captured 0</div></div></div></div>
+      <div class="board-wrap"><canvas id="board" width="720" height="720" aria-label="Go board. Select an intersection to play." role="img" tabindex="0" aria-describedby="selectionHint"></canvas></div>
       <div class="board-controls">
+        <div id="placementControls" class="placement-controls hidden">
+          <label class="confirm-option"><input id="confirmMoves" type="checkbox" checked> Confirm each move</label>
+          <p id="selectionHint" class="control-hint" role="status" aria-live="polite">Tap the board to preview your move.</p>
+          <div class="actions split"><button id="placeMove" class="button primary" disabled>Place stone</button><button id="clearMove" class="button ghost" disabled>Clear</button></div>
+        </div>
         <div id="playActions" class="actions split"><button id="pass" class="button primary" disabled>Pass</button><button id="resign" class="button ghost" disabled>Resign</button></div>
         <div id="scoreActions" class="actions hidden"><p id="scoringHint" class="notice">Select dead groups, then both players accept the score.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">Accept score</button><button id="resume" class="button ghost">Resume play</button></div>
         <div id="finishActions" class="actions hidden"><div id="finalResult" class="result"></div><button id="downloadSgf" class="button secondary">Download SGF</button><button id="rematch" class="button primary">Request rematch</button></div>
         <p id="gameHint" class="control-hint">Black plays first. Two consecutive passes start scoring.</p>
       </div>
-      <div class="board-wrap"><canvas id="board" width="720" height="720" aria-label="Go board. Select an intersection to play." role="img"></canvas></div>
-      <div class="mini-player-row"><div id="blackCard" class="player"><span class="stone black"></span><div class="player-detail"><div class="player-label">BLACK · plays first</div><div id="blackName" class="player-name">Waiting</div><div id="blackClock" class="clock" aria-label="Black time">5:00</div><div id="blackCaptures" class="player-capture">Captured 0</div></div></div><div id="whiteCard" class="player"><span class="stone white"></span><div class="player-detail"><div class="player-label">WHITE · 6.5 komi</div><div id="whiteName" class="player-name">Waiting</div><div id="whiteClock" class="clock" aria-label="White time">5:00</div><div id="whiteCaptures" class="player-capture">Captured 0</div></div></div></div>
     </section>
     <aside class="sidebar">
       <section class="panel pad"><p class="side-label">LET’S PLAY</p><p id="myRole" class="note">Find an opponent for a public game, or practice both colors on your own.</p><label class="side-label" for="nickname">Your display name</label><input id="nickname" class="nickname" maxlength="16" placeholder="Player" autocomplete="nickname"><div class="actions"><button id="match" class="button primary">Find a match</button><button id="solo" class="button secondary">Solo practice</button><button id="share" class="button ghost hidden">Share spectator link</button></div><div id="queueStatus" class="queue-status hidden" role="status"><p id="queueMessage">Looking for an opponent…</p><button id="cancelMatch" class="button ghost">Cancel search</button></div><p id="clockNote" class="clock-note">Online games: 5 minutes per player + 3 seconds per move. Solo practice is untimed.</p><div id="codeBox" class="room-code hidden"><span id="code"></span><span>Game ID</span></div><p id="inviteHint" class="control-hint">Public, unranked 13×13 Go. Everyone is welcome.</p></section>
@@ -75,8 +82,9 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
   const N=13,EMPTY=Array(169).fill(0),$=id=>document.getElementById(id);
   const canvas=$('board'),ctx=canvas.getContext('2d'),params=new URLSearchParams(location.search);
   const roles={black:'Black',white:'White',spectator:'Spectator'};
-  let game=null,myRole='spectator',room=params.get('room')?.toUpperCase()||'',watching=params.get('watch')==='1',socket=null,hover=-1,toastTimeout=null,reconnectTimeout=null,retry=0,page='play',posting=false,clockReceived=Date.now();
+  let game=null,myRole='spectator',room=params.get('room')?.toUpperCase()||'',watching=params.get('watch')==='1',socket=null,hover=-1,toastTimeout=null,reconnectTimeout=null,retry=0,page='play',posting=false,clockReceived=Date.now(),selectedMove=null,awaitingMove=null;
   const storage={get(key){try{return localStorage.getItem(key)}catch{return null}},set(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}};
+  $('confirmMoves').checked=storage.get('13go:confirm-moves')!=='off';
   const savedName=storage.get('13go:nickname');
   $('nickname').value=savedName==='\ub300\uad6d\uc790'?'Player':savedName||'';
   if(savedName==='\ub300\uad6d\uc790')storage.set('13go:nickname','Player');
@@ -90,7 +98,7 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
   function readPractice(){try{const data=JSON.parse(storage.get('13go:practice')||'[]');return Array.isArray(data)?data:[]}catch{return []}}
   const endReasons={resign:'By resignation',time:'Time expired',disconnect:'Opponent disconnected',review_timeout:'Opponent did not respond to scoring'};
   function detailReason(reason){return endReasons[reason]||reason}
-  function leaveRoom(message){clearTimeout(reconnectTimeout);if(socket){socket.onclose=null;socket.close();socket=null}storage.set('13go:active-room','');room='';game=null;myRole='spectator';watching=false;history.replaceState({},'',location.pathname);connection('Ready to play');update();draw();if(message)toast(message)}
+  function leaveRoom(message){clearTimeout(reconnectTimeout);if(socket){socket.onclose=null;socket.close();socket=null}storage.set('13go:active-room','');room='';game=null;selectedMove=null;awaitingMove=null;myRole='spectator';watching=false;history.replaceState({},'',location.pathname);connection('Ready to play');update();draw();if(message)toast(message)}
   function recordResult(){
     if(!game?.gameId||game.status!=='finished'||!game.result||watching||myRole==='spectator')return;
     if(game.solo){const sessions=readPractice();if(!sessions.includes(game.gameId)){sessions.push(game.gameId);storage.set('13go:practice',JSON.stringify(sessions))}return}
@@ -110,16 +118,16 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
   }
   function downloadSgf(text,id){if(!text){toast('No move record is available for this game.');return}const blob=new Blob([text],{type:'application/x-go-sgf;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='13go-'+id+'.sgf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
   $('downloadSgf').onclick=()=>downloadSgf(game?.sgf,game?.gameId);
-  function send(type,extras={}){if(socket?.readyState!==WebSocket.OPEN){toast('Please check your connection.');return}socket.send(JSON.stringify({type,...extras}))}
+  function send(type,extras={}){if(socket?.readyState!==WebSocket.OPEN){toast('Please check your connection.');return false}if(['move','pass'].includes(type)){if(awaitingMove)return false;awaitingMove={gameId:game?.gameId,moves:game?.moves};selectedMove=null}socket.send(JSON.stringify({type,...extras}));renderPlacement();return true}
   function connect(){
     if(!room)return;if(socket){socket.onclose=null;socket.close()}
     connection('Connecting');const protocol=location.protocol==='https:'?'wss:':'ws:';
     const ws=new WebSocket(protocol+'//'+location.host+'/ws');socket=ws;
     ws.onopen=()=>{if(socket!==ws)return;retry=0;connection('Connected',true);send('join',{room,token:storage.get('13go:'+room),name:myName(),mode:watching?'watch':'play'})};
-    ws.onmessage=e=>{if(socket!==ws)return;let data;try{data=JSON.parse(e.data)}catch{return}if(data.type==='welcome'){myRole=data.role;storeToken(room,data.token);update()}else if(data.type==='state'){game=data.state;clockReceived=Date.now();if(game.status==='cancelled'){leaveRoom('Game cancelled. You can find a new opponent.');return}if(!watching&&myRole!=='spectator')storage.set('13go:active-room',room);recordResult();update();draw()}else if(data.type==='error'){toast(data.message);if(data.message.includes('Game not found')){leaveRoom('Previous game is no longer available.')}}};
-    ws.onclose=()=>{if(socket!==ws)return;connection('Reconnecting');if(room){clearTimeout(reconnectTimeout);reconnectTimeout=setTimeout(connect,Math.min(1000*Math.pow(1.7,retry++),8000))}};ws.onerror=()=>connection('Connection issue');
+    ws.onmessage=e=>{if(socket!==ws)return;let data;try{data=JSON.parse(e.data)}catch{return}if(data.type==='welcome'){myRole=data.role;storeToken(room,data.token);update()}else if(data.type==='state'){game=data.state;clockReceived=Date.now();if(awaitingMove&&(game.gameId!==awaitingMove.gameId||game.moves!==awaitingMove.moves||game.status!=='playing'))awaitingMove=null;if(game.status==='cancelled'){leaveRoom('Game cancelled. You can find a new opponent.');return}if(!watching&&myRole!=='spectator')storage.set('13go:active-room',room);recordResult();update();draw()}else if(data.type==='error'){awaitingMove=null;selectedMove=null;renderPlacement();draw();toast(data.message);if(data.message.includes('Game not found')){leaveRoom('Previous game is no longer available.')}}};
+    ws.onclose=()=>{if(socket!==ws)return;connection('Reconnecting');awaitingMove=null;selectedMove=null;renderPlacement();draw();if(room){clearTimeout(reconnectTimeout);reconnectTimeout=setTimeout(connect,Math.min(1000*Math.pow(1.7,retry++),8000))}};ws.onerror=()=>connection('Connection issue');
   }
-  function enterRoom(code,token=null,watch=false){room=code;watching=watch;if(token)storeToken(room,token);history.replaceState({},'','?room='+encodeURIComponent(room)+(watch?'&watch=1':''));myRole='spectator';game=null;retry=0;clearTimeout(reconnectTimeout);showPage('play');connect();update();draw()}
+  function enterRoom(code,token=null,watch=false){room=code;watching=watch;if(token)storeToken(room,token);history.replaceState({},'','?room='+encodeURIComponent(room)+(watch?'&watch=1':''));myRole='spectator';game=null;selectedMove=null;awaitingMove=null;retry=0;clearTimeout(reconnectTimeout);showPage('play');connect();update();draw()}
   function canLeave(){if(game?.status==='waiting'&&myRole!=='spectator'){toast('Cancel your current search first.');return false}return !game||myRole==='spectator'||game.solo||!['playing','scoring'].includes(game.status)||confirm('Leave your current game? It will stay open for your opponent.')}
   async function postRoom(url,data,button){
     if(posting||!canLeave())return;posting=true;$('match').disabled=true;$('solo').disabled=true;button.textContent='Connecting…';
@@ -149,7 +157,9 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
     $('match').disabled=posting||searching;$('solo').disabled=posting||searching;
     $('match').textContent=posting?'Connecting…':searching?'Finding an opponent…':'Find a match';$('solo').textContent='Solo practice';
     renderClocks();
-    $('pass').disabled=!active||spectator||!game?.solo&&myRole!==game?.turn;$('resign').disabled=!game||spectator||!active&&!scoring;
+    if(game?.solo&&!spectator)myRole=game.turn;
+    renderPlacement();
+    $('pass').disabled=!active||spectator||!!awaitingMove||(!game?.solo&&myRole!==game?.turn);$('resign').disabled=!game||spectator||!active&&!scoring;
     if(!game){$('status').textContent=room?'Connecting to your game…':'Your next game starts here';$('moveCount').textContent='13 × 13';$('myRole').textContent='Find an opponent for a public game, or practice both colors on your own.';$('gameHint').textContent='Black plays first. Two consecutive passes start scoring.';return}
     // Solo controls follow the turn while the server retains the owner identity.
     if(game.solo&&!spectator)myRole=game.turn;
@@ -166,6 +176,26 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
     $('approve').disabled=spectator||game.approvals.includes(myRole);$('approve').textContent=game.solo?'Confirm score':game.approvals.includes(myRole)?'Accepted · waiting for opponent':'Accept score';$('resume').disabled=spectator;
     $('rematch').disabled=spectator||game.rematch.includes(myRole);$('rematch').textContent=game.solo?'Practice again':game.rematch.includes(myRole)?'Rematch requested · waiting':'Request rematch';
   }
+  function coordinate(index){return 'ABCDEFGHJKLMN'[index%N]+(N-Math.floor(index/N))}
+  function canSelectMove(){return game?.status==='playing'&&myRole!=='spectator'&&(game.solo||myRole===game.turn)&&socket?.readyState===WebSocket.OPEN&&!awaitingMove}
+  function validSelection(){return selectedMove&&canSelectMove()&&selectedMove.gameId===game.gameId&&selectedMove.moves===game.moves&&selectedMove.turn===game.turn&&game.board[selectedMove.index]===0}
+  function renderPlacement(){
+    if(selectedMove&&!validSelection())selectedMove=null;
+    $('placementControls').classList.toggle('hidden',!game||game.status!=='playing'||myRole==='spectator');
+    $('pass').disabled=!canSelectMove();
+    const valid=!!validSelection();$('placeMove').disabled=!valid;$('clearMove').disabled=!valid;
+    $('placeMove').textContent=valid?'Place '+coordinate(selectedMove.index):awaitingMove?'Sending…':'Place stone';
+    $('selectionHint').textContent=awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':valid?'Selected '+coordinate(selectedMove.index)+' · Tap another point to adjust.':!canSelectMove()?'Your opponent is thinking.':$('confirmMoves').checked?'Tap the board to preview, then press Place stone.':'Quick play: tapping an empty point places a stone immediately.';
+  }
+  function selectMove(index){
+    if(!canSelectMove())return;
+    if(index<0||game.board[index]!==0){selectedMove=null;renderPlacement();draw();return}
+    if(!$('confirmMoves').checked){send('move',{index});draw();return}
+    selectedMove={index,gameId:game.gameId,moves:game.moves,turn:game.turn};renderPlacement();draw();
+  }
+  $('placeMove').onclick=()=>{if(validSelection()){const index=selectedMove.index;send('move',{index});draw()}};
+  $('clearMove').onclick=()=>{selectedMove=null;renderPlacement();draw()};
+  $('confirmMoves').onchange=()=>{storage.set('13go:confirm-moves',$('confirmMoves').checked?'on':'off');selectedMove=null;renderPlacement();draw()};
   function renderClocks(){
     const clock=game?.clock,elapsed=Math.max(0,(Date.now()-clockReceived)/1000);
     for(const role of ['black','white']){const el=$(role+'Clock');if(game?.solo){el.textContent='Untimed';el.classList.remove('urgent');continue}let seconds=clock?.remaining?.[role]??300;if(clock?.running===role)seconds-=elapsed;seconds=Math.max(0,Math.ceil(seconds));el.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');el.classList.toggle('urgent',seconds<=30)}
@@ -191,11 +221,13 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
       ctx.beginPath();ctx.moveTo(pad,d);ctx.lineTo(size-pad,d);ctx.stroke();
       ctx.beginPath();ctx.moveTo(d,pad);ctx.lineTo(d,size-pad);ctx.stroke();
     }
+    ctx.fillStyle='#5b462e';ctx.font='18px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';for(let i=0;i<N;i++){ctx.fillText('ABCDEFGHJKLMN'[i],pad+i*step,size-22);ctx.fillText(String(N-i),22,pad+i*step)}
     for(const x of [3,9])for(const y of [3,9])star(x,y);
     star(6,6);
     function star(x,y){ctx.beginPath();ctx.arc(pad+x*step,pad+y*step,4.4,0,Math.PI*2);ctx.fillStyle='#5e4529';ctx.fill()}
     const board=game?.board||EMPTY;
-    if(hover>=0&&board[hover]===0&&game?.status==='playing'&&myRole===game.turn){drawStone(hover,game.turn==='black'?1:-1,.4)}
+    if(validSelection()){const i=selectedMove.index;drawStone(i,game.turn==='black'?1:-1,.65);ctx.beginPath();ctx.arc(pad+(i%N)*step,pad+Math.floor(i/N)*step,step*.53,0,Math.PI*2);ctx.strokeStyle='#bd452b';ctx.lineWidth=3;ctx.stroke()}
+    if(!selectedMove&&hover>=0&&board[hover]===0&&game?.status==='playing'&&myRole===game.turn){drawStone(hover,game.turn==='black'?1:-1,.4)}
     for(let i=0;i<board.length;i++)if(board[i]!==0)drawStone(i,board[i],1);
     if(game?.lastMove!=null&&board[game.lastMove]){
       const x=pad+(game.lastMove%N)*step,y=pad+Math.floor(game.lastMove/N)*step;
@@ -231,13 +263,14 @@ body{color:#edf1f8}.logo{width:58px;height:58px;border-radius:15px;background:va
     }
     if(game.status!=='playing'){toast('You cannot play right now.');return}
     if(myRole!==game.turn){toast(myRole==='spectator'?'You are watching this game.':'It is your opponent’s turn.');return}
-    send('move',{index});
+    selectMove(index);
   });
 
+  canvas.addEventListener('keydown',event=>{if(!canSelectMove()||!$('confirmMoves').checked)return;const dirs={ArrowLeft:-1,ArrowRight:1,ArrowUp:-N,ArrowDown:N};if(event.key in dirs){event.preventDefault();const current=selectedMove?.index??84,col=current%N,row=Math.floor(current/N);if(event.key==='ArrowLeft'&&col===0||event.key==='ArrowRight'&&col===N-1||event.key==='ArrowUp'&&row===0||event.key==='ArrowDown'&&row===N-1)return;selectMove(current+dirs[event.key])}else if(event.key==='Enter'){event.preventDefault();$('placeMove').onclick()}else if(event.key==='Escape'){$('clearMove').onclick()}});
   $('navPlay').onclick=()=>showPage('play');$('navWatch').onclick=()=>showPage('watch');$('navProfile').onclick=()=>showPage('profile');$('browseWatch').onclick=()=>showPage('watch');
   $('solo').onclick=()=>postRoom('/api/rooms',{solo:true},$('solo'));$('match').onclick=()=>postRoom('/api/match',{},$('match'));$('share').onclick=share;$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
   $('cancelMatch').onclick=()=>{if(game?.status==='waiting'){send('cancel');$('cancelMatch').disabled=true}};
-  $('pass').onclick=()=>send('pass');$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('resume').onclick=()=>send('resume');$('rematch').onclick=()=>send('rematch');
+  $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('resume').onclick=()=>send('resume');$('rematch').onclick=()=>send('rematch');
   $('saveProfile').onclick=()=>{$('nickname').value=$('profileNickname').value;myName();renderProfile();toast('Display name saved. It will apply to your next game.')};
   $('nickname').onchange=()=>myName();
   $('exportHistory').onclick=()=>{const blob=new Blob([JSON.stringify({name:myName(),games:readHistory(),exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='13go-game-history.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};

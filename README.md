@@ -54,4 +54,5 @@ the database; backups and long-term retention depend on the database operator.
 
 v1.0 is deployed at https://thirteen-go-online.onrender.com/.
 v1.1 is implemented and locally tested. Production database connection,
-GitHub upload, deployment, and live restart verification are pending login.
+Deployment and live restart verification remain pending the Render database connection.
+See UX_REVIEW.md for the mobile comparison, implemented changes and verification limits.
