@@ -1,13 +1,15 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
 const html=fs.readFileSync(require('path').join(__dirname,'index.html'),'utf8');
 const code=html.match(/<script>([\s\S]*?)<\/script>/)[1];
-function setup(seedName,seedStorage={},search="?room=ABCDEFG"){
+function setup(seedName,seedStorage={},search="?room=ABCDEFG",audioTest=false){
+  const soundEvents=[],listeners={};
+  class AudioMock{constructor(){this.state="running";this.currentTime=0}createOscillator(){soundEvents.push("tone");return {frequency:{setValueAtTime(){}},connect(){},start(){},stop(){}}}createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}resume(){return Promise.resolve()}}
   const values=new Map(seedName?[['13go:nickname',seedName]]:[]),elements=new Map();for(const [key,value] of Object.entries(seedStorage))values.set(key,value);
   class Element{constructor(){this.value='';this.textContent='';this.children=[];this.disabled=false;this.attrs={};this.classes=new Set();this.classList={toggle:(c,force)=>{const add=force===undefined?!this.classes.has(c):force;if(add)this.classes.add(c);else this.classes.delete(c);return add},add:(c)=>this.classes.add(c),remove:(c)=>this.classes.delete(c),contains:(c)=>this.classes.has(c)}}append(...x){this.children.push(...x)}replaceChildren(...x){this.children=x}setAttribute(k,v){this.attrs[k]=v}addEventListener(type,handler){this.events??={};this.events[type]=handler}getContext(){return new Proxy({createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}})}getBoundingClientRect(){return {left:0,top:0,width:720,height:720}}click(){}}
-  const document={hidden:false,getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement(){return new Element()}};
+  const document={addEventListener(type,callback){listeners[type]=callback},hidden:false,getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement(){return new Element()}};
   class WS{static OPEN=1;constructor(){WS.last=this;this.readyState=1}send(value){this.sent=JSON.parse(value);this.messages??=[];this.messages.push(this.sent)}close(){}message(x){this.onmessage({data:JSON.stringify(x)})}}
-  const sandbox={document,location:{search,protocol:'http:',host:'localhost',origin:'http://localhost',pathname:'/'},localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},WebSocket:WS,URLSearchParams,URL,Blob,history:{replaceState(){}},fetch:async()=>({ok:true,json:async()=>({online:0,playing:0,waiting:0,list:[]})}),setTimeout:()=>1,clearTimeout(){},setInterval(){},confirm:()=>true,window:{scrollTo(){}},navigator:{},console};
-  vm.runInNewContext(code,sandbox);if(search||seedStorage["13go:active-room"])WS.last.onopen();return {ws:WS.last,e:id=>document.getElementById(id),values};
+  const sandbox={document,location:{search,protocol:'http:',host:'localhost',origin:'http://localhost',pathname:'/'},localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},WebSocket:WS,URLSearchParams,URL,Blob,history:{replaceState(){}},fetch:async()=>({ok:true,json:async()=>({online:0,playing:0,waiting:0,list:[]})}),setTimeout:()=>1,clearTimeout(){},setInterval(){},confirm:()=>true,window:{scrollTo(){},...(audioTest?{AudioContext:AudioMock}:{})},navigator:{},console};
+  vm.runInNewContext(code,sandbox);if(search||seedStorage["13go:active-room"])WS.last.onopen();return {ws:WS.last,e:id=>document.getElementById(id),values,soundEvents,listeners};
 }
 function game(id,result,solo=false){return {room:'ABCDEFG',gameId:id,solo,status:'finished',turn:'white',board:Array(169).fill(0),players:{black:{name:'Alice',connected:true},white:{name:'Bob',connected:true}},captures:{black:0,white:0},passes:0,moves:42,lastMove:null,dead:[],approvals:[],rematch:[],result:{winner:result,reason:'resign'}}}
 let t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});t.ws.message({type:'state',state:game('g1','black')});t.ws.message({type:'state',state:game('g1','black')});t.ws.message({type:'state',state:game('g2','white')});t.e('navProfile').onclick();assert.equal(t.e('statGames').textContent,2);assert.equal(t.e('statWins').textContent,1);assert.equal(t.e('statLosses').textContent,1);assert.equal(t.e('statRate').textContent,'50%');assert.equal(t.e('historyRows').children.length,2);console.log('PASS profile wins/losses/rate and duplicate result protection');
@@ -65,3 +67,29 @@ t.e('board').events.click({clientX:10+(48+7*52)*.5,clientY:100+(48+6*52)*.5});as
 t=ready();assert.equal(t.e('shell').classList.contains('game-view'),true);t.e('homeButton').onclick();assert.equal(t.e('shell').classList.contains('game-view'),false);t.e('resumeGame').onclick();assert.equal(t.e('shell').classList.contains('game-view'),true);t.e('navProfile').onclick();assert.equal(t.e('shell').classList.contains('game-view'),false);console.log('PASS expanded board layout applies only to the visible game');
 
 assert(!html.includes('ctx.fillText('));assert(!html.includes('Tap to select'));assert(!html.includes('Tap again to play'));console.log('PASS board coordinates and routine tap instructions removed');
+
+// New policy: display Japanese overtime and keep analysis outside review countdown.
+t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});
+let manners=game('manners-clock','white');manners.status='playing';manners.result=null;manners.turn='black';
+manners.clock={policy:'byoyomi-manners-v1',remaining:{black:30,white:125},mainRemaining:{black:0,white:125},periods:{black:2,white:3},running:'black',turnElapsed:0,serverTime:Date.now()/1000};
+t.ws.message({type:'state',state:manners});assert.equal(t.e('blackClock').textContent,'0:30 ×2');assert.equal(t.e('whiteClock').textContent,'2:05');
+manners.clock.mainRemaining.black=200;manners.clock.remaining.black=200;manners.clock.turnElapsed=60;
+t.ws.message({type:'state',state:manners});assert(t.e('clockNote').textContent.includes('Please move'));
+manners.status='scoring';manners.adjudication={status:'analyzing'};manners.clock.running=null;manners.clock.reviewDeadline=null;
+t.ws.message({type:'state',state:manners});assert.equal(t.e('clockNote').textContent,'Checking the score…');assert.equal(t.e('approve').disabled,true);
+console.log('PASS byoyomi periods, private delay warning, and no countdown during analysis');
+
+// Audio follows acknowledged actions, never previews, duplicate packets or passes.
+t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.soundEvents.length=0;
+let soundGame=game('audio','white');soundGame.status='playing';soundGame.result=null;soundGame.moves=0;
+t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,0);
+soundGame={...soundGame,moves:1,lastMove:84};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,2);
+t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,2);
+soundGame={...soundGame,moves:2,lastMove:null};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,2);
+t.e('soundToggle').onclick();soundGame={...soundGame,moves:3,lastMove:85};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,2);assert.equal(t.values.get('13go:sound'),'off');
+t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.soundEvents.length=0;t.ws.message({type:'welcome',role:'black',token:'owner'});
+let countdownGame=game('count-audio','white');countdownGame.status='playing';countdownGame.result=null;countdownGame.turn='black';countdownGame.clock={policy:'byoyomi-manners-v1',remaining:{black:10,white:30},mainRemaining:{black:0,white:0},periods:{black:3,white:3},running:'black',serverTime:Date.now()/1000};
+t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,1);t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,1);
+countdownGame.clock.remaining.black=9;t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,2);
+countdownGame.clock.running='white';countdownGame.clock.remaining.white=8;t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,2);
+console.log('PASS acknowledged stone sounds, mute persistence, and own-turn countdown deduplication');

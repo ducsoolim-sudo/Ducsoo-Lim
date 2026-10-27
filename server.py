@@ -14,6 +14,10 @@ from aiohttp import web, WSMsgType
 from storage import RoomStore, StaleRoom
 import copy
 import logging
+import auth
+from scoring import automatic_dead, territory_score
+from adjudicator import KataGo
+import rules_policy as policy
 
 N = 13
 KOMI = 6.5
@@ -21,7 +25,7 @@ VERSION = "1.1.0"
 MAIN_SECONDS = 300.0
 INCREMENT = 3.0
 DISCONNECT_GRACE = 90.0
-REVIEW_SECONDS = 120.0
+REVIEW_SECONDS = policy.REVIEW_SECONDS
 ROOT = Path(__file__).resolve().parent
 ROOMS: dict[str, "Room"] = {}
 # The first deployment uses a single aiohttp worker. Multiple workers require a
@@ -130,6 +134,15 @@ def area_score(board: list[int], dead: set[int]) -> dict:
 
 class Room:
     def __init__(self, code: str, public: bool = False, solo: bool = False):
+        self.time_policy = policy.POLICY
+        self.periods = {"black": policy.BYOYOMI_PERIODS, "white": policy.BYOYOMI_PERIODS}
+        self.game_started_at = None
+        self.departures = {"black": 0, "white": 0}
+        self.offline_used = {"black": 0.0, "white": 0.0}
+        self.absence_counted = {"black": False, "white": False}
+        self.rules = "Japanese"
+        self.adjudication = None
+        self.ko_position = None
         self.revision = 0
         self.game_id = secrets.token_urlsafe(12)
         self.code = code
@@ -147,6 +160,7 @@ class Room:
         self.move_record: list[tuple[int, int | None]] = []
         self.last_move: int | None = None
         self.dead: set[int] = set()
+        self.score_uncertain: set[int] = set()
         self.approvals: set[str] = set()
         self.rematch: set[str] = set()
         self.result: dict | None = None
@@ -159,7 +173,7 @@ class Room:
 
     def snapshot(self):
         data = copy.deepcopy({k: v for k, v in self.__dict__.items() if k != "clients"})
-        for key in ("history", "dead", "approvals", "rematch"):
+        for key in ("history", "dead", "approvals", "rematch", "score_uncertain"):
             data[key] = list(data[key])
         return data
 
@@ -167,23 +181,41 @@ class Room:
         for key, value in copy.deepcopy(data).items():
             if key != "clients":
                 setattr(self, key, value)
-        for key in ("history", "dead", "approvals", "rematch"):
-            setattr(self, key, set(getattr(self, key)))
+        for key in ("history", "dead", "approvals", "rematch", "score_uncertain"):
+            setattr(self, key, set(getattr(self, key, ())))
 
     @classmethod
     def from_snapshot(cls, data):
         room = cls(data["code"])
         room.restore(data)
+        if "time_policy" not in data:
+            room.time_policy = "fischer-v1"
+        if "rules" not in data:
+            room.rules = "Chinese"
         return room
 
     def clock(self, now=None):
         now = time.time() if now is None else now
         remaining = self.remaining.copy()
+        main_remaining = self.remaining.copy()
+        periods = self.periods.copy()
         role = "black" if self.turn == 1 else "white"
         if self.status == "playing" and self.turn_started is not None:
-            remaining[role] = max(0.0, remaining[role] - max(0.0, now - self.turn_started))
+            if self.time_policy == policy.POLICY:
+                main_remaining[role], periods[role], remaining[role] = policy.project_clock(self.remaining[role], self.periods[role], now-self.turn_started)
+            else:
+                remaining[role] = max(0.0, remaining[role] - max(0.0, now - self.turn_started))
+        if self.time_policy == policy.POLICY:
+            for side in ('black', 'white'):
+                if side != role or self.status != 'playing' or self.turn_started is None:
+                    remaining[side] = self.remaining[side] if self.remaining[side]>0 else policy.BYOYOMI_SECONDS if self.periods[side]>0 else 0
+        elapsed = max(0, now-self.turn_started) if self.turn_started is not None else 0
+        warning = self.time_policy == policy.POLICY and self.status == 'playing' and main_remaining[role]>0 and elapsed>=policy.IDLE_WARNING_SECONDS
         return {"remaining": remaining, "running": role if self.status == "playing" and self.turn_started is not None else None,
-                "increment": INCREMENT, "serverTime": now, "reviewDeadline": self.review_deadline}
+                "increment": INCREMENT if self.time_policy != policy.POLICY else 0, "serverTime": now, "reviewDeadline": self.review_deadline,
+                "policy": self.time_policy, "mainRemaining": main_remaining, "periods": periods,
+                "byoyomiSeconds": policy.BYOYOMI_SECONDS, "idleWarning": role if warning else None,
+                "turnElapsed": elapsed}
 
     def tick(self, now=None):
         now = time.time() if now is None else now
@@ -191,9 +223,17 @@ class Room:
             return False
         if self.status == "playing" and self.turn_started is not None:
             role = "black" if self.turn == 1 else "white"
-            if self.clock(now)["remaining"][role] <= 0:
+            clock = self.clock(now)
+            reason = None
+            if self.time_policy == policy.POLICY:
+                elapsed = now-self.turn_started
+                if self.moves == 0 and elapsed >= policy.FIRST_ACTION_SECONDS:
+                    reason = 'first_move_timeout'
+                elif clock['mainRemaining'][role]>0 and elapsed>=policy.IDLE_LOSS_SECONDS:
+                    reason = 'move_delay'
+            if reason or clock["remaining"][role] <= 0:
                 self.remaining[role] = 0
-                self.result = {"reason": "time", "winner": "white" if role == "black" else "black"}
+                self.result = {"reason": reason or "time", "winner": "white" if role == "black" else "black"}
                 self.status = "finished"
                 self.turn_started = None
                 return True
@@ -204,17 +244,32 @@ class Room:
             else:
                 self.status = "cancelled"
             return True
+        changed = False
         for role in ("black", "white"):
+            changed = self.count_absence(role, now) or changed
             other = "white" if role == "black" else "black"
             absent = self.absent_since[role]
-            if absent is not None and now - absent >= DISCONNECT_GRACE and self.connected(other):
+            elapsed = max(0, now-absent) if absent is not None else 0
+            repeated = self.time_policy == policy.POLICY and self.departures[role]>=policy.DISCONNECT_LIMIT
+            budget = self.offline_used[role]+elapsed if self.time_policy == policy.POLICY else elapsed
+            if (repeated or (absent is not None and budget>=DISCONNECT_GRACE)) and self.connected(other):
                 if self.turn_started is None and self.moves == 0:
                     self.status = "cancelled"
                 else:
-                    self.result = {"reason": "disconnect", "winner": other}
+                    self.result = {"reason": "repeated_departure" if repeated else "disconnect", "winner": other}
                     self.status = "finished"
                     self.turn_started = None
                 return True
+        return changed
+
+    def count_absence(self, role, now):
+        absent = self.absent_since[role]
+        if (self.time_policy == policy.POLICY and self.game_started_at is not None
+                and self.status in ('playing', 'scoring') and absent is not None
+                and not self.absence_counted[role] and now-absent>=policy.DISCONNECT_EPISODE_SECONDS):
+            self.departures[role] += 1
+            self.absence_counted[role] = True
+            return True
         return False
 
     def connection_changed(self):
@@ -222,12 +277,19 @@ class Room:
         if self.solo:
             return
         for role in ("black", "white"):
+            self.count_absence(role, now)
             if self.connected(role):
+                if self.absent_since[role] is not None and self.game_started_at is not None:
+                    self.offline_used[role] += max(0, now-self.absent_since[role])
                 self.absent_since[role] = None
+                self.absence_counted[role] = False
             elif self.players[role] and self.absent_since[role] is None:
                 self.absent_since[role] = now
+                self.absence_counted[role] = False
         if self.status == "playing" and self.turn_started is None and self.moves == 0 and all(self.connected(r) for r in ("black", "white")):
             self.turn_started = now
+            self.game_started_at = now
+            self.absent_since = {"black": None, "white": None}
 
     def claim(self, token: str | None, name: str) -> tuple[str, str | None]:
         self.modified = time.time()
@@ -269,19 +331,33 @@ class Room:
             "sgf": self.sgf(),
             "clock": None if self.solo else self.clock(),
             "disconnectGrace": DISCONNECT_GRACE,
+            "departures": self.departures,
+            "offlineUsed": self.offline_used,
             "absentSince": self.absent_since,
             "lastMove": self.last_move,
             "dead": sorted(self.dead),
             "approvals": sorted(self.approvals),
             "rematch": sorted(self.rematch),
-            "score": area_score(self.board, self.dead) if self.status == "scoring" else None,
+            "score": self.calculate_score() if self.status == "scoring" else None,
+            "rules": self.rules,
+            "scoreUncertain": sorted(self.score_uncertain),
+            "adjudication": self.adjudication,
             "result": self.result,
         }
+
+    def calculate_score(self):
+        if self.adjudication and self.adjudication.get("status") in ("ready", "review"):
+            return self.adjudication["score"]
+        if self.rules == "Chinese":
+            return area_score(self.board, self.dead)
+        return territory_score(self.board, self.dead, self.captures)
 
     def sgf(self) -> str:
         def escape(value):
             return str(value).replace("\\", "\\\\").replace("]", "\\]").replace("\r", " ").replace("\n", " ")
-        headers = "(;GM[1]FF[4]CA[UTF-8]AP[13GO]SZ[13]KM[6.5]RU[Chinese]"
+        headers = "(;GM[1]FF[4]CA[UTF-8]AP[13GO]SZ[13]KM[6.5]RU[" + self.rules + "]"
+        if self.time_policy == policy.POLICY:
+            headers += "TM[300]OT[3x30 byo-yomi]"
         for role, prop in (("black", "PB"), ("white", "PW")):
             headers += prop + "[" + escape((self.players[role] or {}).get("name", role)) + "]"
         if self.result:
@@ -314,7 +390,7 @@ class Room:
             role = "black" if self.turn == 1 else "white"
         kind = action.get("type")
         now = time.time()
-        if self.tick(now):
+        if self.tick(now) and self.status in ("finished", "cancelled"):
             return
         if kind == "cancel":
             if self.status != "waiting":
@@ -331,16 +407,23 @@ class Room:
                 index = action.get("index")
                 if type(index) is not int:
                     raise ValueError("Invalid move position.")
-                self.board, captured = try_move(self.board, index, self.turn, self.history)
+                previous = board_hash(self.board)
+                forbidden = ({self.ko_position} if self.ko_position else set()) if self.rules == "Japanese" else self.history
+                self.board, captured = try_move(self.board, index, self.turn, forbidden)
+                self.ko_position = previous
                 self.history.add(board_hash(self.board))
                 self.captures[role] += captured
                 self.last_move = index
                 self.passes = 0
             else:
+                self.ko_position = None
                 self.passes += 1
                 self.last_move = None
             if not self.solo:
-                self.remaining[role] = self.clock(now)["remaining"][role] + INCREMENT
+                if self.time_policy == policy.POLICY:
+                    self.remaining[role], self.periods[role], _ = policy.project_clock(self.remaining[role], self.periods[role], now-self.turn_started if self.turn_started is not None else 0)
+                else:
+                    self.remaining[role] = self.clock(now)["remaining"][role] + INCREMENT
                 self.turn_started = now
             self.move_record.append((self.turn, index if kind == "move" else None))
             self.moves += 1
@@ -349,7 +432,9 @@ class Room:
                 self.status = "scoring"
                 self.turn_started = None
                 self.review_deadline = None if self.solo else now + REVIEW_SECONDS
-                self.dead.clear()
+                self.dead, self.score_uncertain = automatic_dead(self.board) if self.rules == "Japanese" else (set(), set())
+                if self.time_policy == policy.POLICY and self.score_uncertain:
+                    self.review_deadline = None
                 self.approvals.clear()
         elif kind == "dead":
             if self.status != "scoring":
@@ -362,22 +447,27 @@ class Room:
                 self.dead.difference_update(group)
             else:
                 self.dead.update(group)
+            self.adjudication = {"status": "manual"}
             self.approvals.clear()
         elif kind == "approve":
             if self.status != "scoring":
                 raise ValueError("The score can only be accepted during scoring.")
+            if self.adjudication and self.adjudication.get("status") in ("analyzing", "review", "unavailable"):
+                raise ValueError("Automatic scoring needs review. Resume play or correct the marked groups.")
             self.approvals.update(("black", "white") if self.solo else (role,))
             if len(self.approvals) == 2:
-                self.result = {"reason": "score", **area_score(self.board, self.dead)}
+                self.result = {"reason": "score", **self.calculate_score()}
                 self.status = "finished"
         elif kind == "resume":
             if self.status != "scoring":
                 raise ValueError("This game cannot be resumed right now.")
+            self.adjudication = None
             self.status = "playing"
             self.turn_started = None if self.solo else now
             self.review_deadline = None
             self.passes = 0
             self.dead.clear()
+            self.score_uncertain.clear()
             self.approvals.clear()
         elif kind == "resign":
             if self.status not in ("playing", "scoring"):
@@ -392,18 +482,27 @@ class Room:
                 self.game_id = secrets.token_urlsafe(12)
                 self.board = [0] * (N * N)
                 self.history = {board_hash(self.board)}
+                self.ko_position = None
                 self.turn = 1
                 self.status = "playing"
                 self.captures = {"black": 0, "white": 0}
                 self.passes = 0
                 self.moves = 0
+                self.adjudication = None
                 self.move_record.clear()
                 self.last_move = None
                 self.dead.clear()
+                self.score_uncertain.clear()
                 self.approvals.clear()
                 self.rematch.clear()
                 self.result = None
                 self.remaining = {"black": MAIN_SECONDS, "white": MAIN_SECONDS}
+                self.periods = {"black": policy.BYOYOMI_PERIODS, "white": policy.BYOYOMI_PERIODS}
+                self.departures = {"black": 0, "white": 0}
+                self.offline_used = {"black": 0.0, "white": 0.0}
+                self.absence_counted = {"black": False, "white": False}
+                self.absent_since = {"black": None, "white": None}
+                self.game_started_at = now
                 self.turn_started = None if self.solo else now
                 self.review_deadline = None
         else:
@@ -572,6 +671,13 @@ async def websocket_handler(request):
                             role, token = "spectator", None
                         else:
                             role, token = candidate.claim(token, name)
+                            user = await auth.identity(request, request.app[STORE])
+                            if user and role in ('black', 'white'):
+                                owner = candidate.players[role].get('account_id')
+                                if owner and owner != user['id']:
+                                    candidate.restore(before)
+                                    raise ValueError('This seat belongs to another account.')
+                                candidate.players[role]['account_id'] = user['id']
                         if role == "spectator" and sum(r == "spectator" for r in candidate.clients.values()) >= MAX_SPECTATORS_PER_ROOM:
                             candidate.restore(before)
                             raise ValueError("This game has reached its spectator limit.")
@@ -590,6 +696,8 @@ async def websocket_handler(request):
                     else:
                         before = room.snapshot()
                         room.act(role, data)
+                        if room.status == 'scoring' and before['status'] != 'scoring':
+                            schedule_adjudication(request.app, room)
                         try:
                             await request.app[STORE].save(room)
                         except Exception as exc:
@@ -640,6 +748,53 @@ async def cleanup_loop(app):
         pass
 
 
+ENGINE = web.AppKey("engine", KataGo)
+JOBS = web.AppKey("adjudication_jobs", set)
+
+
+def schedule_adjudication(app, room):
+    if not app[ENGINE].configured or room.rules != "Japanese" or room.status != "scoring":
+        return
+    if room.adjudication and room.adjudication.get("status") != "analyzing":
+        return
+    # Mark before another event can accept the preliminary heuristic score.
+    room.adjudication = {"status": "analyzing"}
+    room.review_deadline = None
+    game_id = room.game_id
+    snapshot = Room.from_snapshot(room.snapshot())
+    marker = room.adjudication
+
+    async def run():
+        try:
+            result = await app[ENGINE].analyze(snapshot)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logging.exception("Automatic adjudication unavailable")
+            result = {"status": "unavailable"}
+        async with app[LOCK]:
+            if room.status != "scoring" or room.game_id != game_id or room.adjudication is not marker:
+                return
+            before = room.snapshot()
+            room.adjudication = result
+            room.approvals.clear()
+            if result['status'] in ('ready', 'review'):
+                room.dead = set(result['dead'])
+                room.score_uncertain = set(result['uncertain'])
+            # An engine error or uncertain result never starts a forfeit timer.
+            room.review_deadline = time.time() + REVIEW_SECONDS if result['status'] == 'ready' and not room.solo else None
+            try:
+                await app[STORE].save(room)
+            except Exception as exc:
+                room.restore(exc.snapshot if isinstance(exc, StaleRoom) else before)
+                logging.exception("Unable to save automatic adjudication")
+                return
+            await room.broadcast()
+    task = asyncio.create_task(run())
+    app[JOBS].add(task)
+    task.add_done_callback(app[JOBS].discard)
+
+
 STORE = web.AppKey("store", RoomStore)
 LOCK = web.AppKey("room_lock", asyncio.Lock)
 
@@ -647,22 +802,30 @@ LOCK = web.AppKey("room_lock", asyncio.Lock)
 async def cleanup_context(app):
     store = app[STORE]
     await store.open()
+    await store.init_accounts()
     ROOMS.clear()
     for payload in await store.load():
         room = Room.from_snapshot(payload)
         room.connection_changed()
         ROOMS[room.code] = room
+    for room in ROOMS.values():
+        schedule_adjudication(app, room)
     task = asyncio.create_task(cleanup_loop(app))
     yield
     task.cancel()
-    await asyncio.gather(task, return_exceptions=True)
+    for job in app[JOBS]:
+        job.cancel()
+    await asyncio.gather(task, *app[JOBS], return_exceptions=True)
     await store.close()
 
 
 def make_app(store=None):
-    app = web.Application(client_max_size=2048)
+    app = web.Application(client_max_size=16384)
     app[STORE] = store or RoomStore()
     app[LOCK] = asyncio.Lock()
+    app[ENGINE] = KataGo()
+    app[JOBS] = set()
+    auth.setup(app, STORE)
     app.router.add_get("/", index)
     app.router.add_post("/api/rooms", create_room)
     app.router.add_post("/api/match", match_room)

@@ -30,16 +30,27 @@ old server; confirm restoration and health on the new instance.
 
 ## Rules and time
 
-- Online: 5 minutes per player, plus 3 seconds for each legal move or pass.
-- Clock begins when both players connect. Server time decides timeout results;
-  the browser clock is only a display.
-- Disconnected players have 90 seconds to return, while their game clock continues.
-  Before a game starts, a missing player causes cancellation rather than a win.
-- Both passes enter scoring and pause the game clock. Players have 120 seconds
-  to accept the marked score or resume play. If exactly one accepts and the other
-  never responds, the latter forfeits. If neither accepts, the game is cancelled.
+- New online games: 5 minutes plus three 30-second Japanese overtime periods;
+  no per-move increment. Saved older games retain their Fischer clock policy.
+- The opening action must arrive within 30 seconds after both players connect.
+- During main time, warn at 60 seconds and forfeit after 90 seconds without an
+  action. Once overtime begins, its period rules apply instead.
+- Reconnecting preserves the active turn deadline, departure count, and cumulative
+  offline time. A >=10-second outage counts once; three episodes forfeit. The
+  10-second threshold and 90-second cumulative return budget are implementation
+  defaults pending final operational approval, distinct from the agreed three-
+  departure rule. Explicit leave UI/events are not yet implemented.
+- Prepared automatic scores have a 30-second review deadline. Analysis errors or
+  unresolved scoring do not start a review-forfeit deadline. One acceptance and
+  one nonresponse forfeits; neither accepting cancels (operational default).
 - Solo practice has no clock and does not affect the win record.
-- Server downtime does not stop an already running wall-clock deadline.
+- Server downtime still affects running wall-clock deadlines: outage exemption
+  and restart recovery remain a release blocker, documented in the manual.
+- Rules are versioned in `rules_policy.py`; `test_manners.py` exercises boundary,
+  overtime, repeated-reconnect, persistence, and scoring timeout behavior.
+- Product decisions and status are maintained in the separately saved **13GO
+  운영·개발 매뉴얼**, version 0.1. Proposed rating/temperature formulas remain
+  unimplemented; this change does not activate Google sign-in or deploy.
 
 Waiting searches can be cancelled. If matching wins the cancellation race, the
 server rejects cancellation and keeps the matched game intact. The guest's last
@@ -65,3 +76,88 @@ This explicitly allows disposable SQLite storage on Render, without connecting
 to production Postgres. Rooms can reset on sleep, restart or redeploy. Production
 still refuses to start without `DATABASE_URL`. The preview HTML is marked Test
 and noindex. This is a functional game preview, not durability acceptance testing.
+
+### Google account sign-in
+
+Guest play remains available. My Page uses Google's official sign-in button only
+when `GOOGLE_CLIENT_ID` is configured. The server verifies the signed Google ID
+token, audience, issuer, expiry, verified email, and nonce before issuing an
+HttpOnly session cookie. Google access/refresh tokens and email addresses are not
+stored. Sessions are revocable; game results come from the server, never from a
+client-uploaded win count. Existing guest history remains local and is not imported
+as verified account results.
+
+To activate on the isolated test service:
+
+1. In Google Cloud Console, configure Google Auth Platform branding/audience and
+   create an OAuth client of type **Web application**.
+2. Add authorized JavaScript origin `https://thirteen-go-test.onrender.com`.
+   This implementation uses Google Identity Services' JavaScript callback;
+   no redirect URI or client secret is required.
+3. Set `GOOGLE_CLIENT_ID` to that client's public ID and set
+   `PUBLIC_ORIGIN=https://thirteen-go-test.onrender.com` on the test service.
+4. Redeploy only `test-menu-v11`. Verify a real Google login, sign-out, and
+   cross-device results before enabling production. If Google's project is in
+   Testing mode, add the participating Google accounts as test users.
+
+The test service still uses disposable SQLite. Account sessions and results can
+reset on sleep/redeploy; production account persistence requires PostgreSQL via
+`DATABASE_URL`. Do not attach the test service to the production database.
+
+Checks: `node test_profile.cjs` and `python -m unittest discover -q`.
+
+### Territory scoring work in progress
+
+New rooms use Japanese-style territory plus prisoners, 6.5 komi, and simple ko.
+Existing room snapshots without a rules field retain their Chinese scoring.
+SGF records carry the room's rules. Shared dame excludes the bordering groups'
+eyes from territory; players must finish dame before accepting the result.
+
+On two passes, Benson's pass-alive test identifies safe enclosing groups. A
+bounded local search checks pockets of at most nine points, with the defender
+moving first, and automatically marks only forced captures found within its
+budget. Large fights, ko cycles, and uncertain life/death remain unmarked and
+produce a review notice. Corrections clear both players' prior approvals.
+
+This is **not a full Japanese life/death adjudicator**. In particular, rare ko,
+seki, bent-four, and replacement-life cases require specialist-engine validation.
+Do not advertise fully automatic dead-stone handling or release this as finished
+Japanese rules until that validation/integration is complete. This implementation
+has not yet been uploaded to the test service.
+
+### KataGo-assisted adjudication (development, not yet deployed)
+
+`adjudicator.py` runs KataGo locally as a subprocess; game data is not sent to an
+external analysis provider. Two searches (256 and 1024 visits) use the actual move
+history, Japanese rules, and Black's perspective. Ownership/deviation arrays are
+validated, whole groups must agree across both searches, neutral points stay
+neutral, and the calculated territory/prisoner score must agree with the engine.
+Low confidence, disagreement, invalid output, and engine failure block automatic
+confirmation. The opponent can resume play; manual marking remains an explicit
+fallback. Analysis runs outside the global room lock, with one engine at a time,
+a 60-second queue-plus-runtime limit, process cleanup, and stale-result rejection.
+Analysis is rescheduled after server restart. Failures do not cause review-time
+forfeits.
+
+Set `KATAGO_BINARY` and `KATAGO_MODEL` to local absolute paths; optionally set
+`KATAGO_TIMEOUT`. `python install_engine.py /absolute/runtime/path` downloads
+checksum-pinned KataGo 1.16.3 Eigen and a **small upstream regression-test model**.
+It is for development smoke tests only, not production adjudication. A stronger,
+validated model and adequate CPU/RAM are required before deployment. Engine
+binaries/models are runtime dependencies, not committed to the application repo.
+Keep upstream license notices with any redistributed binaries/models.
+
+Run `KATAGO_BINARY=... KATAGO_MODEL=... python check_engine.py` for real-engine
+checks. The current small-model run identified the enclosed dead stone and kept
+the shared-liberty groups, but all three fixtures remained `review`, including an
+unfinished double-pass position. This verifies the uncertainty guard, **not** full
+automatic scoring accuracy. A stronger model is now available through the checksum-pinned upstream GitHub
+release (`install_engine.py PATH --strong`). Initial CPU validation did not pass
+the automatic-acceptance gate; no release deployment has been completed.
+
+Outstanding release gates: curated Japanese bent-four/ko/seki/replacement-life and
+no-result fixtures, a stronger-model regression run, ordinary completed-game
+acceptance rate, latency/memory load tests, and an explicit policy for exceptional
+unresolved positions. KataGo's Japanese-like rules are not a mathematical oracle
+for every official Japanese ruling; do not advertise a guaranteed all-position
+fully automatic referee.

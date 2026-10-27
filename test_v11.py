@@ -12,6 +12,7 @@ from aiohttp.test_utils import TestClient, TestServer
 class ClockTests(unittest.TestCase):
     def room(self):
         room=s.Room('CLOCK');room.claim(None,'A');room.claim(None,'B')
+        room.time_policy='fischer-v1'  # Compatibility for saved v1.1 games.
         room.turn_started=1000
         return room
 
