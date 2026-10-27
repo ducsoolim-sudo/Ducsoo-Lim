@@ -97,3 +97,16 @@ porcelain board, quiet hairlines, typographic menu rows and restrained pale acce
 Home has no playable board: the paired-stone artwork is decorative and hidden
 from accessibility. Essential controls retain readable text and focus outlines.
 The solo one-tap behavior and turn validation remain unchanged.
+
+## Two-tap X placement — 2026-10-27
+
+Replaces both quick placement and preview-with-separate-button for all playing
+modes. First tap selects a snapped intersection with an X, without sending a
+move. Tapping another intersection moves X only. Tapping the currently selected
+intersection again sends exactly one move. Previous quick-play preferences no
+longer bypass this rule. Pending confirmation clears after turn changes, errors,
+reconnects and game changes. Keyboard selection/Enter and Clear remain available.
+No translucent preview stone is shown, so a selection cannot resemble a placed
+stone. Added coverage for a scaled phone canvas and ambiguous taps near adjacent
+intersections, as well as fresh confirmation after rejection and alternating solo
+turns under the new interaction.
