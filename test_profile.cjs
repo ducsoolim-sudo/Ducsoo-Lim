@@ -61,3 +61,5 @@ t=ready();t.e('board').getBoundingClientRect=()=>({left:10,top:100,width:360,hei
 t.e('board').events.click({clientX:10+(48+6*52+24)*.5,clientY:100+(48+6*52)*.5});assert.equal(t.ws.sent.type,'join');assert.equal(t.e('selectionHint').textContent,'G7 · Tap again');
 t.e('board').events.click({clientX:10+(48+7*52)*.5,clientY:100+(48+6*52)*.5});assert.equal(t.ws.sent.type,'join');assert.equal(t.e('selectionHint').textContent,'H7 · Tap again');
 t.e('board').events.click({clientX:10+(48+7*52)*.5,clientY:100+(48+6*52)*.5});assert.equal(t.ws.sent.index,85);console.log('PASS scaled phone coordinates and ambiguous-point correction require same-point confirmation');
+
+t=ready();assert.equal(t.e('shell').classList.contains('game-view'),true);t.e('homeButton').onclick();assert.equal(t.e('shell').classList.contains('game-view'),false);t.e('resumeGame').onclick();assert.equal(t.e('shell').classList.contains('game-view'),true);t.e('navProfile').onclick();assert.equal(t.e('shell').classList.contains('game-view'),false);console.log('PASS expanded board layout applies only to the visible game');

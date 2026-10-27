@@ -14,6 +14,10 @@
 @media(max-width:700px){.profile-layout{grid-template-columns:minmax(0,1fr)}.brand .nav{display:none}.brand-right{gap:14px}.shell{padding:22px 20px 36px}.home-view{padding:28px 28px 36px}.home-view .brand{padding-bottom:22px}.home-view .brand-lockup{width:118px}.home-stage{grid-template-columns:1fr;gap:24px;padding:24px 0 0;min-height:0}.home-art{width:100%;max-width:230px;margin:0 auto}.home-art-caption{display:none}.home-menu .button{min-height:88px;font-size:24px;gap:20px}.home-menu .primary{min-height:112px;font-size:44px}.home-menu .resume{font-size:13px;min-height:48px;margin-top:14px}.brand{margin-bottom:26px}.brand-lockup{width:100px}.game-only{max-width:100%}.mini-player-row{gap:10px;margin-bottom:12px}.player{padding:10px 12px;gap:8px}.clock{font-size:21px}.board-head{padding-bottom:12px}.bigstatus{font-size:17px}.board-controls{padding-top:12px}.setup-only{margin:28px auto}.pad{padding:22px}.profile-stats{gap:6px}.profile-stat strong{font-size:24px}.profile-stat span{font-size:10px}.watch-row{gap:10px}.watch-row .lobby-room-info strong{font-size:13px}.watch-tools{font-size:13px}.brand-edition{font-size:9px}.preview-mark{margin-top:16px}}
 @media(max-height:740px) and (max-width:700px){.home-art{max-width:170px}.home-stage{gap:12px;padding-top:12px}.home-menu .primary{min-height:94px}.home-menu .button{min-height:76px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Use almost the entire screen width during play. */
+.shell.game-view{max-width:1480px;padding:14px 12px 32px}.game-view .game-only{max-width:1100px}.game-view .brand{margin-bottom:14px}.game-view .board-head{padding-bottom:10px}.game-view .mini-player-row{margin-bottom:10px}.game-view .player{padding:8px 12px}.game-view .player-detail{display:flex;align-items:center;justify-content:space-between;gap:8px}.game-view .clock{font-size:21px}.game-view .board-tools{margin-bottom:0}.game-view .board-controls{padding-top:10px}
+@media(max-width:700px){.shell.game-view{padding:8px 4px 24px}.game-view .brand{padding:0 8px;margin-bottom:10px}.game-view .brand-lockup{width:86px}.game-view .home-button{width:38px;height:38px}.game-view .board-head{padding:0 8px 8px}.game-view .mini-player-row{gap:6px;margin:0 4px 8px}.game-view .player{padding:7px 8px;gap:6px}.game-view .player-name{font-size:12px}.game-view .clock{font-size:18px}.game-view .stone{width:20px;height:20px}.game-view .board-controls{padding:10px 8px 0}.game-view canvas{border-radius:3px}}
 </style>
 </head>
 <body>
@@ -83,7 +87,7 @@
   function connection(text,ready=false){$('connection').textContent=text;$('light').classList.toggle('ready',ready)}
   function storeToken(code,token){if(token)storage.set('13go:'+code,token)}
   function invitation(){return location.origin+location.pathname+'?room='+encodeURIComponent(room)+'&watch=1'}
-  function showPage(next){page=next;for(const name of ['home','play','watch','profile']){$(name+'Page').classList.toggle('hidden',name!==next);if(name!=='home')$('nav'+name[0].toUpperCase()+name.slice(1)).setAttribute('aria-selected',String(name===next))}$('shell').classList.toggle('home-view',next==='home');$('resumeGame').classList.toggle('hidden',!room);if(next==='watch')loadLobby();if(next==='profile')renderProfile();}
+  function showPage(next){page=next;$('shell').classList.toggle('game-view',next==='play'&&!!game&&(game.status!=='waiting'||myRole==='spectator'));for(const name of ['home','play','watch','profile']){$(name+'Page').classList.toggle('hidden',name!==next);if(name!=='home')$('nav'+name[0].toUpperCase()+name.slice(1)).setAttribute('aria-selected',String(name===next))}$('shell').classList.toggle('home-view',next==='home');$('resumeGame').classList.toggle('hidden',!room);if(next==='watch')loadLobby();if(next==='profile')renderProfile();}
   function readHistory(){try{const data=JSON.parse(storage.get('13go:history')||'[]');return Array.isArray(data)?data.filter(r=>r&&typeof r.id==='string'&&typeof r.won==='boolean'):[]}catch{return []}}
   function readPractice(){try{const data=JSON.parse(storage.get('13go:practice')||'[]');return Array.isArray(data)?data:[]}catch{return []}}
   const endReasons={resign:'By resignation',time:'Time expired',disconnect:'Opponent disconnected',review_timeout:'Opponent did not respond to scoring'};
@@ -141,7 +145,7 @@
   function update(){
     const spectator=myRole==='spectator',active=game?.status==='playing',scoring=game?.status==='scoring',finished=game?.status==='finished';
     const boardVisible=!!game&&(game.status!=='waiting'||spectator);
-    $('gameBoard').classList.toggle('hidden',!boardVisible);$('playPage').classList.toggle('game-only',boardVisible);$('playPage').classList.toggle('setup-only',!boardVisible);
+    $('shell').classList.toggle('game-view',page==='play'&&boardVisible);$('gameBoard').classList.toggle('hidden',!boardVisible);$('playPage').classList.toggle('game-only',boardVisible);$('playPage').classList.toggle('setup-only',!boardVisible);
     $('watchBanner').classList.toggle('hidden',!game||!spectator);$('codeBox').classList.toggle('hidden',!room||game?.solo);$('share').classList.toggle('hidden',!room||game?.solo);$('code').textContent=room;
     $('playActions').classList.toggle('hidden',!active||spectator);$('scoreActions').classList.toggle('hidden',!scoring);$('finishActions').classList.toggle('hidden',!finished);
     const searching=!!game&&game.status==='waiting'&&!spectator;
@@ -230,9 +234,9 @@
     const board=game?.board||EMPTY;
     if(validSelection()){
       const i=selectedMove.index,x=pad+(i%N)*step,y=pad+Math.floor(i/N)*step,r=step*.32,gap=step*.09;
-      ctx.save();ctx.strokeStyle='#304838';ctx.lineWidth=2.4;ctx.lineCap='square';
+      ctx.save();ctx.strokeStyle='#fffbea';ctx.lineWidth=3;ctx.lineCap='square';ctx.shadowColor='#57401f';ctx.shadowBlur=3;
       ctx.beginPath();ctx.moveTo(x-r,y);ctx.lineTo(x-gap,y);ctx.moveTo(x+gap,y);ctx.lineTo(x+r,y);ctx.moveTo(x,y-r);ctx.lineTo(x,y-gap);ctx.moveTo(x,y+gap);ctx.lineTo(x,y+r);ctx.stroke();
-      ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='#304838';ctx.fill();ctx.restore();
+      ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='#fffbea';ctx.fill();ctx.restore();
     }
     for(let i=0;i<board.length;i++)if(board[i]!==0)drawStone(i,board[i],1);
     if(game?.lastMove!=null&&board[game.lastMove]){

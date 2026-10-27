@@ -118,3 +118,10 @@ with the board grid. The same-intersection second-tap confirmation is unchanged.
 Board colors now use warm kaya-inspired golden wood with fine longitudinal
 procedural grain, restrained contrast and brown grid lines. This is a drawn
 wood material inspired by kaya, not a photograph of a particular wood specimen.
+
+## Expanded board and bright crosshair — 2026-10-27
+
+Crosshair is now warm ivory with a subtle dark contact shadow. Game layout uses
+up to 1100px board width on larger screens and only 4px outer margins on phones.
+Header, player cards and status spacing are reduced; name/time share one line.
+Home and profile spacing remains independent. Two-tap confirmation is unchanged.
