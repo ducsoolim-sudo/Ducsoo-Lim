@@ -180,7 +180,7 @@
     $('placementActions').classList.toggle('hidden',!selectedMove);$('selectionHint').classList.remove('hidden');
     const valid=!!validSelection();$('placeMove').disabled=!valid;$('clearMove').disabled=!valid;
     $('placeMove').textContent=valid?'Place '+coordinate(selectedMove.index):awaitingMove?'Sending…':'Place stone';
-    $('selectionHint').textContent=awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':valid?coordinate(selectedMove.index)+' · Tap X again':!canSelectMove()?'Your opponent is thinking.':'Tap to select. Tap X again to play.';
+    $('selectionHint').textContent=awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':valid?coordinate(selectedMove.index)+' · Tap again':!canSelectMove()?'Your opponent is thinking.':'Tap to select. Tap again to play.';
   }
   function selectMove(index){
     if(!canSelectMove())return;
@@ -206,25 +206,33 @@
     function dimensions(){const size=720,pad=48,step=(size-2*pad)/(N-1);return{size,pad,step}}
   function draw(){
     const {size,pad,step}=dimensions();ctx.clearRect(0,0,size,size);
-    const background=ctx.createLinearGradient(0,0,size,size);background.addColorStop(0,'#e0e2d9');background.addColorStop(.57,'#daddd4');background.addColorStop(1,'#d3d7cd');
+    const background=ctx.createLinearGradient(0,0,size,size);background.addColorStop(0,'#e9c980');background.addColorStop(.48,'#e3be70');background.addColorStop(1,'#d9ae60');
     ctx.fillStyle=background;ctx.fillRect(0,0,size,size);
-    // Subtle board grain makes the same canvas pleasant on large and small phones.
-    ctx.save();ctx.globalAlpha=0;for(let y=1;y<80;y++){ctx.beginPath();ctx.strokeStyle=y%3?'#7c5128':'#fff4cb';ctx.lineWidth=y%4===0?2:1;const z=(y*83)%720;ctx.moveTo(0,z);ctx.bezierCurveTo(220,z-5,410,z+3,720,z-2);ctx.stroke()}ctx.restore();
-    ctx.strokeStyle='#778078';ctx.lineWidth=1.5;
+    // Fine, continuous longitudinal grain inspired by a quarter-sawn kaya board.
+    ctx.save();
+    for(let i=0;i<210;i++){
+      const x=i*3.5+Math.sin(i*2.17)*1.4;
+      ctx.beginPath();ctx.strokeStyle=i%5===0?'#fff2ba':'#95662d';
+      ctx.globalAlpha=i%5===0?.09:.035;ctx.lineWidth=i%7===0?1.1:.55;
+      ctx.moveTo(x,-4);ctx.bezierCurveTo(x+Math.sin(i*.19)*8,220,x+Math.cos(i*.13)*6,510,x+Math.sin(i*.23)*3,size+4);ctx.stroke();
+    }
+    ctx.restore();
+    ctx.strokeStyle='#65502f';ctx.lineWidth=1.5;
     for(let i=0;i<N;i++){
       let d=Math.round(pad+i*step)+.5;
       ctx.beginPath();ctx.moveTo(pad,d);ctx.lineTo(size-pad,d);ctx.stroke();
       ctx.beginPath();ctx.moveTo(d,pad);ctx.lineTo(d,size-pad);ctx.stroke();
     }
-    ctx.fillStyle='#778078';ctx.font='18px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';for(let i=0;i<N;i++){ctx.fillText('ABCDEFGHJKLMN'[i],pad+i*step,size-22);ctx.fillText(String(N-i),22,pad+i*step)}
+    ctx.fillStyle='#65502f';ctx.font='18px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';for(let i=0;i<N;i++){ctx.fillText('ABCDEFGHJKLMN'[i],pad+i*step,size-22);ctx.fillText(String(N-i),22,pad+i*step)}
     for(const x of [3,9])for(const y of [3,9])star(x,y);
     star(6,6);
-    function star(x,y){ctx.beginPath();ctx.arc(pad+x*step,pad+y*step,4.4,0,Math.PI*2);ctx.fillStyle='#778078';ctx.fill()}
+    function star(x,y){ctx.beginPath();ctx.arc(pad+x*step,pad+y*step,4.4,0,Math.PI*2);ctx.fillStyle='#65502f';ctx.fill()}
     const board=game?.board||EMPTY;
     if(validSelection()){
-      const i=selectedMove.index,x=pad+(i%N)*step,y=pad+Math.floor(i/N)*step,r=step*.22;
-      ctx.save();ctx.strokeStyle='#173e35';ctx.lineWidth=5;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(x-r,y-r);ctx.lineTo(x+r,y+r);ctx.moveTo(x+r,y-r);ctx.lineTo(x-r,y+r);ctx.stroke();ctx.restore();
+      const i=selectedMove.index,x=pad+(i%N)*step,y=pad+Math.floor(i/N)*step,r=step*.32,gap=step*.09;
+      ctx.save();ctx.strokeStyle='#304838';ctx.lineWidth=2.4;ctx.lineCap='square';
+      ctx.beginPath();ctx.moveTo(x-r,y);ctx.lineTo(x-gap,y);ctx.moveTo(x+gap,y);ctx.lineTo(x+r,y);ctx.moveTo(x,y-r);ctx.lineTo(x,y-gap);ctx.moveTo(x,y+gap);ctx.lineTo(x,y+r);ctx.stroke();
+      ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='#304838';ctx.fill();ctx.restore();
     }
     for(let i=0;i<board.length;i++)if(board[i]!==0)drawStone(i,board[i],1);
     if(game?.lastMove!=null&&board[game.lastMove]){

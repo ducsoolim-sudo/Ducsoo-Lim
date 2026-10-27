@@ -58,6 +58,6 @@ assert.deepEqual(soloBoard.slice(0,8),[1,-1,1,-1,1,-1,1,-1]);console.log('PASS s
 t=ready();clickPoint(t,84);clickPoint(t,84);const sent=t.ws.messages.length;t.ws.message({type:'error',message:'Illegal move'});clickPoint(t,84);assert.equal(t.ws.messages.length,sent);clickPoint(t,84);assert.equal(t.ws.messages.length,sent+1);console.log('PASS rejected move requires two fresh taps');
 t=ready();clickPoint(t,84);clickPoint(t,85);clickPoint(t,84);assert.equal(t.ws.sent.type,'join');clickPoint(t,84);assert.equal(t.ws.sent.type,'move');assert.equal(t.ws.sent.index,84);console.log('PASS changing X back to an earlier point still requires confirmation');
 t=ready();t.e('board').getBoundingClientRect=()=>({left:10,top:100,width:360,height:360});
-t.e('board').events.click({clientX:10+(48+6*52+24)*.5,clientY:100+(48+6*52)*.5});assert.equal(t.ws.sent.type,'join');assert.equal(t.e('selectionHint').textContent,'G7 · Tap X again');
-t.e('board').events.click({clientX:10+(48+7*52)*.5,clientY:100+(48+6*52)*.5});assert.equal(t.ws.sent.type,'join');assert.equal(t.e('selectionHint').textContent,'H7 · Tap X again');
+t.e('board').events.click({clientX:10+(48+6*52+24)*.5,clientY:100+(48+6*52)*.5});assert.equal(t.ws.sent.type,'join');assert.equal(t.e('selectionHint').textContent,'G7 · Tap again');
+t.e('board').events.click({clientX:10+(48+7*52)*.5,clientY:100+(48+6*52)*.5});assert.equal(t.ws.sent.type,'join');assert.equal(t.e('selectionHint').textContent,'H7 · Tap again');
 t.e('board').events.click({clientX:10+(48+7*52)*.5,clientY:100+(48+6*52)*.5});assert.equal(t.ws.sent.index,85);console.log('PASS scaled phone coordinates and ambiguous-point correction require same-point confirmation');
