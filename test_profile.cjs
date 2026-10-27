@@ -3,7 +3,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'index.html'),'utf8');
 const code=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 function setup(seedName,seedStorage={},search="?room=ABCDEFG",audioTest=false){
   const soundEvents=[],listeners={};
-  class AudioMock{constructor(){this.state="running";this.currentTime=0}createOscillator(){soundEvents.push("tone");return {frequency:{setValueAtTime(){}},connect(){},start(){},stop(){}}}createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}resume(){return Promise.resolve()}}
+  class AudioMock{constructor(){this.state="running";this.currentTime=0}createBuffer(channels,length){const data=new Float32Array(length);return {getChannelData(){return data}}}createBufferSource(){soundEvents.push("impact");return {connect(){},start(){}}}createOscillator(){soundEvents.push("tone");return {frequency:{setValueAtTime(){}},connect(){},start(){},stop(){}}}createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}resume(){return Promise.resolve()}}
   const values=new Map(seedName?[['13go:nickname',seedName]]:[]),elements=new Map();for(const [key,value] of Object.entries(seedStorage))values.set(key,value);
   class Element{constructor(){this.value='';this.textContent='';this.children=[];this.disabled=false;this.attrs={};this.classes=new Set();this.classList={toggle:(c,force)=>{const add=force===undefined?!this.classes.has(c):force;if(add)this.classes.add(c);else this.classes.delete(c);return add},add:(c)=>this.classes.add(c),remove:(c)=>this.classes.delete(c),contains:(c)=>this.classes.has(c)}}append(...x){this.children.push(...x)}replaceChildren(...x){this.children=x}setAttribute(k,v){this.attrs[k]=v}addEventListener(type,handler){this.events??={};this.events[type]=handler}getContext(){return new Proxy({createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}})}getBoundingClientRect(){return {left:0,top:0,width:720,height:720}}click(){}}
   const document={addEventListener(type,callback){listeners[type]=callback},hidden:false,getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement(){return new Element()}};
@@ -83,13 +83,15 @@ console.log('PASS byoyomi periods, private delay warning, and no countdown durin
 t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.soundEvents.length=0;
 let soundGame=game('audio','white');soundGame.status='playing';soundGame.result=null;soundGame.moves=0;
 t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,0);
-soundGame={...soundGame,moves:1,lastMove:84};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,2);
-t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,2);
-soundGame={...soundGame,moves:2,lastMove:null};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,2);
-t.e('soundToggle').onclick();soundGame={...soundGame,moves:3,lastMove:85};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,2);assert.equal(t.values.get('13go:sound'),'off');
+soundGame={...soundGame,moves:1,lastMove:84};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,1);
+t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,1);
+soundGame={...soundGame,moves:2,lastMove:null};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,1);
+t.e('soundToggle').onclick();soundGame={...soundGame,moves:3,lastMove:85};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,1);assert.equal(t.values.get('13go:sound'),'off');
 t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.soundEvents.length=0;t.ws.message({type:'welcome',role:'black',token:'owner'});
 let countdownGame=game('count-audio','white');countdownGame.status='playing';countdownGame.result=null;countdownGame.turn='black';countdownGame.clock={policy:'byoyomi-manners-v1',remaining:{black:10,white:30},mainRemaining:{black:0,white:0},periods:{black:3,white:3},running:'black',serverTime:Date.now()/1000};
 t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,1);t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,1);
 countdownGame.clock.remaining.black=9;t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,2);
 countdownGame.clock.running='white';countdownGame.clock.remaining.white=8;t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,2);
 console.log('PASS acknowledged stone sounds, mute persistence, and own-turn countdown deduplication');
+
+assert(html.includes('intro-out 2.6s'));assert(html.includes('woodenTapBuffer'));console.log('PASS wooden impact buffer and longer brand introduction');
