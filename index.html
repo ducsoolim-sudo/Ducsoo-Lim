@@ -23,6 +23,7 @@
 .home-menu .button{justify-content:flex-start}.home-menu .primary:hover{color:var(--accent)}.home-menu .button:active .menu-label{opacity:.65}#testMatch{border-color:#65755b}#profilePage .quiet-details{font-size:12px}#profilePage .quiet-details p{color:var(--muted)}
 .deadline-count{display:flex;align-items:center;gap:12px;color:#f2b17e}.deadline-count span{font-size:12px}.deadline-count strong{font-size:34px;line-height:1;font-variant-numeric:tabular-nums}.board-tools{display:block}.board-tools .result{margin:14px 0 0;text-align:center}.board-tools .result p{margin:5px 0 0}.board-tools .numbers{font-size:24px}
 .home-art{filter:drop-shadow(0 25px 30px #0003)}.home-menu .button{transition:color .2s,opacity .2s}.home-menu .button:hover .menu-label{color:var(--accent)}.home-art-caption{opacity:.7}
+.board-meta{display:flex;align-items:center;gap:16px}.spectator-count{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}.spectator-count svg{width:18px;height:18px}.match-backdrop{position:fixed;inset:0;background:#050a09a8;backdrop-filter:blur(5px);z-index:50;display:grid;place-items:center;padding:24px}.match-card{width:min(100%,390px);padding:30px;border-radius:22px;background:#eeeee8;color:#101313;box-shadow:0 28px 90px #0006;animation:match-arrive .2s ease-out}.match-kicker{font-size:10px;letter-spacing:2px;color:#647267}.match-card h2{font-size:42px;font-weight:550;letter-spacing:-1.5px;margin:18px 0 20px;line-height:1.1}.match-card p{color:#5b665f;font-size:14px;margin:20px 0 26px;line-height:1.5}.match-players{display:grid;gap:12px}.match-player{display:flex;align-items:center;gap:10px;font-size:15px;min-width:0}.match-player span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.match-card .primary{background:#14261b;color:#f1f4eb;border-color:#14261b}.match-card .stone{width:23px;height:23px}@keyframes match-arrive{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.match-card{animation:none}}
 </style>
 </head>
 <body>
@@ -39,7 +40,7 @@
 <button id="resumeGame" class="button ghost resume hidden">Return to game</button></div><div class="preview-mark">13GO / V1.1</div></div></div></section>
   <main id="playPage" role="tabpanel" aria-labelledby="navPlay" class="layout hidden">
     <section id="gameBoard" class="panel board-panel hidden" aria-label="13 by 13 Go board">
-      <div class="board-head"><div><div class="kicker">THE BOARD / 13GO</div><div id="status" class="bigstatus">Your next game starts here</div></div><div id="deadlineCountdown" class="deadline-count hidden" role="status"><span id="deadlineLabel"></span><strong id="deadlineNumber"></strong></div><span id="moveCount" class="rounds">13 × 13</span></div>
+      <div class="board-head"><div><div class="kicker">THE BOARD / 13GO</div><div id="status" class="bigstatus">Your next game starts here</div></div><div id="deadlineCountdown" class="deadline-count hidden" role="status"><span id="deadlineLabel"></span><strong id="deadlineNumber"></strong></div><span class="board-meta"><span id="spectatorCount" class="spectator-count hidden" aria-label="Spectators"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span id="spectatorNumber">0</span></span><span id="moveCount" class="rounds">13 × 13</span></span></div>
       <div id="watchBanner" class="watch-banner hidden">Watching</div>
       <div class="mini-player-row"><div id="blackCard" class="player"><span class="stone black"></span><div class="player-detail"><div class="player-label">BLACK · plays first</div><div id="blackName" class="player-name">Waiting</div><div id="blackClock" class="clock" aria-label="Black time">5:00</div><div id="blackCaptures" class="player-capture">Captured 0</div></div></div><div id="whiteCard" class="player"><span class="stone white"></span><div class="player-detail"><div class="player-label">WHITE · 6.5 komi</div><div id="whiteName" class="player-name">Waiting</div><div id="whiteClock" class="clock" aria-label="White time">5:00</div><div id="whiteCaptures" class="player-capture">Captured 0</div></div></div></div>
       <div class="board-wrap"><canvas id="board" width="720" height="720" aria-label="Go board. Select an intersection to play." role="img" tabindex="0" aria-describedby="selectionHint"></canvas></div>
@@ -76,6 +77,7 @@
         </details><p id="practiceCount" class="profile-note">0 solo sessions completed</p></div></section><div><div class="profile-stats"><div class="profile-stat"><strong id="statGames">0</strong><span>Games played</span></div><div class="profile-stat"><strong id="statWins">0</strong><span>Wins</span></div><div class="profile-stat"><strong id="statLosses">0</strong><span>Losses</span></div><div class="profile-stat"><strong id="statRate">—</strong><span>Win rate</span></div></div><section class="panel pad history-panel"><div class="section-head"><h3>Recent games</h3><button id="exportHistory" class="button ghost">Export history</button></div><p id="historyEmpty" class="note" style="margin-top:20px">No games yet.</p><div class="table-wrap"><table id="historyTable" class="history hidden"><thead><tr><th>Result</th><th>Opponent</th><th>Color</th><th>Details</th><th>Date</th><th>Record</th></tr></thead><tbody id="historyRows"></tbody></table></div></section></div></div></section>
   <p class="foot">13GO v1.1 · 13×13 Go for everyone · Public games & live spectators<br>Games and move records are saved on the server. Your guest identity stays in this browser. Keep your game link to return.</p>
 </div><div id="toast" class="toast" role="status"></div>
+<div id="matchDialog" class="match-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="matchDialogTitle" aria-describedby="matchDialogDetail"><section class="match-card"><div id="matchDialogKicker" class="match-kicker"></div><h2 id="matchDialogTitle"></h2><div id="matchDialogPlayers" class="match-players"></div><p id="matchDialogDetail"></p><button id="matchDialogConfirm" class="button primary">OK</button></section></div>
 <script>
 (() => {
   'use strict';
@@ -124,6 +126,27 @@
     orbitFrame=window.requestAnimationFrame(frame);
   }
   document.addEventListener?.('visibilitychange',()=>{if(!document.hidden&&page==='home')startHomeOrbit()});
+  let matchDialogTimer=null,matchDialogFocus=null,matchDialogKey=null;
+  function closeMatchDialog(){clearTimeout(matchDialogTimer);$('matchDialog').classList.add('hidden');$('shell').inert=false;matchDialogKey=null;matchDialogFocus?.focus?.()}
+  function openMatchDialog(kind){
+    clearTimeout(matchDialogTimer);matchDialogFocus=document.activeElement;matchDialogKey=game.gameId+':'+kind;
+    $('matchDialogKicker').textContent=game.testBot?'TEST MATCH · UNRATED':game.solo?'PRACTICE':'13GO / 13 × 13';
+    const winner=roles[game.result?.winner]||'';
+    $('matchDialogTitle').textContent=kind==='start'?'Ready to play':game.solo||myRole==='spectator'?winner+' wins':game.result.winner===myRole?'You win':'You lose';
+    $('matchDialogDetail').textContent=kind==='start'?roles[myRole]+' · 5 min + 30 sec × 3':game.result.reason==='score'?winner+' +'+game.result.margin+' · White +6.5':winner+' · '+detailReason(game.result.reason);
+    const players=$('matchDialogPlayers');players.replaceChildren();for(const color of ['black','white']){const row=document.createElement('div');row.className='match-player';const stone=document.createElement('span');stone.className='stone '+color;const name=document.createElement('span');name.textContent=game.players[color]?.name||roles[color];row.append(stone,name);players.append(row)}
+    $('matchDialogConfirm').textContent=kind==='start'?'Play':'OK';$('shell').inert=true;$('matchDialog').classList.remove('hidden');$('matchDialogConfirm').focus?.();
+    if(kind==='start')matchDialogTimer=setTimeout(closeMatchDialog,2200);
+  }
+  function updateMatchDialog(){
+    $('spectatorCount').classList.toggle('hidden',!game||game.solo);const count=Math.max(0,game?.spectators||0);$('spectatorNumber').textContent=String(count);$('spectatorCount').setAttribute('aria-label',count+' spectators');
+    if(!game)return;
+    if(game.status==='playing'&&!game.solo&&myRole!=='spectator'&&game.moves===0&&game.clock?.running&&game.players.black?.connected&&game.players.white?.connected&&storage.get('13go:start-dialog')!==game.gameId){storage.set('13go:start-dialog',game.gameId);openMatchDialog('start')}
+    else if(game.status==='finished'&&game.result&&storage.get('13go:end-dialog')!==game.gameId){storage.set('13go:end-dialog',game.gameId);openMatchDialog('end')}
+    else if(game.status!=='playing'&&game.status!=='finished'&&matchDialogKey)closeMatchDialog();
+  }
+  $('matchDialogConfirm').onclick=closeMatchDialog;
+  $('matchDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeMatchDialog()}else if(event.key==='Tab'){event.preventDefault();$('matchDialogConfirm').focus?.()}});
   function myName(){const name=$('nickname').value.trim().slice(0,16)||'Player';storage.set('13go:nickname',name);return name}
   function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('show'),3300)}
   function connection(text,ready=false){$('connection').textContent=text;$('light').classList.toggle('ready',ready)}
@@ -135,7 +158,7 @@
   function readPractice(){try{const data=JSON.parse(storage.get('13go:practice')||'[]');return Array.isArray(data)?data:[]}catch{return []}}
   const endReasons={resign:'By resignation',time:'Time expired',disconnect:'Opponent disconnected',review_timeout:'Opponent did not respond to scoring',first_move_timeout:'No opening move',move_delay:'Move delay',repeated_departure:'Repeated departure'};
   function detailReason(reason){return endReasons[reason]||reason}
-  function leaveRoom(message){clearTimeout(reconnectTimeout);if(socket){socket.onclose=null;socket.close();socket=null}storage.set('13go:active-room','');room='';game=null;selectedMove=null;awaitingMove=null;myRole='spectator';watching=false;history.replaceState({},'',location.pathname);connection('Ready to play');showPage('play');update();draw();if(message)toast(message)}
+  function leaveRoom(message){closeMatchDialog();clearTimeout(reconnectTimeout);if(socket){socket.onclose=null;socket.close();socket=null}storage.set('13go:active-room','');room='';game=null;selectedMove=null;awaitingMove=null;myRole='spectator';watching=false;history.replaceState({},'',location.pathname);connection('Ready to play');showPage('play');update();draw();if(message)toast(message)}
   function recordResult(){
     if(!game?.gameId||game.status!=='finished'||!game.result||game.testBot||watching||myRole==='spectator')return;
     if(game.solo){const sessions=readPractice();if(!sessions.includes(game.gameId)){sessions.push(game.gameId);storage.set('13go:practice',JSON.stringify(sessions))}return}
@@ -173,7 +196,7 @@
     ws.onmessage=e=>{if(socket!==ws)return;let data;try{data=JSON.parse(e.data)}catch{return}if(data.type==='welcome'){myRole=data.role;storeToken(room,data.token);update()}else if(data.type==='state'){stoneSound(game,data.state);if(!game||game.gameId!==data.state.gameId||game.moves!==data.state.moves)lastCountdown=null;game=data.state;clockReceived=Date.now();if(awaitingMove&&(game.gameId!==awaitingMove.gameId||game.moves!==awaitingMove.moves||game.status!=='playing'))awaitingMove=null;if(game.status==='cancelled'){leaveRoom('Game cancelled. You can find a new opponent.');return}if(!watching&&myRole!=='spectator')storage.set('13go:active-room',room);recordResult();update();draw()}else if(data.type==='error'){awaitingMove=null;selectedMove=null;renderPlacement();draw();toast(data.message);if(data.message.includes('Game not found')){leaveRoom('Previous game is no longer available.')}}};
     ws.onclose=()=>{if(socket!==ws)return;connection('Reconnecting');awaitingMove=null;selectedMove=null;renderPlacement();draw();if(room){clearTimeout(reconnectTimeout);reconnectTimeout=setTimeout(connect,Math.min(1000*Math.pow(1.7,retry++),8000))}};ws.onerror=()=>connection('Connection issue');
   }
-  function enterRoom(code,token=null,watch=false){room=code;watching=watch;if(token)storeToken(room,token);history.replaceState({},'','?room='+encodeURIComponent(room)+(watch?'&watch=1':''));myRole='spectator';game=null;selectedMove=null;awaitingMove=null;retry=0;clearTimeout(reconnectTimeout);showPage('play');connect();update();draw()}
+  function enterRoom(code,token=null,watch=false){closeMatchDialog();room=code;watching=watch;if(token)storeToken(room,token);history.replaceState({},'','?room='+encodeURIComponent(room)+(watch?'&watch=1':''));myRole='spectator';game=null;selectedMove=null;awaitingMove=null;retry=0;clearTimeout(reconnectTimeout);showPage('play');connect();update();draw()}
   function canLeave(){if(game?.status==='waiting'&&myRole!=='spectator'){toast('Cancel your current search first.');return false}return !game||myRole==='spectator'||game.solo||!['playing','scoring'].includes(game.status)||confirm('Leave your current game? It will stay open for your opponent.')}
   async function postRoom(url,data,button){
     if(posting||!canLeave())return;posting=true;$('match').disabled=true;$('solo').disabled=true;$('testMatch').disabled=true;button.textContent='Connecting…';
@@ -222,7 +245,7 @@
     if(game.status==='waiting')$('status').textContent='Looking for an opponent…';else if(active)$('status').textContent=(game.solo?roles[game.turn]+' to play':game.turn===myRole&&!spectator?'Your turn':roles[game.turn]+' to play')+(game.passes===1?' · passed last turn':'');else if(scoring){$('status').textContent='Score';renderScore()}else{$('status').textContent='';renderFinal()}
     $('scoringHint').textContent=game.adjudication?.status==='analyzing'?'Checking the score…':game.adjudication?.status==='unavailable'?'Score check unavailable. Resume or review marks.':game.scoreUncertain?.length?'Unsettled groups or dame. Review marks or resume play.':'Dead stones checked. Confirm the score.';
     $('approve').disabled=spectator||game.approvals.includes(myRole)||['analyzing','review','unavailable'].includes(game.adjudication?.status);$('approve').textContent=game.solo?'Confirm score':game.approvals.includes(myRole)?'Accepted · waiting for opponent':'Accept score';$('resume').disabled=spectator;
-    $('rematch').disabled=spectator||game.rematch.includes(myRole);$('rematch').textContent=game.solo?'Practice again':game.rematch.includes(myRole)?'Rematch requested · waiting':'Request rematch';
+    $('rematch').disabled=spectator||game.rematch.includes(myRole);$('rematch').textContent=game.solo?'Practice again':game.rematch.includes(myRole)?'Rematch requested · waiting':'Request rematch';updateMatchDialog();
   }
   function coordinate(index){return 'ABCDEFGHJKLMN'[index%N]+(N-Math.floor(index/N))}
   function canSelectMove(){return game?.status==='playing'&&myRole!=='spectator'&&(game.solo||myRole===game.turn)&&socket?.readyState===WebSocket.OPEN&&!awaitingMove}

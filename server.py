@@ -326,7 +326,7 @@ class Room:
             "gameId": self.game_id,
             "solo": self.solo,
             "testBot": self.test_bot,
-            "spectators": sum(role == "spectator" for role in self.clients.values()),
+            "spectators": sum(role == "spectator" and not ws.closed for ws, role in self.clients.items()),
             "board": self.board,
             "turn": "black" if self.turn == 1 else "white",
             "status": self.status,
@@ -573,7 +573,7 @@ def lobby_snapshot():
             "status": r.status,
             "black": r.players["black"]["name"] if r.players["black"] else None,
             "white": r.players["white"]["name"] if r.players["white"] else None,
-            "spectators": sum(role == "spectator" for role in r.clients.values()),
+            "spectators": sum(role == "spectator" and not ws.closed for ws, role in r.clients.items()),
             "moves": r.moves,
         } for r in visible[:32]],
     }
