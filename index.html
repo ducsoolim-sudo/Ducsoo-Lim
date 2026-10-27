@@ -21,6 +21,8 @@
 
 .clock{font-weight:650;letter-spacing:0}.game-view .clock{font-size:25px}.player-detail{min-width:0}.clock{white-space:nowrap;flex-shrink:0}.sound-toggle{width:42px;height:42px;border:1px solid var(--line);border-radius:50%;background:transparent;color:var(--muted);display:grid;place-items:center}.sound-toggle svg{width:20px;height:20px}.sound-toggle[aria-pressed=false]{opacity:.45}.brand-intro{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:#101313;pointer-events:none;animation:intro-out 2.6s ease forwards}.brand-intro .wordmark{width:min(46vw,220px);color:#eeeee8;animation:intro-mark 2.6s ease both}@keyframes intro-mark{0%{opacity:0;transform:translateY(8px) scale(.96)}18%,82%{opacity:1;transform:none}100%{opacity:0}}@keyframes intro-out{0%,82%{opacity:1}100%{opacity:0;visibility:hidden}}@media(max-width:700px){.game-view .clock{font-size:21px}.game-view .player-name{max-width:80px}.game-view .player{gap:5px;padding:8px 6px}.game-view .player-detail{gap:4px}}@media(prefers-reduced-motion:reduce){.brand-intro{animation:none;display:none}}
 .home-menu .button{justify-content:flex-start}.home-menu .primary:hover{color:var(--accent)}.home-menu .button:active .menu-label{opacity:.65}#testMatch{border-color:#65755b}#profilePage .quiet-details{font-size:12px}#profilePage .quiet-details p{color:var(--muted)}
+.deadline-count{display:flex;align-items:center;gap:12px;color:#f2b17e}.deadline-count span{font-size:12px}.deadline-count strong{font-size:34px;line-height:1;font-variant-numeric:tabular-nums}.board-tools{display:block}.board-tools .result{margin:14px 0 0;text-align:center}.board-tools .result p{margin:5px 0 0}.board-tools .numbers{font-size:24px}
+.home-art{filter:drop-shadow(0 25px 30px #0003)}.home-menu .button{transition:color .2s,opacity .2s}.home-menu .button:hover .menu-label{color:var(--accent)}.home-art-caption{opacity:.7}
 </style>
 </head>
 <body>
@@ -29,19 +31,19 @@
   <header class="brand">
     <div class="brand-left brand-art"><h1 class="brand-lockup"><svg class="wordmark" viewBox="0 0 252 64" role="img" aria-label="13GO" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter"><path d="M5 16 22 6v51M8 58h30"/><path d="M51 7h20a12 12 0 0 1 0 24H58m13 0a13.5 13.5 0 0 1 0 27H51"/><path d="M164 15a25 25 0 1 0 0 34V33h-20"/><circle cx="215" cy="32" r="25"/></g><circle cx="215" cy="32" r="4" fill="currentColor"/></svg></h1><p>Small board. Big game.</p></div>
     <span class="brand-edition">13 × 13 / ONLINE GO</span>
-    <button id="soundToggle" class="sound-toggle" aria-label="Mute sound" aria-pressed="true" title="Sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4Z"/><path d="M16 8c3 2 3 6 0 8M19 5c5 4 5 10 0 14"/></svg></button><div class="brand-right"><button id="homeButton" class="home-button" aria-label="Home" title="Home"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 16 5l11 10v12H5Z"/><path d="M12 27V17h8v10"/></svg></button><nav class="nav" role="tablist" aria-label="Main navigation"><button id="navPlay" role="tab" aria-controls="playPage" aria-selected="false">Play</button><button id="navWatch" role="tab" aria-controls="watchPage" aria-selected="false">Watch</button><button id="navProfile" role="tab" aria-controls="profilePage" aria-selected="false">My Page</button></nav><span class="online"><span id="light" class="light"></span><span id="connection">Ready to play</span></span></div>
+    <div class="brand-right"><button id="homeButton" class="home-button" aria-label="Home" title="Home"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 16 5l11 10v12H5Z"/><path d="M12 27V17h8v10"/></svg></button><nav class="nav" role="tablist" aria-label="Main navigation"><button id="navPlay" role="tab" aria-controls="playPage" aria-selected="false">Play</button><button id="navWatch" role="tab" aria-controls="watchPage" aria-selected="false">Watch</button><button id="navProfile" role="tab" aria-controls="profilePage" aria-selected="false">My Page</button></nav><span class="online"><span id="light" class="light"></span><span id="connection">Ready to play</span></span></div>
   </header>
-  <section id="homePage" aria-label="Home"><div class="home-stage"><div class="home-art"><svg class="stone-composition" viewBox="0 0 420 420" aria-hidden="true"><defs><radialGradient id="blackStone" cx="32%" cy="26%" r="80%"><stop stop-color="#505852"/><stop offset=".4" stop-color="#272e29"/><stop offset="1" stop-color="#080c0a"/></radialGradient><radialGradient id="whiteStone" cx="32%" cy="25%" r="85%"><stop stop-color="#fffef7"/><stop offset=".6" stop-color="#dcded4"/><stop offset="1" stop-color="#9da79c"/></radialGradient></defs><circle cx="210" cy="210" r="172" fill="none" stroke="#343d37" stroke-width="1"/><path d="M210 24v14m0 344v14M24 210h14m344 0h14" stroke="#58645a" stroke-width="1"/><circle cx="161" cy="169" r="98" fill="url(#blackStone)" stroke="#576057" stroke-width=".7"/><circle cx="263" cy="259" r="98" fill="url(#whiteStone)" stroke="#ebeee5" stroke-width=".5"/><circle cx="263" cy="259" r="5" fill="#343d37"/></svg><div class="home-art-caption"><span>BLACK / WHITE</span><span>13GO</span></div></div><div><div class="home-menu"><button id="homePlay" class="button primary"><span class="menu-label">Play</span></button>
+  <section id="homePage" aria-label="Home"><div class="home-stage"><div class="home-art"><svg class="stone-composition" viewBox="0 0 420 420" aria-hidden="true"><defs><radialGradient id="blackStone" cx="32%" cy="26%" r="80%"><stop stop-color="#505852"/><stop offset=".4" stop-color="#272e29"/><stop offset="1" stop-color="#080c0a"/></radialGradient><radialGradient id="whiteStone" cx="32%" cy="25%" r="85%"><stop stop-color="#fffef7"/><stop offset=".6" stop-color="#dcded4"/><stop offset="1" stop-color="#9da79c"/></radialGradient></defs><circle cx="210" cy="210" r="172" fill="none" stroke="#343d37" stroke-width="1"/><path d="M210 24v14m0 344v14M24 210h14m344 0h14" stroke="#58645a" stroke-width="1"/><g id="homeBlackStone" class="orbit-stone" transform="translate(161 169)"><circle r="98" fill="url(#blackStone)" stroke="#576057" stroke-width=".7"/></g><g id="homeWhiteStone" class="orbit-stone" transform="translate(263 259)"><circle r="98" fill="url(#whiteStone)" stroke="#ebeee5" stroke-width=".5"/></g></svg><div class="home-art-caption"><span>BLACK / WHITE</span><span>13GO</span></div></div><div><div class="home-menu"><button id="homePlay" class="button primary"><span class="menu-label">Play</span></button>
 <button id="homeWatch" class="button secondary"><span class="menu-label">Watch</span></button>
 <button id="homeProfile" class="button ghost"><span class="menu-label">My Page</span></button>
 <button id="resumeGame" class="button ghost resume hidden">Return to game</button></div><div class="preview-mark">13GO / V1.1</div></div></div></section>
   <main id="playPage" role="tabpanel" aria-labelledby="navPlay" class="layout hidden">
     <section id="gameBoard" class="panel board-panel hidden" aria-label="13 by 13 Go board">
-      <div class="board-head"><div><div class="kicker">THE BOARD / 13GO</div><div id="status" class="bigstatus">Your next game starts here</div></div><span id="moveCount" class="rounds">13 × 13</span></div>
+      <div class="board-head"><div><div class="kicker">THE BOARD / 13GO</div><div id="status" class="bigstatus">Your next game starts here</div></div><div id="deadlineCountdown" class="deadline-count hidden" role="status"><span id="deadlineLabel"></span><strong id="deadlineNumber"></strong></div><span id="moveCount" class="rounds">13 × 13</span></div>
       <div id="watchBanner" class="watch-banner hidden">Watching</div>
       <div class="mini-player-row"><div id="blackCard" class="player"><span class="stone black"></span><div class="player-detail"><div class="player-label">BLACK · plays first</div><div id="blackName" class="player-name">Waiting</div><div id="blackClock" class="clock" aria-label="Black time">5:00</div><div id="blackCaptures" class="player-capture">Captured 0</div></div></div><div id="whiteCard" class="player"><span class="stone white"></span><div class="player-detail"><div class="player-label">WHITE · 6.5 komi</div><div id="whiteName" class="player-name">Waiting</div><div id="whiteClock" class="clock" aria-label="White time">5:00</div><div id="whiteCaptures" class="player-capture">Captured 0</div></div></div></div>
       <div class="board-wrap"><canvas id="board" width="720" height="720" aria-label="Go board. Select an intersection to play." role="img" tabindex="0" aria-describedby="selectionHint"></canvas></div>
-      <div class="board-tools"><button id="share" class="button ghost hidden">Share</button></div>
+      <div class="board-tools"><div id="finalResult" class="result hidden" role="status"></div></div>
       <div class="board-controls">
         <div id="placementControls" class="placement-controls hidden">
           <input id="confirmMoves" type="checkbox" checked hidden aria-hidden="true">
@@ -50,7 +52,7 @@
         </div>
         <div id="playActions" class="actions split"><button id="pass" class="button ghost" disabled>Pass</button><button id="resign" class="button ghost" disabled>Resign</button></div>
         <div id="scoreActions" class="actions hidden"><p id="scoringHint" class="notice">Review the score.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">Accept score</button><button id="resume" class="button ghost">Resume play</button></div>
-        <div id="finishActions" class="actions hidden"><div id="finalResult" class="result"></div><button id="downloadSgf" class="button secondary">Download SGF</button><button id="rematch" class="button primary">Request rematch</button></div>
+        <div id="finishActions" class="actions hidden"><button id="rematch" class="button primary">Request rematch</button></div>
         <p id="clockNote" class="clock-note" role="status"></p>
         <p id="gameHint" class="control-hint">Black plays first. Two consecutive passes start scoring.</p>
       </div>
@@ -82,37 +84,51 @@
   const roles={black:'Black',white:'White',spectator:'Spectator'};
   let game=null,myRole='spectator',room=params.get('room')?.toUpperCase()||'',watching=params.get('watch')==='1',socket=null,hover=-1,toastTimeout=null,reconnectTimeout=null,retry=0,page='home',posting=false,clockReceived=Date.now(),selectedMove=null,awaitingMove=null;
   const storage={get(key){try{return localStorage.getItem(key)}catch{return null}},set(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}};
-  let audioContext=null,soundEnabled=storage.get('13go:sound')!=='off',brandSoundPending=!room&&!storage.get('13go:active-room'),lastCountdown=null;
-  function soundState(){const button=$('soundToggle');button.setAttribute('aria-pressed',String(soundEnabled));button.setAttribute('aria-label',soundEnabled?'Mute sound':'Enable sound')}
+  let audioContext=null,soundEnabled=true,brandSoundPending=!room&&!storage.get('13go:active-room'),lastCountdown=null,lastDeadlineKey=null;
   function tone(frequency,duration=.08,volume=.05,delay=0,type='sine'){
     if(!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return;
     try{const start=audioContext.currentTime+delay,osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type=type;osc.frequency.setValueAtTime(frequency,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(volume,start+.004);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain);gain.connect(audioContext.destination);osc.start(start);osc.stop(start+duration+.01)}catch{}
   }
-  let woodenTapBuffer=null;
+  let woodenTapBuffer=null,recordedTapBuffer=null;
+  const stoneSampleBytes=fetch('/static/stone-placement.wav').then(r=>r.ok?r.arrayBuffer():null).catch(()=>null);
+  let decodingStone=null;
+  function loadRecordedTap(){if(!audioContext||recordedTapBuffer||decodingStone)return;decodingStone=stoneSampleBytes.then(bytes=>bytes&&audioContext.decodeAudioData?audioContext.decodeAudioData(bytes):null).then(buffer=>{recordedTapBuffer=buffer}).catch(()=>{})}
+
   function woodenTap(volume=.7,delay=0){
     if(!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return;
-    try{if(!woodenTapBuffer){const rate=audioContext.sampleRate||44100,length=Math.floor(rate*.145);woodenTapBuffer=audioContext.createBuffer(1,length,rate);const samples=woodenTapBuffer.getChannelData(0);let wood=0,seed=713;for(let i=0;i<length;i++){const t=i/rate;seed=(seed*16807)%2147483647;const noise=seed/1073741823.5-1;wood=.63*wood+.37*noise;const attack=Math.min(1,t/.0007);const impact=.44*noise*Math.exp(-t*1050)+.31*wood*Math.exp(-t*85);const body=.25*Math.sin(2*Math.PI*475*t)*Math.exp(-t*95)+.18*Math.sin(2*Math.PI*810*t+.4)*Math.exp(-t*140)+.1*Math.sin(2*Math.PI*1240*t)*Math.exp(-t*185);samples[i]=Math.max(-.9,Math.min(.9,(impact+body)*attack))}}const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=woodenTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay)}catch{}
+    try{if(recordedTapBuffer){const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=recordedTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay);return}if(!woodenTapBuffer){const rate=audioContext.sampleRate||44100,length=Math.floor(rate*.145);woodenTapBuffer=audioContext.createBuffer(1,length,rate);const samples=woodenTapBuffer.getChannelData(0);let wood=0,seed=713;for(let i=0;i<length;i++){const t=i/rate;seed=(seed*16807)%2147483647;const noise=seed/1073741823.5-1;wood=.63*wood+.37*noise;const attack=Math.min(1,t/.0007);const impact=.44*noise*Math.exp(-t*1050)+.31*wood*Math.exp(-t*85);const body=.25*Math.sin(2*Math.PI*475*t)*Math.exp(-t*95)+.18*Math.sin(2*Math.PI*810*t+.4)*Math.exp(-t*140)+.1*Math.sin(2*Math.PI*1240*t)*Math.exp(-t*185);samples[i]=Math.max(-.9,Math.min(.9,(impact+body)*attack))}}const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=woodenTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay)}catch{}
   }
   function brandSound(){woodenTap(.38);tone(196,.45,.018,.06);tone(392,.6,.012,.18);tone(587.33,.65,.008,.34)}
-  async function unlockSound(){if(!soundEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;if(!audioContext)audioContext=new Audio();if(audioContext.state!=='running')await audioContext.resume();if(brandSoundPending){brandSoundPending=false;brandSound()}}catch{}}
+  async function unlockSound(){if(!soundEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;if(!audioContext)audioContext=new Audio();loadRecordedTap();if(audioContext.state!=='running')await audioContext.resume();if(brandSoundPending){brandSoundPending=false;brandSound()}}catch{}}
   function stoneSound(previous,next){if(previous&&previous.gameId===next.gameId&&next.moves===previous.moves+1&&next.lastMove!==null&&next.lastMove!==undefined)woodenTap()}
   function countdownSound(role,seconds,periods,main){
     if(!game||game.status!=='playing'||game.solo||role!==myRole||game.clock?.running!==role||main>0||seconds<1||seconds>10||document.hidden)return;
     const key=[game.gameId,game.moves,role,periods,seconds].join(':');if(key===lastCountdown)return;lastCountdown=key;tone(seconds<=3?1040:740,.065,seconds<=3?.055:.035);
   }
-  $('soundToggle').onclick=()=>{soundEnabled=!soundEnabled;storage.set('13go:sound',soundEnabled?'on':'off');brandSoundPending=false;soundState();if(soundEnabled)unlockSound()};soundState();
   document.addEventListener?.('pointerdown',unlockSound,{passive:true});document.addEventListener?.('keydown',unlockSound);
   function intro(){if(room||storage.get('13go:active-room')||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;$('brandIntro').classList.remove('hidden');setTimeout(()=>$('brandIntro').classList.add('hidden'),2700)}
   $('confirmMoves').checked=true;
   const savedName=storage.get('13go:nickname');
   $('nickname').value=savedName==='\ub300\uad6d\uc790'?'Player':savedName||'';
   if(savedName==='\ub300\uad6d\uc790')storage.set('13go:nickname','Player');
+  let orbitFrame=null,orbitStart=null;
+  function startHomeOrbit(){
+    if(orbitFrame!==null||!window.requestAnimationFrame||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+    const black=$('homeBlackStone'),white=$('homeWhiteStone');let lastFront=null;
+    function frame(now){orbitFrame=null;if(page!=='home'||document.hidden)return;if(orbitStart===null)orbitStart=now;
+      const angle=(now-orbitStart)/14000*Math.PI*2-Math.PI*.75;
+      for(const [stone,phase] of [[black,angle],[white,angle+Math.PI]]){const depth=Math.sin(phase);stone.setAttribute('transform','translate('+(210+Math.cos(phase)*76).toFixed(2)+' '+(210+depth*49).toFixed(2)+') scale('+(1+depth*.09).toFixed(3)+')');stone.setAttribute('opacity',String(.95+depth*.05))}
+      const front=Math.sin(angle)>0?black:white;if(front!==lastFront&&front.parentNode){front.parentNode.appendChild(front);lastFront=front}
+      orbitFrame=window.requestAnimationFrame(frame);
+    }
+    orbitFrame=window.requestAnimationFrame(frame);
+  }
+  document.addEventListener?.('visibilitychange',()=>{if(!document.hidden&&page==='home')startHomeOrbit()});
   function myName(){const name=$('nickname').value.trim().slice(0,16)||'Player';storage.set('13go:nickname',name);return name}
   function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('show'),3300)}
   function connection(text,ready=false){$('connection').textContent=text;$('light').classList.toggle('ready',ready)}
   function storeToken(code,token){if(token)storage.set('13go:'+code,token)}
-  function invitation(){return location.origin+location.pathname+'?room='+encodeURIComponent(room)+'&watch=1'}
-  function showPage(next){page=next;$('shell').classList.toggle('game-view',next==='play'&&!!game&&(game.status!=='waiting'||myRole==='spectator'));for(const name of ['home','play','watch','profile']){$(name+'Page').classList.toggle('hidden',name!==next);if(name!=='home')$('nav'+name[0].toUpperCase()+name.slice(1)).setAttribute('aria-selected',String(name===next))}$('shell').classList.toggle('home-view',next==='home');$('resumeGame').classList.toggle('hidden',!room);if(next==='watch')loadLobby();if(next==='profile')renderProfile();}
+  function showPage(next){page=next;if(next==='home')startHomeOrbit();$('shell').classList.toggle('game-view',next==='play'&&!!game&&(game.status!=='waiting'||myRole==='spectator'));for(const name of ['home','play','watch','profile']){$(name+'Page').classList.toggle('hidden',name!==next);if(name!=='home')$('nav'+name[0].toUpperCase()+name.slice(1)).setAttribute('aria-selected',String(name===next))}$('shell').classList.toggle('home-view',next==='home');$('resumeGame').classList.toggle('hidden',!room);if(next==='watch')loadLobby();if(next==='profile')renderProfile();}
   let accountUser=null,accountGames=[];
   function readGuestHistory(){try{const data=JSON.parse(storage.get('13go:history')||'[]');return Array.isArray(data)?data.filter(r=>r&&typeof r.id==='string'&&typeof r.won==='boolean'):[]}catch{return []}}
   function readHistory(){return accountUser?accountGames:readGuestHistory()}
@@ -148,7 +164,6 @@
   $('googleLogout').onclick=async()=>{try{const response=await fetch('/api/auth/logout',{method:'POST'});if(!response.ok)throw new Error();await loadAccount();if(socket){socket.onclose=null;socket.close();connect()}}catch{toast('Please try again.')}};
   setupGoogle();
   function downloadSgf(text,id){if(!text){toast('No move record is available for this game.');return}const blob=new Blob([text],{type:'application/x-go-sgf;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='13go-'+id+'.sgf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-  $('downloadSgf').onclick=()=>downloadSgf(game?.sgf,game?.gameId);
   function send(type,extras={}){if(socket?.readyState!==WebSocket.OPEN){toast('Please check your connection.');return false}if(['move','pass'].includes(type)){if(awaitingMove)return false;awaitingMove={gameId:game?.gameId,moves:game?.moves};selectedMove=null}socket.send(JSON.stringify({type,...extras}));renderPlacement();return true}
   function connect(){
     if(!room)return;if(socket){socket.onclose=null;socket.close()}
@@ -178,12 +193,11 @@
       $('watchCount').textContent=data.list.length+' public '+(data.list.length===1?'game':'games');
     }catch{$('lobbyRooms').textContent='Lobby unavailable. Please refresh.';$('watchRooms').textContent='Unable to load games. Please try Refresh games.'}
   }
-  async function share(){if(!room)return;const url=invitation();try{if(navigator.share){await navigator.share({title:'Watch 13GO',text:'Watch this 13×13 Go game live.',url});return}}catch(e){if(e.name==='AbortError')return}try{await navigator.clipboard.writeText(url);toast('Spectator link copied.')}catch{window.prompt('Copy this spectator link:',url)}}
   function update(){
     const spectator=myRole==='spectator',active=game?.status==='playing',scoring=game?.status==='scoring',finished=game?.status==='finished';
     const boardVisible=!!game&&(game.status!=='waiting'||spectator);
     $('shell').classList.toggle('game-view',page==='play'&&boardVisible);$('gameBoard').classList.toggle('hidden',!boardVisible);$('playPage').classList.toggle('game-only',boardVisible);$('playPage').classList.toggle('setup-only',!boardVisible);
-    $('watchBanner').classList.toggle('hidden',!game||(!spectator&&!game.testBot));$('watchBanner').textContent=game?.testBot?'Test opponent · Unrated':'Watching';$('codeBox').classList.toggle('hidden',!room||game?.solo);$('share').classList.toggle('hidden',!room||game?.solo);$('code').textContent=room;
+    $('watchBanner').classList.toggle('hidden',!game||(!spectator&&!game.testBot));$('watchBanner').textContent=game?.testBot?'Test opponent · Unrated':'Watching';$('codeBox').classList.toggle('hidden',!room||game?.solo);$('finalResult').classList.toggle('hidden',!finished);$('code').textContent=room;
     $('playActions').classList.toggle('hidden',!active||spectator);$('scoreActions').classList.toggle('hidden',!scoring);$('finishActions').classList.toggle('hidden',!finished);
     const searching=!!game&&game.status==='waiting'&&!spectator;
     $('startActions').classList.toggle('hidden',searching);
@@ -203,9 +217,9 @@
     $('pass').textContent=game.passes===1?'Pass & score':'Pass';
     $('myRole').textContent=spectator?'Spectator · enjoy the game.':game.solo?'Solo practice · you control both colors.':'You are playing '+roles[myRole]+'.';
     $('inviteHint').textContent=game.solo?'Practice is private and does not affect your record.':spectator?'Spectators can watch but cannot play moves.':'Your game is public. Share its spectator link.';
-    $('gameHint').classList.toggle('hidden',!scoring&&game.passes!==1);
-    $('gameHint').textContent=game.status==='waiting'?'Waiting for a second player. Others can join from the lobby.':active?(game.passes===1?'Last turn was a pass. Pass now to start scoring.':'Two consecutive passes start scoring.'):scoring?(spectator?'The players are reviewing dead groups and the final score.':'Review the score or resume play.'):'Game complete. Visit My Page for your results.';
-    if(game.status==='waiting')$('status').textContent='Looking for an opponent…';else if(active)$('status').textContent=(game.solo?roles[game.turn]+' to play':game.turn===myRole&&!spectator?'Your turn':roles[game.turn]+' to play')+(game.passes===1?' · passed last turn':'');else if(scoring){$('status').textContent='Score';renderScore()}else{$('status').textContent=roles[game.result?.winner]+' wins';renderFinal()}
+    $('gameHint').classList.toggle('hidden',finished||(!scoring&&game.passes!==1));
+    $('gameHint').textContent=game.status==='waiting'?'Waiting for a second player. Others can join from the lobby.':active?(game.passes===1?'Last turn was a pass. Pass now to start scoring.':'Two consecutive passes start scoring.'):scoring?(spectator?'The players are reviewing dead groups and the final score.':'Review the score or resume play.'):'';
+    if(game.status==='waiting')$('status').textContent='Looking for an opponent…';else if(active)$('status').textContent=(game.solo?roles[game.turn]+' to play':game.turn===myRole&&!spectator?'Your turn':roles[game.turn]+' to play')+(game.passes===1?' · passed last turn':'');else if(scoring){$('status').textContent='Score';renderScore()}else{$('status').textContent='';renderFinal()}
     $('scoringHint').textContent=game.adjudication?.status==='analyzing'?'Checking the score…':game.adjudication?.status==='unavailable'?'Score check unavailable. Resume or review marks.':game.scoreUncertain?.length?'Unsettled groups or dame. Review marks or resume play.':'Dead stones checked. Confirm the score.';
     $('approve').disabled=spectator||game.approvals.includes(myRole)||['analyzing','review','unavailable'].includes(game.adjudication?.status);$('approve').textContent=game.solo?'Confirm score':game.approvals.includes(myRole)?'Accepted · waiting for opponent':'Accept score';$('resume').disabled=spectator;
     $('rematch').disabled=spectator||game.rematch.includes(myRole);$('rematch').textContent=game.solo?'Practice again':game.rematch.includes(myRole)?'Rematch requested · waiting':'Request rematch';
@@ -232,8 +246,22 @@
   $('placeMove').onclick=()=>{if(validSelection()){const index=selectedMove.index;send('move',{index});draw()}};
   $('clearMove').onclick=()=>{selectedMove=null;renderPlacement();draw()};
 
+  function deadlineWarning(clock,elapsed){
+    let remaining=null,kind='';
+    if(game?.status==='playing'&&!game.solo&&clock?.policy==='byoyomi-manners-v1'&&clock.running===myRole){
+      const spent=(clock.turnElapsed||0)+elapsed;
+      if(game.moves===0){remaining=30-spent;kind='First move'}
+      else if((clock.mainRemaining?.[myRole]||0)>elapsed){remaining=90-spent;kind='Move now'}
+    }
+    const visible=remaining!==null&&remaining<=10&&remaining>=0;
+    $('deadlineCountdown').classList.toggle('hidden',!visible);$('moveCount').classList.toggle('hidden',visible);
+    if(!visible)return;
+    const seconds=Math.max(0,Math.ceil(remaining));$('deadlineLabel').textContent=kind;$('deadlineNumber').textContent=String(seconds);
+    const key=[game.gameId,game.moves,kind,seconds].join(':');
+    if(seconds>0&&key!==lastDeadlineKey){lastDeadlineKey=key;tone(seconds<=3?1120:820,.11,seconds<=3?.07:.05)}
+  }
   function renderClocks(){
-    const clock=game?.clock,elapsed=Math.max(0,(Date.now()-clockReceived)/1000);
+    const clock=game?.clock,elapsed=Math.max(0,(Date.now()-clockReceived)/1000);deadlineWarning(clock,elapsed);$('clockNote').classList.toggle('hidden',game?.status==='finished');
     for(const role of ['black','white']){const el=$(role+'Clock');if(game?.solo){el.textContent='∞';el.classList.remove('urgent');continue}let seconds=clock?.remaining?.[role]??300,periods=clock?.periods?.[role]??3,main=clock?.mainRemaining?.[role]??300;const modern=clock?.policy==='byoyomi-manners-v1';if(clock?.running===role){if(modern){if(main>0){const overtime=elapsed-main;if(overtime>=0){periods=Math.max(0,periods-Math.floor(overtime/30));seconds=periods?30-overtime%30:0}else seconds=main-elapsed;main=Math.max(0,main-elapsed)}else{const left=seconds-elapsed;if(left<=0){periods=Math.max(0,periods-(1+Math.floor(-left/30)));seconds=periods?30-(-left)%30:0}else seconds=left}}else seconds-=elapsed}seconds=Math.max(0,Math.ceil(seconds));if(modern)countdownSound(role,seconds,periods,main);el.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')+(modern&&main<=0?' ×'+periods:'');el.classList.toggle('urgent',modern?main<=0:seconds<=30)}
     if(game?.status==='waiting'){const seconds=Math.max(0,Math.floor((Date.now()/1000)-(game.queueSince||Date.now()/1000)));$('queueMessage').textContent='Finding an opponent · '+seconds+'s'}
     if(!game||game.solo){$('clockNote').textContent=game?.solo?'Practice':'5 min + 30 sec × 3';return}
@@ -242,7 +270,7 @@
     if(game.status==='scoring'){$('clockNote').textContent='Review time: '+Math.max(0,Math.ceil((clock?.reviewDeadline||now)-now))+'s. Accept or resume; inactivity may forfeit.';return}
     const other=myRole==='black'?'white':'black',absent=game.absentSince?.[other];
     if(game.status==='playing'&&clock?.policy==='byoyomi-manners-v1'&&clock.running===myRole){const spent=(clock.turnElapsed||0)+elapsed;if(game.moves===0){$('clockNote').textContent='Opening move · '+Math.max(0,Math.ceil(30-spent))+'s';return}if((clock.mainRemaining?.[myRole]||0)>elapsed&&spent>=60){$('clockNote').textContent='Please move · '+Math.max(0,Math.ceil(90-spent))+'s';return}}
-    $('clockNote').textContent=game.status==='finished'?'Game complete. Download your SGF record.':absent&&myRole!=='spectator'?'Opponent offline · '+Math.max(0,Math.ceil(game.disconnectGrace-(game.offlineUsed?.[other]||0)-(now-absent)))+'s to reconnect. The game clock continues.':clock?.running?'5 min + 30 sec × 3':'The clock starts when both players connect.';
+    $('clockNote').textContent=game.status==='finished'?'':absent&&myRole!=='spectator'?'Opponent offline · '+Math.max(0,Math.ceil(game.disconnectGrace-(game.offlineUsed?.[other]||0)-(now-absent)))+'s to reconnect. The game clock continues.':clock?.running?'5 min + 30 sec × 3':'The clock starts when both players connect.';
   }
   function renderScore(){const s=game.score;if(!s)return;$('scoreResult').replaceChildren();const head=document.createElement('div');head.className='numbers';head.textContent='Black '+s.black+' · White '+s.white;const p=document.createElement('p');p.textContent=roles[s.winner]+' leads by '+s.margin+' points · Territory + prisoners · White +'+s.komi;$('scoreResult').append(head,p)}
   function renderFinal(){const s=game.result;if(!s)return;$('finalResult').replaceChildren();const head=document.createElement('div');head.className='numbers';head.textContent=roles[s.winner]+' wins';const p=document.createElement('p');p.textContent=s.reason==='score'?s.margin+' points · Black '+s.black+' / White '+s.white:detailReason(s.reason);$('finalResult').append(head,p)}
@@ -318,7 +346,7 @@
   $('homePlay').onclick=()=>showPage('play');$('homeWatch').onclick=()=>showPage('watch');$('homeProfile').onclick=()=>showPage('profile');$('homeButton').onclick=()=>showPage('home');$('resumeGame').onclick=()=>showPage('play');
   $('navPlay').onclick=()=>showPage('play');$('navWatch').onclick=()=>showPage('watch');$('navProfile').onclick=()=>showPage('profile');$('browseWatch').onclick=()=>showPage('watch');
   $('testMatch').onclick=()=>postRoom('/api/test-match',{},$('testMatch'));
-  $('solo').onclick=()=>postRoom('/api/rooms',{solo:true},$('solo'));$('match').onclick=()=>postRoom('/api/match',{},$('match'));$('share').onclick=share;$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
+  $('solo').onclick=()=>postRoom('/api/rooms',{solo:true},$('solo'));$('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
   $('cancelMatch').onclick=()=>{if(game?.status==='waiting'){send('cancel');$('cancelMatch').disabled=true}};
   $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('resume').onclick=()=>send('resume');$('rematch').onclick=()=>send('rematch');
   $('saveProfile').onclick=()=>{$('nickname').value=$('profileNickname').value;myName();renderProfile();toast('Display name saved. It will apply to your next game.')};

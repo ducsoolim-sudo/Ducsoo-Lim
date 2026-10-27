@@ -1,15 +1,15 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
 const html=fs.readFileSync(require('path').join(__dirname,'index.html'),'utf8');
 const code=html.match(/<script>([\s\S]*?)<\/script>/)[1];
-function setup(seedName,seedStorage={},search="?room=ABCDEFG",audioTest=false){
-  const soundEvents=[],listeners={};
+function setup(seedName,seedStorage={},search="?room=ABCDEFG",audioTest=false,orbitTest=false){
+  const soundEvents=[],listeners={},frames=[];
   class AudioMock{constructor(){this.state="running";this.currentTime=0}createBuffer(channels,length){const data=new Float32Array(length);return {getChannelData(){return data}}}createBufferSource(){soundEvents.push("impact");return {connect(){},start(){}}}createOscillator(){soundEvents.push("tone");return {frequency:{setValueAtTime(){}},connect(){},start(){},stop(){}}}createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}resume(){return Promise.resolve()}}
   const values=new Map(seedName?[['13go:nickname',seedName]]:[]),elements=new Map();for(const [key,value] of Object.entries(seedStorage))values.set(key,value);
   class Element{constructor(){this.value='';this.textContent='';this.children=[];this.disabled=false;this.attrs={};this.classes=new Set();this.classList={toggle:(c,force)=>{const add=force===undefined?!this.classes.has(c):force;if(add)this.classes.add(c);else this.classes.delete(c);return add},add:(c)=>this.classes.add(c),remove:(c)=>this.classes.delete(c),contains:(c)=>this.classes.has(c)}}append(...x){this.children.push(...x)}replaceChildren(...x){this.children=x}setAttribute(k,v){this.attrs[k]=v}addEventListener(type,handler){this.events??={};this.events[type]=handler}getContext(){return new Proxy({createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}})}getBoundingClientRect(){return {left:0,top:0,width:720,height:720}}click(){}}
   const document={addEventListener(type,callback){listeners[type]=callback},hidden:false,getElementById(id){if(!elements.has(id))elements.set(id,new Element());return elements.get(id)},createElement(){return new Element()}};
   class WS{static OPEN=1;constructor(){WS.last=this;this.readyState=1}send(value){this.sent=JSON.parse(value);this.messages??=[];this.messages.push(this.sent)}close(){}message(x){this.onmessage({data:JSON.stringify(x)})}}
-  const sandbox={document,location:{search,protocol:'http:',host:'localhost',origin:'http://localhost',pathname:'/'},localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},WebSocket:WS,URLSearchParams,URL,Blob,history:{replaceState(){}},fetch:async()=>({ok:true,json:async()=>({online:0,playing:0,waiting:0,list:[]})}),setTimeout:()=>1,clearTimeout(){},setInterval(){},confirm:()=>true,window:{scrollTo(){},...(audioTest?{AudioContext:AudioMock}:{})},navigator:{},console};
-  vm.runInNewContext(code,sandbox);if(search||seedStorage["13go:active-room"])WS.last.onopen();return {ws:WS.last,e:id=>document.getElementById(id),values,soundEvents,listeners};
+  const sandbox={document,location:{search,protocol:'http:',host:'localhost',origin:'http://localhost',pathname:'/'},localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},WebSocket:WS,URLSearchParams,URL,Blob,history:{replaceState(){}},fetch:async()=>({ok:true,json:async()=>({online:0,playing:0,waiting:0,list:[]})}),setTimeout:()=>1,clearTimeout(){},setInterval(){},confirm:()=>true,window:{scrollTo(){},...(audioTest?{AudioContext:AudioMock}:{}),...(orbitTest?{requestAnimationFrame(callback){frames.push(callback);return frames.length}}:{})},navigator:{},console};
+  vm.runInNewContext(code,sandbox);if(search||seedStorage["13go:active-room"])WS.last.onopen();return {ws:WS.last,e:id=>document.getElementById(id),values,soundEvents,listeners,frames};
 }
 function game(id,result,solo=false){return {room:'ABCDEFG',gameId:id,solo,status:'finished',turn:'white',board:Array(169).fill(0),players:{black:{name:'Alice',connected:true},white:{name:'Bob',connected:true}},captures:{black:0,white:0},passes:0,moves:42,lastMove:null,dead:[],approvals:[],rematch:[],result:{winner:result,reason:'resign'}}}
 let t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});t.ws.message({type:'state',state:game('g1','black')});t.ws.message({type:'state',state:game('g1','black')});t.ws.message({type:'state',state:game('g2','white')});t.e('navProfile').onclick();assert.equal(t.e('statGames').textContent,2);assert.equal(t.e('statWins').textContent,1);assert.equal(t.e('statLosses').textContent,1);assert.equal(t.e('statRate').textContent,'50%');assert.equal(t.e('historyRows').children.length,2);console.log('PASS profile wins/losses/rate and duplicate result protection');
@@ -86,13 +86,13 @@ t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,0
 soundGame={...soundGame,moves:1,lastMove:84};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,1);
 t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,1);
 soundGame={...soundGame,moves:2,lastMove:null};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,1);
-t.e('soundToggle').onclick();soundGame={...soundGame,moves:3,lastMove:85};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,1);assert.equal(t.values.get('13go:sound'),'off');
+soundGame={...soundGame,moves:3,lastMove:85};t.ws.message({type:'state',state:soundGame});assert.equal(t.soundEvents.length,2);assert(!html.includes('id="soundToggle"'));
 t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.soundEvents.length=0;t.ws.message({type:'welcome',role:'black',token:'owner'});
 let countdownGame=game('count-audio','white');countdownGame.status='playing';countdownGame.result=null;countdownGame.turn='black';countdownGame.clock={policy:'byoyomi-manners-v1',remaining:{black:10,white:30},mainRemaining:{black:0,white:0},periods:{black:3,white:3},running:'black',serverTime:Date.now()/1000};
 t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,1);t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,1);
 countdownGame.clock.remaining.black=9;t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,2);
 countdownGame.clock.running='white';countdownGame.clock.remaining.white=8;t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,2);
-console.log('PASS acknowledged stone sounds, mute persistence, and own-turn countdown deduplication');
+console.log('PASS acknowledged stone sounds, removed sound button, and own-turn countdown deduplication');
 
 assert(html.includes('intro-out 2.6s'));assert(html.includes('woodenTapBuffer'));console.log('PASS wooden impact buffer and longer brand introduction');
 
@@ -100,3 +100,22 @@ assert(!html.includes('class="home-index"'));assert(!html.includes('<svg class="
 assert(!html.includes('Options &amp; rules'));assert(html.indexOf('Settings &amp; rules')>html.indexOf('id="profilePage"'));
 t=setup();let botResult=game('preview-bot','black');botResult.testBot=true;t.ws.message({type:'welcome',role:'black',token:'owner'});t.ws.message({type:'state',state:botResult});assert.equal(t.values.get('13go:history'),undefined);
 console.log('PASS plain home menus, profile settings, and test-opponent results excluded');
+
+// First action and idle forfeits get a private audiovisual 10-second warning.
+t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.soundEvents.length=0;t.ws.message({type:'welcome',role:'black',token:'owner'});
+let warning=game('deadline-audio','white');warning.status='playing';warning.result=null;warning.turn='black';warning.moves=0;warning.clock={policy:'byoyomi-manners-v1',remaining:{black:280,white:300},mainRemaining:{black:280,white:300},periods:{black:3,white:3},running:'black',turnElapsed:20,serverTime:Date.now()/1000};
+t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineNumber').textContent,'10');assert.equal(t.e('deadlineLabel').textContent,'First move');assert.equal(t.soundEvents.length,1);
+t.ws.message({type:'state',state:warning});assert.equal(t.soundEvents.length,1);warning.clock.turnElapsed=21;t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineNumber').textContent,'9');assert.equal(t.soundEvents.length,2);
+warning.moves=4;warning.clock.turnElapsed=80;t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineLabel').textContent,'Move now');assert.equal(t.e('deadlineNumber').textContent,'10');
+warning.clock.running='white';t.ws.message({type:'state',state:warning});assert(t.e('deadlineCountdown').classes.has('hidden'));
+warning.status='finished';warning.result={winner:'white',reason:'move_delay'};t.ws.message({type:'state',state:warning});assert(t.e('deadlineCountdown').classes.has('hidden'));assert.equal(t.e('clockNote').textContent,'');
+assert(!html.includes('id="share"'));assert(!html.includes('id="downloadSgf"'));assert(!html.includes('Game complete'));
+assert(html.indexOf('id="finalResult"')<html.indexOf('id="finishActions"'));
+console.log('PASS pre-forfeit countdown visibility, sound deduplication, and compact result placement');
+
+assert(html.includes('id="homeBlackStone"'));assert(html.includes('id="homeWhiteStone"'));assert(html.includes('front.parentNode.appendChild(front)'));console.log('PASS paired stones alternate foreground with reduced-motion fallback');
+
+t=setup(undefined,{},'',false,true);const order=[];const parent={appendChild(node){order.push(node)}};t.e('homeBlackStone').parentNode=parent;t.e('homeWhiteStone').parentNode=parent;
+t.frames.shift()(0);const initialBlack=t.e('homeBlackStone').attrs.transform;assert.equal(order.at(-1),t.e('homeWhiteStone'));
+t.frames.shift()(7000);assert.equal(order.at(-1),t.e('homeBlackStone'));assert.notEqual(t.e('homeBlackStone').attrs.transform,initialBlack);
+t.e('homePlay').onclick();t.frames.shift()(7100);assert.equal(t.frames.length,0);console.log('PASS home stones change depth order and stop animating outside home');
