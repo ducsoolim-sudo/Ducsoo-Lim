@@ -234,7 +234,11 @@ class Room:
                 elif clock['mainRemaining'][role]>0 and elapsed>=policy.IDLE_LOSS_SECONDS:
                     reason = 'move_delay'
             if reason or clock["remaining"][role] <= 0:
-                self.remaining[role] = 0
+                if self.time_policy == policy.POLICY:
+                    self.remaining[role] = clock['mainRemaining'][role]
+                    self.periods[role] = clock['periods'][role]
+                else:
+                    self.remaining[role] = 0
                 self.result = {"reason": reason or "time", "winner": "white" if role == "black" else "black"}
                 self.status = "finished"
                 self.turn_started = None

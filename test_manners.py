@@ -21,6 +21,8 @@ class MannersTests(unittest.TestCase):
     def test_first_action_30_second_boundary(self):
         r=self.room();self.assertFalse(r.tick(1029.99));self.assertTrue(r.tick(1030))
         self.assertEqual(r.result,{'reason':'first_move_timeout','winner':'white'})
+        self.assertEqual(r.clock(1040)['remaining']['black'],270)
+        self.assertEqual(r.periods['black'],3)
         r=self.room();self.act(r,'black',{'type':'move','index':0},1029.9)
         self.assertEqual(r.moves,1);self.assertAlmostEqual(r.remaining['black'],270.1)
 
