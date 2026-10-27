@@ -18,6 +18,7 @@ import auth
 from scoring import automatic_dead, territory_score
 from adjudicator import KataGo
 import rules_policy as policy
+from preview_bot import run_bot
 
 N = 13
 KOMI = 6.5
@@ -140,6 +141,7 @@ class Room:
         self.departures = {"black": 0, "white": 0}
         self.offline_used = {"black": 0.0, "white": 0.0}
         self.absence_counted = {"black": False, "white": False}
+        self.test_bot = False
         self.rules = "Japanese"
         self.adjudication = None
         self.ko_position = None
@@ -319,6 +321,7 @@ class Room:
             "queueSince": self.created,
             "gameId": self.game_id,
             "solo": self.solo,
+            "testBot": self.test_bot,
             "spectators": sum(role == "spectator" for role in self.clients.values()),
             "board": self.board,
             "turn": "black" if self.turn == 1 else "white",
@@ -576,6 +579,7 @@ async def index(request):
     path = ROOT / "index.html" if (ROOT / "index.html").exists() else ROOT / "static" / "index.html"
     if os.getenv("GO13_PREVIEW") == "true":
         html = path.read_text().replace("<title>13GO v1.1", "<title>13GO Test v1.1")
+        html = html.replace('id="testMatch" class="button secondary hidden"', 'id="testMatch" class="button secondary"')
         html = html.replace('13GO / V1.1', 'TEST V1.1 · Temporary games')
         return web.Response(text=html, content_type="text/html", headers={"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store"})
     return web.FileResponse(path)
@@ -607,6 +611,38 @@ async def create_room(request):
             ROOMS.pop(room.code, None)
             raise web.HTTPServiceUnavailable(text="Unable to save this game. Please try again.")
     return web.json_response({"room": room.code, "token": token, "role": role})
+
+
+async def test_match(request):
+    if os.getenv('GO13_PREVIEW') != 'true':
+        raise web.HTTPNotFound()
+    check_rate(request)
+    if len(request.app[BOT_JOBS]) >= 8:
+        raise web.HTTPServiceUnavailable(text='Test opponents are busy. Please retry shortly.')
+    data = await input_json(request)
+    async with request.app[LOCK]:
+        room = new_room(public=False, solo=False)
+        room.test_bot = True
+        role, token = room.claim(None, request_name(data))
+        try:
+            await request.app[STORE].save(room)
+        except Exception:
+            ROOMS.pop(room.code,None)
+            raise web.HTTPServiceUnavailable(text='Unable to start test game.')
+    port = request.transport.get_extra_info('sockname')[1]
+    ready = asyncio.get_running_loop().create_future()
+    task = asyncio.create_task(run_bot(port,room.code,ready,try_move,board_hash))
+    request.app[BOT_JOBS][room.code] = task
+    task.add_done_callback(lambda _: request.app[BOT_JOBS].pop(room.code,None))
+    try:
+        await asyncio.wait_for(ready,8)
+    except Exception:
+        task.cancel()
+        async with request.app[LOCK]:
+            room.status='cancelled'
+            await request.app[STORE].save(room)
+        raise web.HTTPServiceUnavailable(text='Test opponent unavailable. Please retry.')
+    return web.json_response({'room':room.code,'token':token,'role':role,'testBot':True})
 
 
 async def match_room(request):
@@ -748,6 +784,7 @@ async def cleanup_loop(app):
         pass
 
 
+BOT_JOBS = web.AppKey("preview_bots", dict)
 ENGINE = web.AppKey("engine", KataGo)
 JOBS = web.AppKey("adjudication_jobs", set)
 
@@ -813,10 +850,19 @@ async def cleanup_context(app):
     task = asyncio.create_task(cleanup_loop(app))
     yield
     task.cancel()
+    for job in list(app[BOT_JOBS].values()):
+        job.cancel()
+    await asyncio.gather(*list(app[BOT_JOBS].values()),return_exceptions=True)
     for job in app[JOBS]:
         job.cancel()
     await asyncio.gather(task, *app[JOBS], return_exceptions=True)
     await store.close()
+
+
+async def shutdown_preview_bots(app):
+    jobs=list(app[BOT_JOBS].values())
+    for job in jobs:job.cancel()
+    await asyncio.gather(*jobs,return_exceptions=True)
 
 
 def make_app(store=None):
@@ -825,16 +871,19 @@ def make_app(store=None):
     app[LOCK] = asyncio.Lock()
     app[ENGINE] = KataGo()
     app[JOBS] = set()
+    app[BOT_JOBS] = {}
     auth.setup(app, STORE)
     app.router.add_get("/", index)
     app.router.add_post("/api/rooms", create_room)
     app.router.add_post("/api/match", match_room)
+    app.router.add_post("/api/test-match", test_match)
     app.router.add_get("/api/lobby", lobby)
     app.router.add_get("/health", health)
     app.router.add_get("/ws", websocket_handler)
     if (ROOT / "static").exists():
         app.router.add_static("/static/", ROOT / "static", show_index=False)
     app.cleanup_ctx.append(cleanup_context)
+    app.on_shutdown.append(shutdown_preview_bots)
     return app
 
 

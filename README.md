@@ -161,3 +161,17 @@ acceptance rate, latency/memory load tests, and an explicit policy for exception
 unresolved positions. KataGo's Japanese-like rules are not a mathematical oracle
 for every official Japanese ruling; do not advertise a guaranteed all-position
 fully automatic referee.
+
+### One-person online testing (preview only)
+
+On the test service, choose **Play → Play test opponent**. A separate lightweight
+opponent joins through the same WebSocket handler as a real player, so server
+clocks, turn permissions, reconnect, resign and rematch can be tested by one
+person. This is not a strength-rated AI. Its rooms are private and excluded from
+account and browser results. The endpoint returns 404 unless `GO13_PREVIEW=true`;
+it does not add bots to the ordinary Find a match queue. Finished bots wait up to
+two minutes for rematch before disconnecting. Server shutdown cancels bot clients.
+
+Home buttons contain only their names. Settings & rules live in My Page.
+Original company/app identity concepts are in `BRAND_REVIEW.md` and
+`brand-directions.svg`; no company name or replacement app logo is final.

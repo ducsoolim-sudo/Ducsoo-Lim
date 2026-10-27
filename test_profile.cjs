@@ -95,3 +95,8 @@ countdownGame.clock.running='white';countdownGame.clock.remaining.white=8;t.ws.m
 console.log('PASS acknowledged stone sounds, mute persistence, and own-turn countdown deduplication');
 
 assert(html.includes('intro-out 2.6s'));assert(html.includes('woodenTapBuffer'));console.log('PASS wooden impact buffer and longer brand introduction');
+
+assert(!html.includes('class="home-index"'));assert(!html.includes('<svg class="menu-arrow"'));
+assert(!html.includes('Options &amp; rules'));assert(html.indexOf('Settings &amp; rules')>html.indexOf('id="profilePage"'));
+t=setup();let botResult=game('preview-bot','black');botResult.testBot=true;t.ws.message({type:'welcome',role:'black',token:'owner'});t.ws.message({type:'state',state:botResult});assert.equal(t.values.get('13go:history'),undefined);
+console.log('PASS plain home menus, profile settings, and test-opponent results excluded');

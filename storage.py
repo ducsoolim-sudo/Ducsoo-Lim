@@ -72,7 +72,7 @@ class RoomStore:
         values = (room.code, json.dumps(snapshot), time.time(), room.revision + 1, room.revision)
         archive = (room.game_id, json.dumps(room.state()), time.time()) if room.status == 'finished' else None
         account_records = []
-        if archive and not room.solo:
+        if archive and not room.solo and not room.test_bot:
             for color, player in room.players.items():
                 if player and player.get('account_id'):
                     other = room.players['white' if color == 'black' else 'black'] or {}
