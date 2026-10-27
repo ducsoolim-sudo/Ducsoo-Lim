@@ -41,7 +41,7 @@
       <div class="board-controls">
         <div id="placementControls" class="placement-controls hidden">
           <input id="confirmMoves" type="checkbox" checked hidden aria-hidden="true">
-          <p id="selectionHint" class="control-hint" role="status" aria-live="polite">Tap the board to preview your move.</p>
+          <p id="selectionHint" class="control-hint hidden" role="status" aria-live="polite"></p>
           <div id="placementActions" class="actions split"><button id="placeMove" class="button primary hidden" disabled>Place stone</button><button id="clearMove" class="button ghost" disabled>Clear</button></div>
         </div>
         <div id="playActions" class="actions split"><button id="pass" class="button ghost" disabled>Pass</button><button id="resign" class="button ghost" disabled>Resign</button></div>
@@ -181,10 +181,10 @@
     if(selectedMove&&!validSelection())selectedMove=null;
     $('placementControls').classList.toggle('hidden',!game||game.status!=='playing'||myRole==='spectator');
     $('pass').disabled=!canSelectMove();
-    $('placementActions').classList.toggle('hidden',!selectedMove);$('selectionHint').classList.remove('hidden');
+    $('placementActions').classList.toggle('hidden',!selectedMove);$('selectionHint').classList.toggle('hidden',!awaitingMove&&socket?.readyState===WebSocket.OPEN&&canSelectMove());
     const valid=!!validSelection();$('placeMove').disabled=!valid;$('clearMove').disabled=!valid;
     $('placeMove').textContent=valid?'Place '+coordinate(selectedMove.index):awaitingMove?'Sending…':'Place stone';
-    $('selectionHint').textContent=awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':valid?coordinate(selectedMove.index)+' · Tap again':!canSelectMove()?'Your opponent is thinking.':'Tap to select. Tap again to play.';
+    $('selectionHint').textContent=awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':valid?'':!canSelectMove()?'Your opponent is thinking.':'';
   }
   function selectMove(index){
     if(!canSelectMove())return;
@@ -227,7 +227,6 @@
       ctx.beginPath();ctx.moveTo(pad,d);ctx.lineTo(size-pad,d);ctx.stroke();
       ctx.beginPath();ctx.moveTo(d,pad);ctx.lineTo(d,size-pad);ctx.stroke();
     }
-    ctx.fillStyle='#65502f';ctx.font='18px -apple-system,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';for(let i=0;i<N;i++){ctx.fillText('ABCDEFGHJKLMN'[i],pad+i*step,size-22);ctx.fillText(String(N-i),22,pad+i*step)}
     for(const x of [3,9])for(const y of [3,9])star(x,y);
     star(6,6);
     function star(x,y){ctx.beginPath();ctx.arc(pad+x*step,pad+y*step,4.4,0,Math.PI*2);ctx.fillStyle='#65502f';ctx.fill()}

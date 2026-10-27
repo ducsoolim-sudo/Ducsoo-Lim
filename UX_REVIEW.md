@@ -125,3 +125,9 @@ Crosshair is now warm ivory with a subtle dark contact shadow. Game layout uses
 up to 1100px board width on larger screens and only 4px outer margins on phones.
 Header, player cards and status spacing are reduced; name/time share one line.
 Home and profile spacing remains independent. Two-tap confirmation is unchanged.
+
+## Minimal board labels — 2026-10-27
+
+Removed painted row/column coordinates and routine tap instructions. Selection
+crosshair, same-point two-tap confirmation and keyboard control remain. Connection
+and pending-server notices remain available when interaction is blocked.
