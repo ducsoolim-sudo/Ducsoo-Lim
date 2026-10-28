@@ -26,17 +26,66 @@
 .board-meta{display:flex;align-items:center;gap:16px}.spectator-count{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}.spectator-count svg{width:18px;height:18px}.match-backdrop{position:fixed;inset:0;background:#050a09a8;backdrop-filter:blur(5px);z-index:50;display:grid;place-items:center;padding:24px}.match-card{width:min(100%,390px);padding:30px;border-radius:22px;background:#eeeee8;color:#101313;box-shadow:0 28px 90px #0006;animation:match-arrive .2s ease-out}.match-kicker{font-size:10px;letter-spacing:2px;color:#647267}.match-card h2{font-size:42px;font-weight:550;letter-spacing:-1.5px;margin:18px 0 20px;line-height:1.1}.match-card p{color:#5b665f;font-size:14px;margin:20px 0 26px;line-height:1.5}.match-players{display:grid;gap:12px}.match-player{display:flex;align-items:center;gap:10px;font-size:15px;min-width:0}.match-player span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.match-card .primary{background:#14261b;color:#f1f4eb;border-color:#14261b}.match-card .stone{width:23px;height:23px}@keyframes match-arrive{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.match-card{animation:none}}
 /* Company signature: a stone between two people. */
 .brand-intro{border:0;color:#ecebe3;padding:0;pointer-events:auto;animation:none;cursor:pointer;background:radial-gradient(ellipse at 50% 43%,#252c28 0%,#101513 45%,#0c100e 100%)}.studio-lockup{display:flex;flex-direction:column;align-items:center;animation:studio-in 1.1s ease both}.studio-symbol{width:112px;height:112px;margin-bottom:26px;filter:drop-shadow(0 8px 22px #0004)}.studio-name{font-size:18px;font-weight:450;letter-spacing:7px;padding-left:7px}.studio-app{margin-top:62px;font-size:11px;letter-spacing:4px;color:#a4afa5}.brand-intro.studio-out{opacity:0;transition:opacity .65s ease;pointer-events:none}@keyframes studio-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.brand-intro{display:grid}.studio-lockup{animation:none}.brand-intro.studio-out{transition:none}}
+
+/* Home identity: quiet typography and natural black/ivory stones. */
+.home-view .brand{border-bottom:0;padding-bottom:20px}
+.home-view .brand-edition{font-size:10px;letter-spacing:1.8px;color:#8f9692}
+.home-view .brand-lockup{width:132px}
+.home-stage{gap:clamp(48px,8vw,110px);padding:42px 0 54px}
+.home-art{filter:drop-shadow(0 22px 28px #0005)}
+.home-art-caption{display:none}
+.home-menu .button{min-height:110px;font-size:32px;font-weight:400;letter-spacing:-1px;border-bottom-color:#303634}
+.home-menu .primary{min-height:138px;font-size:58px;font-weight:450;letter-spacing:-2px}
+.home-menu .button:focus-visible{outline:2px solid var(--accent);outline-offset:7px;border-radius:3px}
+.home-menu .button:active{transform:none;background:#ffffff04}
+.home-menu .resume{min-height:52px;font-size:14px;letter-spacing:0;margin-top:18px}
+.home-view .preview-mark{margin-top:20px;font-size:9px;letter-spacing:1.6px;color:#848d87}
+.stone.black{background:radial-gradient(circle at 30% 25%,#5b5d5d,#17191a 68%)}
+.stone.white{background:radial-gradient(circle at 30% 25%,#fffef9,#e6e1d8 72%);border-color:#cfcac1}
+@media(max-width:700px){
+.home-view{padding:28px 28px max(30px,env(safe-area-inset-bottom))}
+.home-view .brand{padding-bottom:8px}
+.home-view .brand-lockup{width:112px}
+.home-view .brand-edition{font-size:8px;letter-spacing:1.1px}
+.home-stage{gap:18px;padding:14px 0 0}
+.home-art{max-width:238px}
+.home-menu .button{min-height:84px;font-size:28px;letter-spacing:-.8px}
+.home-menu .primary{min-height:108px;font-size:48px;letter-spacing:-1.8px}
+.home-menu .resume{font-size:13px;min-height:46px;margin-top:10px}
+.home-view .preview-mark{margin-top:16px}
+}
+@media(max-height:740px) and (max-width:700px){
+.home-art{max-width:180px}
+.home-stage{gap:8px;padding-top:8px}
+.home-menu .button{min-height:72px;font-size:25px}
+.home-menu .primary{min-height:92px;font-size:43px}
+}
+
+/* Keep essential controls and dialog contents usable on narrow phones. */
+.game-view .home-button{width:44px;height:44px;flex:none}
+.match-backdrop{padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+.match-card{max-height:calc(100dvh - 40px);overflow-y:auto}
+.match-card h2{overflow-wrap:anywhere}
+.match-player span:last-child{min-width:0}
+.game-view .player-name{min-width:0;flex:1}
+@media(max-width:380px){
+.match-card{padding:24px;border-radius:18px}
+.match-card h2{font-size:36px;letter-spacing:-1px}
+.game-view .player-name{font-size:11px}
+.game-view .clock{font-size:19px}
+.board-meta{gap:10px}
+}
 </style>
 </head>
 <body>
 <button id="brandIntro" class="brand-intro hidden" aria-label="SAI STUDIO · Open 13GO"><span class="studio-lockup"><svg class="studio-symbol" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><span class="studio-name">SAI STUDIO</span><span class="studio-app">13GO</span></span></button>
 <div id="shell" class="shell home-view">
   <header class="brand">
-    <div class="brand-left brand-art"><h1 class="brand-lockup"><svg class="wordmark" viewBox="0 0 252 64" role="img" aria-label="13GO" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter"><path d="M5 16 22 6v51M8 58h30"/><path d="M51 7h20a12 12 0 0 1 0 24H58m13 0a13.5 13.5 0 0 1 0 27H51"/><path d="M164 15a25 25 0 1 0 0 34V33h-20"/><circle cx="215" cy="32" r="25"/></g><circle cx="215" cy="32" r="4" fill="currentColor"/></svg></h1><p>Small board. Big game.</p></div>
+    <div class="brand-left brand-art"><h1 class="brand-lockup"><svg class="wordmark" viewBox="0 0 252 64" role="img" aria-label="13GO" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 19 24 8v48M9 56h30"/><path d="M53 8h18a12 12 0 0 1 0 24H60m11 0a12 12 0 0 1 0 24H53"/><path d="M164 15a24 24 0 1 0 0 34V33h-19"/><circle cx="215" cy="32" r="24"/></g></svg></h1><p>Small board. Big game.</p></div>
     <span class="brand-edition">13 × 13 / ONLINE GO</span>
     <div class="brand-right"><button id="homeButton" class="home-button" aria-label="Home" title="Home"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 16 5l11 10v12H5Z"/><path d="M12 27V17h8v10"/></svg></button><nav class="nav" role="tablist" aria-label="Main navigation"><button id="navPlay" role="tab" aria-controls="playPage" aria-selected="false">Play</button><button id="navWatch" role="tab" aria-controls="watchPage" aria-selected="false">Watch</button><button id="navProfile" role="tab" aria-controls="profilePage" aria-selected="false">My Page</button></nav><span class="online"><span id="light" class="light"></span><span id="connection">Ready to play</span></span></div>
   </header>
-  <section id="homePage" aria-label="Home"><div class="home-stage"><div class="home-art"><svg class="stone-composition" viewBox="0 0 420 420" aria-hidden="true"><defs><radialGradient id="blackStone" cx="32%" cy="26%" r="80%"><stop stop-color="#505852"/><stop offset=".4" stop-color="#272e29"/><stop offset="1" stop-color="#080c0a"/></radialGradient><radialGradient id="whiteStone" cx="32%" cy="25%" r="85%"><stop stop-color="#fffef7"/><stop offset=".6" stop-color="#dcded4"/><stop offset="1" stop-color="#9da79c"/></radialGradient></defs><circle cx="210" cy="210" r="172" fill="none" stroke="#343d37" stroke-width="1"/><path d="M210 24v14m0 344v14M24 210h14m344 0h14" stroke="#58645a" stroke-width="1"/><g id="homeBlackStone" class="orbit-stone" transform="translate(161 169)"><circle r="98" fill="url(#blackStone)" stroke="#576057" stroke-width=".7"/></g><g id="homeWhiteStone" class="orbit-stone" transform="translate(263 259)"><circle r="98" fill="url(#whiteStone)" stroke="#ebeee5" stroke-width=".5"/></g></svg><div class="home-art-caption"><span>BLACK / WHITE</span><span>13GO</span></div></div><div><div class="home-menu"><button id="homePlay" class="button primary"><span class="menu-label">Play</span></button>
+  <section id="homePage" aria-label="Home"><div class="home-stage"><div class="home-art"><svg class="stone-composition" viewBox="0 0 420 420" aria-hidden="true"><defs><radialGradient id="blackStone" cx="32%" cy="26%" r="80%"><stop stop-color="#57595a"/><stop offset=".4" stop-color="#262829"/><stop offset="1" stop-color="#090b0c"/></radialGradient><radialGradient id="whiteStone" cx="32%" cy="25%" r="85%"><stop stop-color="#fffef8"/><stop offset=".6" stop-color="#e3e0d8"/><stop offset="1" stop-color="#aaa79f"/></radialGradient></defs><g id="homeBlackStone" class="orbit-stone" transform="translate(161 169)"><circle r="98" fill="url(#blackStone)" stroke="#626365" stroke-width=".5"/></g><g id="homeWhiteStone" class="orbit-stone" transform="translate(263 259)"><circle r="98" fill="url(#whiteStone)" stroke="#f1eee7" stroke-width=".5"/></g></svg><div class="home-art-caption"><span>BLACK / WHITE</span><span>13GO</span></div></div><div><div class="home-menu"><button id="homePlay" class="button primary"><span class="menu-label">Play</span></button>
 <button id="homeWatch" class="button secondary"><span class="menu-label">Watch</span></button>
 <button id="homeProfile" class="button ghost"><span class="menu-label">My Page</span></button>
 <button id="resumeGame" class="button ghost resume hidden">Return to game</button></div><div class="preview-mark">13GO / V1.1</div></div></div></section>
@@ -55,7 +104,7 @@
         </div>
         <div id="playActions" class="actions split"><button id="pass" class="button ghost" disabled>Pass</button><button id="resign" class="button ghost" disabled>Resign</button></div>
         <div id="scoreActions" class="actions hidden"><p id="scoringHint" class="notice">Review the score.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">Confirm</button></div>
-        <div id="finishActions" class="actions hidden"><button id="rematch" class="button primary">Request rematch</button></div>
+        <div id="finishActions" class="actions hidden"><button id="rematch" class="button primary">Request rematch</button><button id="newGame" class="button secondary">New game</button></div>
         <p id="clockNote" class="clock-note" role="status"></p>
         <p id="gameHint" class="control-hint">Black plays first. Two consecutive passes start scoring.</p>
       </div>
@@ -201,7 +250,7 @@
     const ws=new WebSocket(protocol+'//'+location.host+'/ws');socket=ws;
     ws.onopen=()=>{if(socket!==ws)return;retry=0;connection('Connected',true);send('join',{room,token:storage.get('13go:'+room),name:myName(),mode:watching?'watch':'play'})};
     ws.onmessage=e=>{if(socket!==ws)return;let data;try{data=JSON.parse(e.data)}catch{return}if(data.type==='welcome'){myRole=data.role;storeToken(room,data.token);update()}else if(data.type==='state'){stoneSound(game,data.state);if(!game||game.gameId!==data.state.gameId||game.moves!==data.state.moves)lastCountdown=null;game=data.state;clockReceived=Date.now();if(awaitingMove&&(game.gameId!==awaitingMove.gameId||game.moves!==awaitingMove.moves||game.status!=='playing'))awaitingMove=null;if(game.status==='cancelled'){leaveRoom('Game cancelled. You can find a new opponent.');return}if(!watching&&myRole!=='spectator')storage.set('13go:active-room',room);recordResult();update();draw()}else if(data.type==='error'){awaitingMove=null;selectedMove=null;renderPlacement();draw();toast(data.message);if(data.message.includes('Game not found')){leaveRoom('Previous game is no longer available.')}}};
-    ws.onclose=()=>{if(socket!==ws)return;connection('Reconnecting');awaitingMove=null;selectedMove=null;renderPlacement();draw();if(room){clearTimeout(reconnectTimeout);reconnectTimeout=setTimeout(connect,Math.min(1000*Math.pow(1.7,retry++),8000))}};ws.onerror=()=>connection('Connection issue');
+    ws.onclose=event=>{if(socket!==ws)return;if(event?.code===4001){clearTimeout(reconnectTimeout);leaveRoom('Game opened in another tab.');return}connection('Reconnecting');awaitingMove=null;selectedMove=null;renderPlacement();draw();if(room){clearTimeout(reconnectTimeout);reconnectTimeout=setTimeout(connect,Math.min(1000*Math.pow(1.7,retry++),8000))}};ws.onerror=()=>connection('Connection issue');
   }
   function enterRoom(code,token=null,watch=false){closeMatchDialog();room=code;watching=watch;if(token)storeToken(room,token);history.replaceState({},'','?room='+encodeURIComponent(room)+(watch?'&watch=1':''));myRole='spectator';game=null;selectedMove=null;awaitingMove=null;retry=0;clearTimeout(reconnectTimeout);showPage('play');connect();update();draw()}
   function canLeave(){if(game?.status==='waiting'&&myRole!=='spectator'){toast('Cancel your current search first.');return false}return !game||myRole==='spectator'||game.solo||!['playing','scoring'].includes(game.status)||confirm('Leave your current game? It will stay open for your opponent.')}
@@ -378,7 +427,7 @@
   $('testMatch').onclick=()=>postRoom('/api/test-match',{},$('testMatch'));
   $('solo').onclick=()=>postRoom('/api/rooms',{solo:true},$('solo'));$('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
   $('cancelMatch').onclick=()=>{if(game?.status==='waiting'){send('cancel');$('cancelMatch').disabled=true}};
-  $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('rematch').onclick=()=>send('rematch');
+  $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('rematch').onclick=()=>send('rematch');$('newGame').onclick=()=>{if(game?.status==='finished')leaveRoom()};
   $('saveProfile').onclick=()=>{$('nickname').value=$('profileNickname').value;myName();renderProfile();toast('Display name saved. It will apply to your next game.')};
   $('nickname').onchange=()=>myName();
   $('exportHistory').onclick=()=>{const blob=new Blob([JSON.stringify({name:myName(),games:readHistory(),exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='13go-game-history.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};

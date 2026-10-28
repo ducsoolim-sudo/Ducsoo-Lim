@@ -734,9 +734,20 @@ async def websocket_handler(request):
                             await socket.send_json({"type": "error", "message": "Unable to save this game. Reconnect shortly."})
                             continue
                         room = candidate
+                        # A seat has one controlling connection. Retire the old
+                        # socket only after the replacement join is durable.
+                        if role in ("black", "white"):
+                            for previous, previous_role in tuple(room.clients.items()):
+                                if previous is not socket and previous_role == role:
+                                    room.clients.pop(previous, None)
+                                    closing = asyncio.create_task(previous.close(code=4001, message=b"Seat reconnected elsewhere"))
+                                    request.app[JOBS].add(closing)
+                                    closing.add_done_callback(request.app[JOBS].discard)
                         await socket.send_json({"type": "welcome", "role": role, "token": token, "room": code})
                         await room.broadcast()
                     else:
+                        if room.clients.get(socket) != role:
+                            raise ValueError("This connection no longer controls the seat. Reconnect to continue.")
                         before = room.snapshot()
                         room.act(role, data)
                         if room.status == 'scoring' and before['status'] != 'scoring':

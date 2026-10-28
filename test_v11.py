@@ -130,6 +130,50 @@ class DurabilityTests(unittest.IsolatedAsyncioTestCase):
             await ws.close()
         finally:await client.close()
 
+    async def test_reconnect_retires_old_seat_socket_after_durable_join(self):
+        s.ROOMS.clear();s.REQUEST_TIMES.clear()
+        store=s.RoomStore(path=':memory:',database_url='')
+        client=TestClient(TestServer(s.make_app(store)));await client.start_server()
+        try:
+            seat=await (await client.post('/api/rooms',json={'solo':True})).json()
+            first=await client.ws_connect('/ws');await first.send_json({'type':'join',**seat})
+            await first.receive_json();await first.receive_json()
+            second=await client.ws_connect('/ws');await second.send_json({'type':'join',**seat})
+            self.assertEqual((await second.receive_json(timeout=2))['role'],'black')
+            await second.receive_json(timeout=2)
+            closed=await first.receive(timeout=2)
+            self.assertEqual(closed.type,s.WSMsgType.CLOSE)
+            self.assertEqual(closed.data,4001)
+            room=s.ROOMS[seat['room']]
+            self.assertEqual(list(room.clients.values()),['black'])
+            await second.send_json({'type':'move','index':0})
+            for _ in range(3):
+                state=(await second.receive_json(timeout=2))['state']
+                if state['moves']==1:break
+            self.assertEqual(state['moves'],1)
+            await second.close()
+        finally:await client.close()
+
+    async def test_failed_reconnect_keeps_original_seat_connection(self):
+        s.ROOMS.clear();s.REQUEST_TIMES.clear()
+        store=s.RoomStore(path=':memory:',database_url='')
+        client=TestClient(TestServer(s.make_app(store)));await client.start_server()
+        try:
+            seat=await (await client.post('/api/rooms',json={'solo':True})).json()
+            first=await client.ws_connect('/ws');await first.send_json({'type':'join',**seat})
+            await first.receive_json();await first.receive_json()
+            original=store.save
+            async def fail(room):raise RuntimeError('database unavailable')
+            store.save=fail
+            second=await client.ws_connect('/ws');await second.send_json({'type':'join',**seat})
+            self.assertEqual((await second.receive_json(timeout=2))['type'],'error')
+            self.assertFalse(first.closed)
+            store.save=original
+            await first.send_json({'type':'move','index':0})
+            self.assertEqual((await first.receive_json(timeout=2))['state']['moves'],1)
+            await first.close();await second.close()
+        finally:await client.close()
+
     async def test_failed_storage_rolls_back_unacknowledged_move(self):
         s.ROOMS.clear();s.REQUEST_TIMES.clear()
         store=s.RoomStore(path=':memory:',database_url='')
