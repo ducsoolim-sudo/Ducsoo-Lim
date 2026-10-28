@@ -166,6 +166,7 @@
   function detailReason(reason){return endReasons[reason]||reason}
   function leaveRoom(message){closeMatchDialog();clearTimeout(reconnectTimeout);if(socket){socket.onclose=null;socket.close();socket=null}storage.set('13go:active-room','');room='';game=null;selectedMove=null;awaitingMove=null;myRole='spectator';watching=false;history.replaceState({},'',location.pathname);connection('Ready to play');showPage('play');update();draw();if(message)toast(message)}
   function recordResult(){
+    if(game?.status==='finished'&&!watching&&myRole!=='spectator'&&storage.get('13go:active-room')===room)storage.set('13go:active-room','');
     if(!game?.gameId||game.status!=='finished'||!game.result||game.testBot||watching||myRole==='spectator')return;
     if(game.solo){const sessions=readPractice();if(!sessions.includes(game.gameId)){sessions.push(game.gameId);storage.set('13go:practice',JSON.stringify(sessions))}return}
     if(accountUser){loadAccount();return}
