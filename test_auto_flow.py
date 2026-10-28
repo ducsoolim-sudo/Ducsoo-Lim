@@ -1,13 +1,19 @@
 """Automatic adjudication contracts across the real WebSocket lifecycle."""
 import unittest
+from unittest.mock import patch
 from aiohttp.test_utils import TestClient, TestServer
 import server as s
 
 
-def settled_board():
-    board=[1 if i%13<6 else -1 for i in range(169)]
-    for point in (0,2,10,12):board[point]=0
-    return board
+def finished_actions():
+    goals={1:[row*13+col for row in range(12,-1,-1) for col in range(6) if row*13+col not in (0,2)],
+           -1:[row*13+col for row in range(12,-1,-1) for col in range(12,5,-1) if row*13+col not in (10,12)]}
+    color=1
+    while any(goals.values()):
+        yield color, ({'type':'move','index':goals[color].pop(0)} if goals[color] else {'type':'pass'})
+        color *= -1
+    yield color, {'type':'pass'}
+    yield -color, {'type':'pass'}
 
 
 class AutomaticScoreFlow(unittest.IsolatedAsyncioTestCase):
@@ -34,13 +40,18 @@ class AutomaticScoreFlow(unittest.IsolatedAsyncioTestCase):
         black=await (await self.client.post('/api/match',json={'name':'A'})).json()
         white=await (await self.client.post('/api/match',json={'name':'B'})).json()
         room=s.ROOMS[black['room']]
-        # Explicit setup fixture; no fabricated public test endpoint or game moves.
-        room.board=settled_board()
+        # Build the finish through180 legal actions, never inject the board.
         a=await self.join(black);b=await self.join(white);await self.state(a)
-        for ws in (a,b):
-            await ws.send_json({'type':'pass'})
-            left,right=await self.state(a),await self.state(b)
-            self.assertEqual(left,right)
+        started=s.time.time()
+        for index,(color,action) in enumerate(finished_actions()):
+            ws=a if color==1 else b
+            # Virtual quarter-second actions keep the real flood limiter enabled.
+            with patch('server.time.time',return_value=started+(index+1)*.25):
+                await ws.send_json(action)
+                left,right=await self.state(a),await self.state(b)
+                self.assertEqual(left,right)
+        self.assertEqual(left['moves'],180)
+        self.assertEqual(left['captures'],{'black':0,'white':0})
         self.assertEqual(left['adjudication']['source'],'Benson pass-alive proof')
         self.assertEqual(left['status'],'scoring')
         self.assertEqual(left['score']['blackTerritory'],2)

@@ -81,3 +81,10 @@ points, score_disagreement; leads -8.15958491/-8.1259562. This passes ONLY the
 unfinished-position rejection check. It does not pass the normal 256/1024 release
 budget, completed-game accuracy, rare-Japanese-rules, or deployment-latency gates.
 No heavy model or engine runtime has been activated on the hosted test service.
+
+The hosted proof-only path was also exercised through180 legal move/pass actions
+from an empty private practice room, without injecting a board: Black2, White8.5,
+zero prisoners, then confirmation persisted White+6.5 and the correct SGF result.
+The WebSocket regression now constructs that same legal sequence with the flood
+limiter enabled and a virtual quarter-second action cadence. This is a designed
+validation sequence, not a dataset of representative human games.
