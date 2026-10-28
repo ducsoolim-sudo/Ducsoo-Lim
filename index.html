@@ -139,7 +139,7 @@
     $('matchDialogKicker').textContent=game.testBot?'TEST MATCH · UNRATED':game.solo?'PRACTICE':'13GO / 13 × 13';
     const winner=roles[game.result?.winner]||'';
     $('matchDialogTitle').textContent=kind==='start'?'Ready to play':game.solo||myRole==='spectator'?winner+' wins':game.result.winner===myRole?'You win':'You lose';
-    $('matchDialogDetail').textContent=kind==='start'?roles[myRole]+' · 5 min + 30 sec × 3':game.result.reason==='score'?winner+' +'+game.result.margin+' · White +6.5':winner+' · '+detailReason(game.result.reason);
+    $('matchDialogDetail').textContent=kind==='start'?roles[myRole]+' · 5 min + 30 sec × 3':game.result.reason==='score'?winner+' +'+game.result.margin:winner+' · '+detailReason(game.result.reason);
     const players=$('matchDialogPlayers');players.replaceChildren();for(const color of ['black','white']){const row=document.createElement('div');row.className='match-player';const stone=document.createElement('span');stone.className='stone '+color;const name=document.createElement('span');name.textContent=game.players[color]?.name||roles[color];row.append(stone,name);players.append(row)}
     $('matchDialogConfirm').textContent=kind==='start'?'Play':'OK';$('shell').inert=true;$('matchDialog').classList.remove('hidden');$('matchDialogConfirm').focus?.();
     if(kind==='start')matchDialogTimer=setTimeout(closeMatchDialog,2200);
@@ -247,11 +247,11 @@
     $('pass').textContent=game.passes===1?'Pass & score':'Pass';
     $('myRole').textContent=spectator?'Spectator · enjoy the game.':game.solo?'Solo practice · you control both colors.':'You are playing '+roles[myRole]+'.';
     $('inviteHint').textContent=game.solo?'Practice is private and does not affect your record.':spectator?'Spectators can watch but cannot play moves.':'Your game is public. Share its spectator link.';
-    $('gameHint').classList.toggle('hidden',finished||(!scoring&&game.passes!==1));
-    $('gameHint').textContent=game.status==='waiting'?'Waiting for a second player. Others can join from the lobby.':active?(game.passes===1?'Last turn was a pass. Pass now to start scoring.':'Two consecutive passes start scoring.'):scoring?(spectator?'The players are reviewing dead groups and the final score.':'Confirm the score.'):'';
+    $('gameHint').classList.toggle('hidden',finished||(!scoring&&game.passes!==1&&!game.scoringNotice));
+    $('gameHint').textContent=game.scoringNotice|| (game.status==='waiting'?'Waiting for a second player. Others can join from the lobby.':active?(game.passes===1?'Last turn was a pass. Pass now to start scoring.':'Two consecutive passes start scoring.'):scoring?(spectator?'The players are reviewing dead groups and the final score.':'Confirm the score.'):'');
     if(game.status==='waiting')$('status').textContent='Looking for an opponent…';else if(active)$('status').textContent=(game.solo?roles[game.turn]+' to play':game.turn===myRole&&!spectator?'Your turn':roles[game.turn]+' to play')+(game.passes===1?' · passed last turn':'');else if(scoring){$('status').textContent='Score';renderScore()}else{$('status').textContent='';renderFinal()}
     $('scoringHint').textContent=game.adjudication?.status==='analyzing'?'Checking the score…':game.adjudication?.status==='unavailable'?'Score check unavailable.':game.scoreUncertain?.length?'Score not settled.':'Dead stones checked. Confirm the score.';
-    $('approve').disabled=spectator||game.approvals.includes(myRole)||['analyzing','review','unavailable'].includes(game.adjudication?.status);$('approve').textContent=game.approvals.includes(myRole)?'Waiting…':'Confirm';
+    $('approve').disabled=spectator||!!game.scoreUncertain?.length||game.approvals.includes(myRole)||['analyzing','review','unavailable'].includes(game.adjudication?.status);$('approve').textContent=game.approvals.includes(myRole)?'Waiting…':'Confirm';
     $('rematch').disabled=spectator||game.rematch.includes(myRole);$('rematch').textContent=game.solo?'Practice again':game.rematch.includes(myRole)?'Rematch requested · waiting':'Request rematch';updateMatchDialog();
   }
   function coordinate(index){return 'ABCDEFGHJKLMN'[index%N]+(N-Math.floor(index/N))}
@@ -302,7 +302,7 @@
     if(game.status==='playing'&&clock?.policy==='byoyomi-manners-v1'&&clock.running===myRole){const spent=(clock.turnElapsed||0)+elapsed;if(game.moves===0){$('clockNote').textContent='Opening move · '+Math.max(0,Math.ceil(30-spent))+'s';return}if((clock.mainRemaining?.[myRole]||0)>elapsed&&spent>=60){$('clockNote').textContent='Please move · '+Math.max(0,Math.ceil(90-spent))+'s';return}}
     $('clockNote').textContent=game.status==='finished'?'':absent&&myRole!=='spectator'?'Opponent offline · '+Math.max(0,Math.ceil(game.disconnectGrace-(game.offlineUsed?.[other]||0)-(now-absent)))+'s to reconnect. The game clock continues.':clock?.running?'5 min + 30 sec × 3':'The clock starts when both players connect.';
   }
-  function renderScore(){const s=game.score;if(!s)return;$('scoreResult').replaceChildren();const head=document.createElement('div');head.className='numbers';head.textContent='Black '+s.black+' · White '+s.white;const p=document.createElement('p');p.textContent=roles[s.winner]+' leads by '+s.margin+' points · Territory + prisoners · White +'+s.komi;$('scoreResult').append(head,p)}
+  function renderScore(){$('scoreResult').replaceChildren();if(game.scoreUncertain?.length||['analyzing','review','unavailable'].includes(game.adjudication?.status))return;const s=game.score;if(!s)return;const head=document.createElement('div');head.className='numbers';head.textContent='Black '+s.black+' · White '+s.white;const p=document.createElement('p');p.textContent=roles[s.winner]+' leads by '+s.margin+' points · Territory + prisoners · White +'+s.komi;$('scoreResult').append(head,p)}
   function renderFinal(){const s=game.result;if(!s)return;$('finalResult').replaceChildren();const head=document.createElement('div');head.className='numbers';head.textContent=roles[s.winner]+' wins';const p=document.createElement('p');p.textContent=s.reason==='score'?s.margin+' points · Black '+s.black+' / White '+s.white:detailReason(s.reason);$('finalResult').append(head,p)}
     function dimensions(){const size=720,pad=48,step=(size-2*pad)/(N-1);return{size,pad,step}}
   function draw(){

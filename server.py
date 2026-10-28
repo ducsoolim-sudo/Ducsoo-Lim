@@ -171,6 +171,7 @@ class Room:
         self.remaining = {"black": MAIN_SECONDS, "white": MAIN_SECONDS}
         self.turn_started = None
         self.review_deadline = None
+        self.scoring_notice = None
         self.absent_since = {"black": None, "white": None}
 
     def snapshot(self):
@@ -345,9 +346,10 @@ class Room:
             "dead": sorted(self.dead),
             "approvals": sorted(self.approvals),
             "rematch": sorted(self.rematch),
-            "score": self.calculate_score() if self.status == "scoring" else None,
+            "score": self.calculate_score() if self.status == "scoring" and not self.score_uncertain and not (self.adjudication and self.adjudication.get("status") in ("analyzing", "review", "unavailable")) else None,
             "rules": self.rules,
             "scoreUncertain": sorted(self.score_uncertain),
+            "scoringNotice": self.scoring_notice,
             "adjudication": self.adjudication,
             "result": self.result,
         }
@@ -432,6 +434,7 @@ class Room:
                 else:
                     self.remaining[role] = self.clock(now)["remaining"][role] + INCREMENT
                 self.turn_started = now
+            self.scoring_notice = None
             self.move_record.append((self.turn, index if kind == "move" else None))
             self.moves += 1
             self.turn *= -1
@@ -459,8 +462,8 @@ class Room:
         elif kind == "approve":
             if self.status != "scoring":
                 raise ValueError("The score can only be accepted during scoring.")
-            if self.adjudication and self.adjudication.get("status") in ("analyzing", "review", "unavailable"):
-                raise ValueError("Automatic scoring needs review. Resume play or correct the marked groups.")
+            if self.score_uncertain or (self.adjudication and self.adjudication.get("status") in ("analyzing", "review", "unavailable")):
+                raise ValueError("The position is not settled. The score cannot be confirmed.")
             self.approvals.update(("black", "white") if self.solo else (role,))
             if len(self.approvals) == 2:
                 self.result = {"reason": "score", **self.calculate_score()}
@@ -794,6 +797,10 @@ JOBS = web.AppKey("adjudication_jobs", set)
 
 
 def schedule_adjudication(app, room):
+    if not app[ENGINE].configured and room.rules == "Japanese" and room.status == "scoring" and room.score_uncertain:
+        room.act("black" if room.solo or room.turn == 1 else "white", {"type": "resume"})
+        room.scoring_notice = "Position not settled. Continue playing."
+        return
     if not app[ENGINE].configured or room.rules != "Japanese" or room.status != "scoring":
         return
     if room.adjudication and room.adjudication.get("status") != "analyzing":

@@ -57,9 +57,10 @@ class RepeatedMatch(unittest.IsolatedAsyncioTestCase):
             wb = await self.join(b); await self.state(wa)
             for ws in (wa, wb):
                 await ws.send_json({'type': 'pass'}); state = await self.both(wa, wb)
-            self.assertEqual(state['status'], 'scoring')
-            for ws in (wa, wb):
-                await ws.send_json({'type': 'approve'}); state = await self.both(wa, wb)
+            self.assertEqual(state['status'], 'playing')
+            self.assertIsNone(state['result'])
+            self.assertIn('Continue',state['scoringNotice'])
+            await wa.send_json({'type': 'resign'}); state = await self.both(wa, wb)
             self.assertEqual(state['status'], 'finished')
             old_id = state['gameId']
             for ws in (wa, wb):

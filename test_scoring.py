@@ -62,7 +62,8 @@ class JapaneseScoring(unittest.TestCase):
         room = s.Room('REVIEW'); room.claim(None, 'A'); room.claim(None, 'B')
         room.board[0] = 1
         room.act('black', {'type': 'pass'}); room.act('white', {'type': 'pass'})
-        room.act('black', {'type': 'approve'})
+        with self.assertRaises(ValueError):
+            room.act('black', {'type': 'approve'})
         room.act('white', {'type': 'dead', 'index': 0})
         self.assertFalse(room.approvals)
         room.act('white', {'type': 'resume'})
@@ -83,3 +84,21 @@ class JapaneseScoring(unittest.TestCase):
         room.act('black',{'type':'move','index':168})
         room.act('black',{'type':'move','index':14})
         self.assertEqual(room.board[15],0)
+
+class UnsettledFallback(unittest.TestCase):
+    def test_no_engine_open_position_returns_to_play_without_result(self):
+        from types import SimpleNamespace
+        room=s.Room('OPEN',solo=True); room.claim(None,'A')
+        for i in (42,49,62,80,87,120,127): room.board[i]=1
+        for i in (45,46,59,61,83,123,124): room.board[i]=-1
+        room.turn=-1
+        room.act('black',{'type':'pass'});room.act('black',{'type':'pass'})
+        self.assertTrue(room.score_uncertain)
+        self.assertIsNone(room.state()["score"])
+        with self.assertRaises(ValueError): room.act('black',{'type':'approve'})
+        s.schedule_adjudication({s.ENGINE:SimpleNamespace(configured=False)},room)
+        self.assertEqual(room.status,'playing');self.assertIsNone(room.result)
+        self.assertIsNone(room.review_deadline);self.assertEqual(room.passes,0)
+        self.assertIn('Continue',room.state()['scoringNotice'])
+        room.act('black',{'type':'move','index':0})
+        self.assertIsNone(room.scoring_notice)
