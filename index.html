@@ -88,8 +88,8 @@
   const storage={get(key){try{return localStorage.getItem(key)}catch{return null}},set(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}};
   let audioContext=null,soundEnabled=true,brandSoundPending=!room&&!storage.get('13go:active-room'),lastCountdown=null,lastDeadlineKey=null;
   function tone(frequency,duration=.08,volume=.05,delay=0,type='sine'){
-    if(!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return;
-    try{const start=audioContext.currentTime+delay,osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type=type;osc.frequency.setValueAtTime(frequency,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(volume,start+.004);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain);gain.connect(audioContext.destination);osc.start(start);osc.stop(start+duration+.01)}catch{}
+    if(!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return false;
+    try{const start=audioContext.currentTime+delay,osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type=type;osc.frequency.setValueAtTime(frequency,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(volume,start+.004);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain);gain.connect(audioContext.destination);osc.start(start);osc.stop(start+duration+.01);return true}catch{return false}
   }
   let woodenTapBuffer=null,recordedTapBuffer=null;
   const stoneSampleBytes=fetch('/static/stone-placement.wav?v=2').then(r=>r.ok?r.arrayBuffer():null).catch(()=>null);
@@ -101,7 +101,7 @@
     try{if(recordedTapBuffer){const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=recordedTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay);return}if(!woodenTapBuffer){const rate=audioContext.sampleRate||44100,length=Math.floor(rate*.145);woodenTapBuffer=audioContext.createBuffer(1,length,rate);const samples=woodenTapBuffer.getChannelData(0);let wood=0,seed=713;for(let i=0;i<length;i++){const t=i/rate;seed=(seed*16807)%2147483647;const noise=seed/1073741823.5-1;wood=.63*wood+.37*noise;const attack=Math.min(1,t/.0007);const impact=.44*noise*Math.exp(-t*1050)+.31*wood*Math.exp(-t*85);const body=.25*Math.sin(2*Math.PI*475*t)*Math.exp(-t*95)+.18*Math.sin(2*Math.PI*810*t+.4)*Math.exp(-t*140)+.1*Math.sin(2*Math.PI*1240*t)*Math.exp(-t*185);samples[i]=Math.max(-.9,Math.min(.9,(impact+body)*attack))}}const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=woodenTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay)}catch{}
   }
   function brandSound(){woodenTap(.38);tone(196,.45,.018,.06);tone(392,.6,.012,.18);tone(587.33,.65,.008,.34)}
-  async function unlockSound(){if(!soundEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;if(!audioContext){try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}audioContext=new Audio();}loadRecordedTap();if(audioContext.state!=='running')await audioContext.resume();if(brandSoundPending){brandSoundPending=false;brandSound()}}catch{}}
+  async function unlockSound(){if(!soundEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;if(!audioContext){try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}audioContext=new Audio();}loadRecordedTap();if(audioContext.state!=='running')await audioContext.resume();if(brandSoundPending){brandSoundPending=false;brandSound()}renderClocks()}catch{}}
   function stoneSound(previous,next){if(previous&&previous.gameId===next.gameId&&next.moves===previous.moves+1&&next.lastMove!==null&&next.lastMove!==undefined)woodenTap()}
   function countdownSound(role,seconds,periods,main){
     if(!game||game.status!=='playing'||game.solo||role!==myRole||game.clock?.running!==role||main>0||seconds<1||seconds>10||document.hidden)return;
@@ -272,7 +272,7 @@
 
   function deadlineWarning(clock,elapsed){
     let remaining=null,kind='';
-    if(game?.status==='playing'&&!game.solo&&clock?.policy==='byoyomi-manners-v1'&&clock.running===myRole){
+    if(game?.status==='playing'&&!game.solo&&clock?.policy==='byoyomi-manners-v1'&&(myRole==='black'||myRole==='white')&&clock.running&&(game.moves===0||clock.running===myRole)){
       const spent=(clock.turnElapsed||0)+elapsed;
       if(game.moves===0){remaining=30-spent;kind='First move'}
       else if((clock.mainRemaining?.[myRole]||0)>elapsed){remaining=90-spent;kind='Move now'}
@@ -282,7 +282,7 @@
     if(!visible)return;
     const seconds=Math.max(0,Math.ceil(remaining));$('deadlineLabel').textContent=kind;$('deadlineNumber').textContent=String(seconds);
     const key=[game.gameId,game.moves,kind,seconds].join(':');
-    if(seconds>0&&key!==lastDeadlineKey){lastDeadlineKey=key;tone(seconds<=3?1120:820,.11,seconds<=3?.07:.05)}
+    if(seconds>0&&key!==lastDeadlineKey&&tone(seconds<=3?1120:820,.16,seconds<=3?.12:.085))lastDeadlineKey=key
   }
   function renderClocks(){
     const clock=game?.clock,elapsed=Math.max(0,(Date.now()-clockReceived)/1000);deadlineWarning(clock,elapsed);$('clockNote').classList.toggle('hidden',game?.status==='finished');
