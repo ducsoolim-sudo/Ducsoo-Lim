@@ -60,11 +60,11 @@ class RoomStore:
 
     async def load(self):
         if self.url:
-            cursor = await self.connection.execute('SELECT payload FROM go13_rooms ORDER BY updated DESC')
+            cursor = await self.connection.execute('SELECT payload, updated FROM go13_rooms ORDER BY updated DESC')
             rows = await cursor.fetchall()
         else:
-            rows = self.connection.execute('SELECT payload FROM go13_rooms ORDER BY updated DESC').fetchall()
-        return [json.loads(row[0]) for row in rows]
+            rows = self.connection.execute('SELECT payload, updated FROM go13_rooms ORDER BY updated DESC').fetchall()
+        return [dict(json.loads(row[0]), persisted_at=row[1]) for row in rows]
 
     async def save(self, room):
         snapshot = room.snapshot()

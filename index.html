@@ -413,6 +413,7 @@
     if(game?.status==='waiting'){const seconds=Math.max(0,Math.floor((Date.now()/1000)-(game.queueSince||Date.now()/1000)));$('queueMessage').textContent='Finding an opponent · '+seconds+'s'}
     if(!game||game.solo){$('clockNote').textContent=game?.solo?'Practice':'5 min + 30 sec × 3';return}
     const now=(clock?.serverTime||Date.now()/1000)+elapsed;
+    if(clock?.recovering){$('clockNote').textContent='Waiting for both players to reconnect.';return}
     if(game.status==='scoring'&&!clock?.reviewDeadline){$('clockNote').textContent='';return}
     if(game.status==='scoring'){$('clockNote').textContent='Review time: '+Math.max(0,Math.ceil((clock?.reviewDeadline||now)-now))+'s. Confirm before time expires.';return}
     const other=myRole==='black'?'white':'black',absent=game.absentSince?.[other];

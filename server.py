@@ -170,6 +170,7 @@ class Room:
         self.created = time.time()
         self.remaining = {"black": MAIN_SECONDS, "white": MAIN_SECONDS}
         self.turn_started = None
+        self.recovery_anchor = None
         self.review_deadline = None
         self.scoring_notice = None
         self.absent_since = {"black": None, "white": None}
@@ -197,8 +198,17 @@ class Room:
             room.rules = "Chinese"
         return room
 
+    def recover_after_restart(self, persisted_at):
+        # Freeze at the last durable state; never charge unknown server downtime.
+        if not self.solo and self.status in ('playing', 'scoring'):
+            if self.recovery_anchor is None:
+                self.recovery_anchor = persisted_at
+
     def clock(self, now=None):
         now = time.time() if now is None else now
+        wall_now = now
+        if self.recovery_anchor is not None:
+            now = self.recovery_anchor
         remaining = self.remaining.copy()
         main_remaining = self.remaining.copy()
         periods = self.periods.copy()
@@ -214,15 +224,16 @@ class Room:
                     remaining[side] = self.remaining[side] if self.remaining[side]>0 else policy.BYOYOMI_SECONDS if self.periods[side]>0 else 0
         elapsed = max(0, now-self.turn_started) if self.turn_started is not None else 0
         warning = self.time_policy == policy.POLICY and self.status == 'playing' and main_remaining[role]>0 and elapsed>=policy.IDLE_WARNING_SECONDS
-        return {"remaining": remaining, "running": role if self.status == "playing" and self.turn_started is not None else None,
-                "increment": INCREMENT if self.time_policy != policy.POLICY else 0, "serverTime": now, "reviewDeadline": self.review_deadline,
+        return {"remaining": remaining, "running": role if self.status == "playing" and self.turn_started is not None and self.recovery_anchor is None else None,
+                "increment": INCREMENT if self.time_policy != policy.POLICY else 0, "serverTime": wall_now, "reviewDeadline": self.review_deadline if self.recovery_anchor is None else None,
+                "recovering": self.recovery_anchor is not None,
                 "policy": self.time_policy, "mainRemaining": main_remaining, "periods": periods,
                 "byoyomiSeconds": policy.BYOYOMI_SECONDS, "idleWarning": role if warning else None,
                 "turnElapsed": elapsed}
 
     def tick(self, now=None):
         now = time.time() if now is None else now
-        if self.solo or self.status not in ("playing", "scoring"):
+        if self.recovery_anchor is not None or self.solo or self.status not in ("playing", "scoring"):
             return False
         if self.status == "playing" and self.turn_started is not None:
             role = "black" if self.turn == 1 else "white"
@@ -283,6 +294,18 @@ class Room:
         now = time.time()
         if self.solo:
             return
+        if self.recovery_anchor is not None:
+            if not all(self.connected(r) for r in ('black', 'white')):
+                return
+            offset = max(0, now - self.recovery_anchor)
+            for key in ('turn_started', 'review_deadline', 'game_started_at'):
+                value = getattr(self, key)
+                if value is not None:
+                    setattr(self, key, value + offset)
+            for role in ('black', 'white'):
+                if self.absent_since[role] is not None:
+                    self.absent_since[role] += offset
+            self.recovery_anchor = None
         for role in ("black", "white"):
             self.count_absence(role, now)
             if self.connected(role):
@@ -398,6 +421,8 @@ class Room:
                 raise ValueError("Only the solo player can control this game.")
             role = "black" if self.turn == 1 else "white"
         kind = action.get("type")
+        if self.recovery_anchor is not None:
+            raise ValueError("Waiting for both players to reconnect.")
         now = time.time()
         if self.tick(now) and self.status in ("finished", "cancelled"):
             return
@@ -725,6 +750,8 @@ async def websocket_handler(request):
                             raise ValueError("This game has reached its spectator limit.")
                         candidate.clients[socket] = role
                         candidate.connection_changed()
+                        if before.get("recovery_anchor") is not None and candidate.recovery_anchor is None:
+                            schedule_adjudication(request.app, candidate)
                         try:
                             await request.app[STORE].save(candidate)
                         except Exception as exc:
@@ -812,7 +839,7 @@ def continue_unsettled(room, notice):
 
 
 def schedule_adjudication(app, room):
-    if room.rules != "Japanese" or room.status != "scoring":
+    if room.recovery_anchor is not None or room.rules != "Japanese" or room.status != "scoring":
         return
     if room.adjudication and room.adjudication.get("status") == "ready":
         return
@@ -881,6 +908,7 @@ async def cleanup_context(app):
     ROOMS.clear()
     for payload in await store.load():
         room = Room.from_snapshot(payload)
+        room.recover_after_restart(payload["persisted_at"])
         room.connection_changed()
         ROOMS[room.code] = room
     for room in ROOMS.values():
