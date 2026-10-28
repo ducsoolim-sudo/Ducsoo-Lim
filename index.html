@@ -52,7 +52,7 @@
           <div id="placementActions" class="actions split"><button id="placeMove" class="button primary hidden" disabled>Place stone</button><button id="clearMove" class="button ghost" disabled>Clear</button></div>
         </div>
         <div id="playActions" class="actions split"><button id="pass" class="button ghost" disabled>Pass</button><button id="resign" class="button ghost" disabled>Resign</button></div>
-        <div id="scoreActions" class="actions hidden"><p id="scoringHint" class="notice">Review the score.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">Accept score</button><button id="resume" class="button ghost">Resume play</button></div>
+        <div id="scoreActions" class="actions hidden"><p id="scoringHint" class="notice">Review the score.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">Confirm</button></div>
         <div id="finishActions" class="actions hidden"><button id="rematch" class="button primary">Request rematch</button></div>
         <p id="clockNote" class="clock-note" role="status"></p>
         <p id="gameHint" class="control-hint">Black plays first. Two consecutive passes start scoring.</p>
@@ -242,10 +242,10 @@
     $('myRole').textContent=spectator?'Spectator · enjoy the game.':game.solo?'Solo practice · you control both colors.':'You are playing '+roles[myRole]+'.';
     $('inviteHint').textContent=game.solo?'Practice is private and does not affect your record.':spectator?'Spectators can watch but cannot play moves.':'Your game is public. Share its spectator link.';
     $('gameHint').classList.toggle('hidden',finished||(!scoring&&game.passes!==1));
-    $('gameHint').textContent=game.status==='waiting'?'Waiting for a second player. Others can join from the lobby.':active?(game.passes===1?'Last turn was a pass. Pass now to start scoring.':'Two consecutive passes start scoring.'):scoring?(spectator?'The players are reviewing dead groups and the final score.':'Review the score or resume play.'):'';
+    $('gameHint').textContent=game.status==='waiting'?'Waiting for a second player. Others can join from the lobby.':active?(game.passes===1?'Last turn was a pass. Pass now to start scoring.':'Two consecutive passes start scoring.'):scoring?(spectator?'The players are reviewing dead groups and the final score.':'Confirm the score.'):'';
     if(game.status==='waiting')$('status').textContent='Looking for an opponent…';else if(active)$('status').textContent=(game.solo?roles[game.turn]+' to play':game.turn===myRole&&!spectator?'Your turn':roles[game.turn]+' to play')+(game.passes===1?' · passed last turn':'');else if(scoring){$('status').textContent='Score';renderScore()}else{$('status').textContent='';renderFinal()}
-    $('scoringHint').textContent=game.adjudication?.status==='analyzing'?'Checking the score…':game.adjudication?.status==='unavailable'?'Score check unavailable. Resume or review marks.':game.scoreUncertain?.length?'Unsettled groups or dame. Review marks or resume play.':'Dead stones checked. Confirm the score.';
-    $('approve').disabled=spectator||game.approvals.includes(myRole)||['analyzing','review','unavailable'].includes(game.adjudication?.status);$('approve').textContent=game.solo?'Confirm score':game.approvals.includes(myRole)?'Accepted · waiting for opponent':'Accept score';$('resume').disabled=spectator;
+    $('scoringHint').textContent=game.adjudication?.status==='analyzing'?'Checking the score…':game.adjudication?.status==='unavailable'?'Score check unavailable.':game.scoreUncertain?.length?'Score not settled.':'Dead stones checked. Confirm the score.';
+    $('approve').disabled=spectator||game.approvals.includes(myRole)||['analyzing','review','unavailable'].includes(game.adjudication?.status);$('approve').textContent=game.approvals.includes(myRole)?'Waiting…':'Confirm';
     $('rematch').disabled=spectator||game.rematch.includes(myRole);$('rematch').textContent=game.solo?'Practice again':game.rematch.includes(myRole)?'Rematch requested · waiting':'Request rematch';updateMatchDialog();
   }
   function coordinate(index){return 'ABCDEFGHJKLMN'[index%N]+(N-Math.floor(index/N))}
@@ -291,7 +291,7 @@
     if(!game||game.solo){$('clockNote').textContent=game?.solo?'Practice':'5 min + 30 sec × 3';return}
     const now=(clock?.serverTime||Date.now()/1000)+elapsed;
     if(game.status==='scoring'&&!clock?.reviewDeadline){$('clockNote').textContent=game.adjudication?.status==='analyzing'?'Checking the score…':'Score needs review';return}
-    if(game.status==='scoring'){$('clockNote').textContent='Review time: '+Math.max(0,Math.ceil((clock?.reviewDeadline||now)-now))+'s. Accept or resume; inactivity may forfeit.';return}
+    if(game.status==='scoring'){$('clockNote').textContent='Review time: '+Math.max(0,Math.ceil((clock?.reviewDeadline||now)-now))+'s. Confirm before time expires.';return}
     const other=myRole==='black'?'white':'black',absent=game.absentSince?.[other];
     if(game.status==='playing'&&clock?.policy==='byoyomi-manners-v1'&&clock.running===myRole){const spent=(clock.turnElapsed||0)+elapsed;if(game.moves===0){$('clockNote').textContent='Opening move · '+Math.max(0,Math.ceil(30-spent))+'s';return}if((clock.mainRemaining?.[myRole]||0)>elapsed&&spent>=60){$('clockNote').textContent='Please move · '+Math.max(0,Math.ceil(90-spent))+'s';return}}
     $('clockNote').textContent=game.status==='finished'?'':absent&&myRole!=='spectator'?'Opponent offline · '+Math.max(0,Math.ceil(game.disconnectGrace-(game.offlineUsed?.[other]||0)-(now-absent)))+'s to reconnect. The game clock continues.':clock?.running?'5 min + 30 sec × 3':'The clock starts when both players connect.';
@@ -372,7 +372,7 @@
   $('testMatch').onclick=()=>postRoom('/api/test-match',{},$('testMatch'));
   $('solo').onclick=()=>postRoom('/api/rooms',{solo:true},$('solo'));$('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
   $('cancelMatch').onclick=()=>{if(game?.status==='waiting'){send('cancel');$('cancelMatch').disabled=true}};
-  $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('resume').onclick=()=>send('resume');$('rematch').onclick=()=>send('rematch');
+  $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('rematch').onclick=()=>send('rematch');
   $('saveProfile').onclick=()=>{$('nickname').value=$('profileNickname').value;myName();renderProfile();toast('Display name saved. It will apply to your next game.')};
   $('nickname').onchange=()=>myName();
   $('exportHistory').onclick=()=>{const blob=new Blob([JSON.stringify({name:myName(),games:readHistory(),exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='13go-game-history.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
