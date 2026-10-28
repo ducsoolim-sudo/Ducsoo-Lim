@@ -195,3 +195,7 @@ results start the 30-second confirmation timer. During checking, no preliminary
 score or confirm control is shown. This current policy supersedes the older
 manual-fallback development descriptions above; full Japanese adjudication is
 not yet a completed release feature.
+
+
+## Restart recovery validation (2026-10-29)
+Restored online games freeze at the durable checkpoint until both seats reconnect. First-action, idle, overtime, review and absence timers exclude server downtime and recovery waiting. Pre-existing absence remains chargeable. Unsettled adjudication waits for both seats before resuming. See `test_recovery.py` and run `python verify_restart_process.py` for a real killed-process restart check (31-second one-seat wait, board/token recovery and a legal next move). The latter uses a temporary local database. The disposable hosted preview cannot establish durable deployment recovery; a separate persistent test database remains required.
