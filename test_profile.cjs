@@ -94,7 +94,7 @@ countdownGame.clock.remaining.black=9;t.ws.message({type:'state',state:countdown
 countdownGame.clock.running='white';countdownGame.clock.remaining.white=8;t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,2);
 console.log('PASS acknowledged stone sounds, removed sound button, and own-turn countdown deduplication');
 
-assert(html.includes('SAI STUDIO'));assert(html.includes('studio-in 1.1s'));assert(html.includes('studioTimer=setTimeout(finishStudio,3800)'));assert(html.includes('woodenTapBuffer'));console.log('PASS wooden impact buffer and longer brand introduction');
+assert(html.includes('SAI STUDIO'));assert(html.includes('studio-in 1.1s'));assert(html.includes('studioTimer=setTimeout(finishStudio,1400)'));assert(html.includes('woodenTapBuffer'));console.log('PASS wooden impact buffer and longer brand introduction');
 
 assert(!html.includes('class="home-index"'));assert(!html.includes('<svg class="menu-arrow"'));
 assert(!html.includes('Options &amp; rules'));assert(html.indexOf('Settings &amp; rules')>html.indexOf('id="profilePage"'));
@@ -136,10 +136,12 @@ const stoneWav=fs.readFileSync(require('path').join(__dirname,'stone-placement.w
 // Both participants hear opening expiry; spectators do not, and locked audio can retry.
 t=setup(undefined,{},'?room=ABCDEFG',true);t.ws.message({type:'welcome',role:'white',token:'owner'});warning=playing('opening-both');warning.moves=0;warning.clock={policy:'byoyomi-manners-v1',running:'black',turnElapsed:20,remaining:{black:280,white:300},mainRemaining:{black:280,white:300},periods:{black:3,white:3}};t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineNumber').textContent,'10');assert.equal(t.soundEvents.length,0);t.listeners.touchend();assert.equal(t.soundEvents.length,1);t.ws.message({type:'state',state:warning});assert.equal(t.soundEvents.length,1);t.ws.message({type:'welcome',role:'spectator',token:'viewer'});assert(t.e('deadlineCountdown').classes.has('hidden'));console.log('PASS both players opening countdown and retry after audio unlock');
 
-t=setup(undefined,{},'');assert(!t.e('brandIntro').classes.has('hidden'));assert.equal(t.e('shell').inert,true);t.timers.find(x=>x.delay===3800).callback();t.timers.find(x=>x.delay===650).callback();assert(t.e('brandIntro').classes.has('hidden'));assert.equal(t.e('shell').inert,false);t=setup(undefined,{},'?room=ABCDEFG');assert(t.e('brandIntro').classes.has('hidden')||!t.e('shell').inert);console.log('PASS company intro timed exit and room entry bypass');
+t=setup(undefined,{},'',true);assert(!t.e('brandIntro').classes.has('hidden'));assert.equal(t.e('shell').inert,true);assert(t.soundEvents.includes('tone'));t.timers.find(x=>x.delay===1400).callback();t.timers.find(x=>x.delay===650).callback();assert(t.e('brandIntro').classes.has('hidden'));assert.equal(t.e('shell').inert,false);t=setup(undefined,{},'');assert.equal(t.e('shell').inert,true);assert(!t.timers.some(x=>x.delay===1400));console.log('PASS company intro waits for touch when audio unavailable and exits after sound');
 
 t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let unsettled=playing('unsettled-score');unsettled.status='scoring';unsettled.score={black:0,white:6.5,winner:'white',margin:6.5,komi:6.5};unsettled.scoreUncertain=[84];t.ws.message({type:'state',state:unsettled});assert.equal(t.e('scoreResult').children.length,0);assert.equal(t.e('approve').disabled,true);console.log('PASS unsettled score never shows a winner or allows confirmation');
 
 t=setup(undefined,{'13go:active-room':'ABCDEFG'});t.ws.message({type:'welcome',role:'black',token:'owner'});t.ws.message({type:'state',state:game('finish-new-game','black')});t.e('newGame').onclick();assert.equal(t.values.get('13go:active-room'),'');assert(t.e('gameBoard').classes.has('hidden'));assert(!t.e('playPage').classes.has('hidden'));console.log('PASS finished-game New game returns to matchmaking choices');
 
 t=ready();t.ws.onclose({code:4001});assert.equal(t.values.get('13go:active-room'),'');assert(t.e('gameBoard').classes.has('hidden'));assert(!t.timers.some(x=>x.active&&x.delay===1000));console.log('PASS superseded seat closes without reconnect loop');
+
+(async()=>{const introTest=setup(undefined,{},'');await introTest.e('brandIntro').onclick();assert(introTest.timers.some(x=>x.active&&x.delay===1400));console.log('PASS intro still permits entry if audio API is unavailable')})().catch(error=>{console.error(error);process.exitCode=1});
