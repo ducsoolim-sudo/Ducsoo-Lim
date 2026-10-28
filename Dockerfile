@@ -4,7 +4,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY server.py storage.py auth.py scoring.py adjudicator.py katago.cfg rules_policy.py preview_bot.py ./
 COPY index.html ./static/index.html
-COPY stone-placement.wav ./static/stone-placement.wav
+COPY stone-placement.wav brand-intro.wav ./static/
 ENV PORT=8080
 EXPOSE 8080
 CMD ["python", "server.py"]

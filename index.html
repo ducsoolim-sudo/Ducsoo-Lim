@@ -75,17 +75,72 @@
 .game-view .clock{font-size:19px}
 .board-meta{gap:10px}
 }
+
+/* Home: ivory gallery, sculpted stones, and a compact invitation to play. */
+.shell.home-view{max-width:none;min-height:100dvh;padding:34px clamp(28px,5vw,80px) max(28px,env(safe-area-inset-bottom));color:#242b27;background:linear-gradient(125deg,#f4f1e9 0%,#eae6dc 55%,#dfdfd4 100%)}
+.home-view .brand{max-width:1120px;margin:0 auto;padding:0;align-items:center}
+.home-view .brand-lockup{width:112px;color:#26302a}
+.home-view .brand-edition{display:none}
+.home-stage{max-width:1050px;margin:0 auto;min-height:calc(100dvh - 140px);grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);gap:clamp(36px,7vw,94px);padding:40px 0 54px}
+.home-art{width:100%;max-width:540px;filter:none;isolation:isolate}
+.home-art:before{content:"";position:absolute;z-index:-1;inset:8% -6% 0;background:radial-gradient(ellipse at 38% 28%,#fffdf8b3 0%,#fffdf800 68%);border-radius:50%}
+.stone-composition{overflow:visible}
+.home-art-caption{display:none}
+.home-stage>div:last-child{width:100%;max-width:340px;justify-self:end}
+.home-stage .home-menu{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px}
+.home-menu .button{min-height:66px;padding:15px 0;justify-content:center;text-align:center;color:#515c54;font-size:22px;letter-spacing:-.5px;font-weight:450;border:0;border-bottom:1px solid #bdc2b8;background:none;border-radius:0;transition:background .2s,color .2s,box-shadow .2s}
+.home-menu .primary{grid-column:1/-1;min-height:88px;padding:18px 24px;font-size:34px;letter-spacing:-1px;background:#273d30;color:#f7f5ed;border:1px solid #273d30;border-radius:20px;box-shadow:0 9px 20px #2d3c2d14,inset 0 1px #ffffff12}
+.home-menu .button:hover,.home-menu .button:hover .menu-label{color:#1c2e21;background:#ffffff24}
+.home-menu .primary:hover,.home-menu .primary:hover .menu-label{color:#fffdf4;background:#334e3c}
+.home-menu .primary:active{background:#1c3023;box-shadow:inset 0 2px 7px #0002}
+.home-menu .button:focus-visible{outline:3px solid #426048;outline-offset:6px}
+.home-menu .primary:focus-visible{outline-color:#426048;border-radius:20px}
+.home-menu .resume{grid-column:1/-1;border:0;font-size:13px;min-height:44px;padding:8px;margin:0;color:#5b685d}
+.home-view .preview-mark{font-size:9px;letter-spacing:1.4px;color:#757f74;text-align:center;margin-top:28px}
+@media(max-width:700px){
+.shell.home-view{padding:26px 28px max(30px,env(safe-area-inset-bottom))}
+.home-view .brand-lockup{width:96px}
+.home-stage{display:flex;flex-direction:column;justify-content:center;gap:0;min-height:calc(100dvh - 112px);padding:18px 0 24px}
+.home-art{max-width:330px;width:min(100%,330px);margin:0 auto 12px}
+.home-stage>div:last-child{max-width:340px;justify-self:auto}
+.home-stage .home-menu{gap:12px 20px}
+.home-menu .button{min-height:60px;font-size:22px;padding:14px 0}
+.home-menu .primary{min-height:74px;font-size:30px;letter-spacing:-.7px;border-radius:18px;padding:16px 22px}
+.home-menu .primary:focus-visible{border-radius:18px}
+.home-menu .resume{min-height:44px;font-size:13px;padding:8px;margin:0}
+.home-view .preview-mark{margin-top:22px}
+}
+@media(max-height:740px) and (max-width:700px){
+.home-stage{min-height:calc(100dvh - 102px);padding:8px 0 12px}
+.home-art{max-width:254px;margin-bottom:4px}
+.home-menu .primary{min-height:68px;font-size:28px}
+.home-menu .button{min-height:54px;font-size:21px}
+.home-menu .resume{font-size:12px;min-height:44px}
+.home-view .preview-mark{margin-top:16px}
+}
 </style>
 </head>
 <body>
-<button id="brandIntro" class="brand-intro hidden" aria-label="SAI STUDIO · Open 13GO"><span class="studio-lockup"><svg class="studio-symbol" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><span class="studio-name">SAI STUDIO</span><span class="studio-app">13GO</span><span class="studio-enter">Tap</span></span></button>
+<button id="brandIntro" class="brand-intro hidden" aria-label="SAI STUDIO · Open 13GO"><span class="studio-lockup"><svg class="studio-symbol" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><span class="studio-name">SAI STUDIO</span><span class="studio-app">13GO</span></span></button>
 <div id="shell" class="shell home-view">
   <header class="brand">
     <div class="brand-left brand-art"><h1 class="brand-lockup"><svg class="wordmark" viewBox="0 0 252 64" role="img" aria-label="13GO" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 19 24 8v48M9 56h30"/><path d="M53 8h18a12 12 0 0 1 0 24H60m11 0a12 12 0 0 1 0 24H53"/><path d="M164 15a24 24 0 1 0 0 34V33h-19"/><circle cx="215" cy="32" r="24"/></g></svg></h1><p>Small board. Big game.</p></div>
     <span class="brand-edition">13 × 13 / ONLINE GO</span>
     <div class="brand-right"><button id="homeButton" class="home-button" aria-label="Home" title="Home"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 16 5l11 10v12H5Z"/><path d="M12 27V17h8v10"/></svg></button><nav class="nav" role="tablist" aria-label="Main navigation"><button id="navPlay" role="tab" aria-controls="playPage" aria-selected="false">Play</button><button id="navWatch" role="tab" aria-controls="watchPage" aria-selected="false">Watch</button><button id="navProfile" role="tab" aria-controls="profilePage" aria-selected="false">My Page</button></nav><span class="online"><span id="light" class="light"></span><span id="connection">Ready to play</span></span></div>
   </header>
-  <section id="homePage" aria-label="Home"><div class="home-stage"><div class="home-art"><svg class="stone-composition" viewBox="0 0 420 420" aria-hidden="true"><defs><radialGradient id="blackStone" cx="32%" cy="26%" r="80%"><stop stop-color="#57595a"/><stop offset=".4" stop-color="#262829"/><stop offset="1" stop-color="#090b0c"/></radialGradient><radialGradient id="whiteStone" cx="32%" cy="25%" r="85%"><stop stop-color="#fffef8"/><stop offset=".6" stop-color="#e3e0d8"/><stop offset="1" stop-color="#aaa79f"/></radialGradient></defs><g id="homeBlackStone" class="orbit-stone" transform="translate(161 169)"><circle r="98" fill="url(#blackStone)" stroke="#626365" stroke-width=".5"/></g><g id="homeWhiteStone" class="orbit-stone" transform="translate(263 259)"><circle r="98" fill="url(#whiteStone)" stroke="#f1eee7" stroke-width=".5"/></g></svg><div class="home-art-caption"><span>BLACK / WHITE</span><span>13GO</span></div></div><div><div class="home-menu"><button id="homePlay" class="button primary"><span class="menu-label">Play</span></button>
+  <section id="homePage" aria-label="Home"><div class="home-stage"><div class="home-art"><svg class="stone-composition" viewBox="0 0 420 420" aria-hidden="true"><defs>
+<radialGradient id="blackStone" cx="32%" cy="18%" r="85%"><stop stop-color="#666867"/><stop offset=".28" stop-color="#373b3a"/><stop offset=".67" stop-color="#171b1a"/><stop offset="1" stop-color="#050908"/></radialGradient>
+<radialGradient id="whiteStone" cx="32%" cy="16%" r="90%"><stop stop-color="#ffffff"/><stop offset=".35" stop-color="#f8f6ef"/><stop offset=".72" stop-color="#ddd9cf"/><stop offset="1" stop-color="#aaa99f"/></radialGradient>
+<linearGradient id="blackRim" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#252a28"/><stop offset="1" stop-color="#060a08"/></linearGradient>
+<linearGradient id="whiteRim" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#dedbd1"/><stop offset="1" stop-color="#aaa99f"/></linearGradient>
+<radialGradient id="stoneGlint"><stop stop-color="#ffffff" stop-opacity=".19"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+<radialGradient id="stoneGround"><stop stop-color="#403f36" stop-opacity=".21"/><stop offset="1" stop-color="#403f36" stop-opacity="0"/></radialGradient>
+<filter id="stoneCast" x="-60%" y="-60%" width="240%" height="260%"><feDropShadow dx="9" dy="19" stdDeviation="10" flood-color="#34372d" flood-opacity=".22"/></filter>
+</defs>
+<ellipse cx="210" cy="327" rx="167" ry="36" fill="url(#stoneGround)"/>
+<g id="homeBlackStone" class="orbit-stone" transform="translate(161 169)"><g filter="url(#stoneCast)"><ellipse cy="5" rx="98" ry="82" fill="url(#blackRim)"/><ellipse cy="-2" rx="98" ry="79" fill="url(#blackStone)"/><ellipse cx="-23" cy="-35" rx="60" ry="27" fill="url(#stoneGlint)"/></g></g>
+<g id="homeWhiteStone" class="orbit-stone" transform="translate(263 259)"><g filter="url(#stoneCast)"><ellipse cy="5" rx="98" ry="82" fill="url(#whiteRim)"/><ellipse cy="-2" rx="98" ry="79" fill="url(#whiteStone)"/><ellipse cx="-23" cy="-35" rx="60" ry="27" fill="url(#stoneGlint)"/></g></g>
+</svg><div class="home-art-caption"><span>BLACK / WHITE</span><span>13GO</span></div></div><div><div class="home-menu"><button id="homePlay" class="button primary"><span class="menu-label">Play</span></button>
 <button id="homeWatch" class="button secondary"><span class="menu-label">Watch</span></button>
 <button id="homeProfile" class="button ghost"><span class="menu-label">My Page</span></button>
 <button id="resumeGame" class="button ghost resume hidden">Return to game</button></div><div class="preview-mark">13GO / V1.1</div></div></div></section>
@@ -151,8 +206,16 @@
     if(!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return;
     try{if(recordedTapBuffer){const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=recordedTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay);return}if(!woodenTapBuffer){const rate=audioContext.sampleRate||44100,length=Math.floor(rate*.145);woodenTapBuffer=audioContext.createBuffer(1,length,rate);const samples=woodenTapBuffer.getChannelData(0);let wood=0,seed=713;for(let i=0;i<length;i++){const t=i/rate;seed=(seed*16807)%2147483647;const noise=seed/1073741823.5-1;wood=.63*wood+.37*noise;const attack=Math.min(1,t/.0007);const impact=.44*noise*Math.exp(-t*1050)+.31*wood*Math.exp(-t*85);const body=.25*Math.sin(2*Math.PI*475*t)*Math.exp(-t*95)+.18*Math.sin(2*Math.PI*810*t+.4)*Math.exp(-t*140)+.1*Math.sin(2*Math.PI*1240*t)*Math.exp(-t*185);samples[i]=Math.max(-.9,Math.min(.9,(impact+body)*attack))}}const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=woodenTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay)}catch{}
   }
-  function brandSound(){woodenTap(.45);const played=tone(261.63,.65,.065,.04);tone(392,.75,.04,.16);tone(523.25,.85,.025,.32);return played}
-  async function unlockSound(){if(!soundEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;if(!audioContext){try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}audioContext=new Audio();}loadRecordedTap();if(audioContext.state!=='running')await audioContext.resume();if(brandSoundPending&&brandSound()){brandSoundPending=false;if(!$('brandIntro').classList.contains('hidden')){clearTimeout(studioTimer);studioTimer=setTimeout(finishStudio,1400)}}renderClocks()}catch{}}
+  let studioSoundBuffer=null,studioSoundDecode=null;
+  const studioSoundBytes=fetch('/static/brand-intro.wav?v=1').then(r=>r.ok?r.arrayBuffer():null).catch(()=>null);
+  function loadStudioSound(){if(!studioSoundDecode&&audioContext)studioSoundDecode=studioSoundBytes.then(bytes=>bytes&&audioContext.decodeAudioData?audioContext.decodeAudioData(bytes):null).then(buffer=>{if(!buffer)return;let peak=0;for(const sample of buffer.getChannelData(0))peak=Math.max(peak,Math.abs(sample));if(peak>.001)studioSoundBuffer=buffer}).catch(()=>{});return studioSoundDecode}
+  function brandSound(){
+    if(!audioContext||audioContext.state!=='running'||document.hidden)return false;
+    if(studioSoundBuffer){try{const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=studioSoundBuffer;gain.gain.setValueAtTime(.85,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start();return true}catch{}}
+    const played=tone(659.255,.8,.075,.04);tone(830.609,.9,.06,.17);tone(987.767,1,.05,.31);tone(1318.51,1.2,.04,.49);return played;
+  }
+  async function unlockSound(){if(!soundEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;if(!audioContext){try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}audioContext=new Audio();}loadRecordedTap();if(audioContext.state!=='running')await audioContext.resume();if(brandSoundPending){await loadStudioSound();if(brandSoundPending&&!$('brandIntro').classList.contains('hidden')&&brandSound())brandSoundPending=false}renderClocks()}catch{}}
+
   function stoneSound(previous,next){if(previous&&previous.gameId===next.gameId&&next.moves===previous.moves+1&&next.lastMove!==null&&next.lastMove!==undefined)woodenTap()}
   function countdownSound(role,seconds,periods,main){
     if(!game||game.status!=='playing'||game.solo||role!==myRole||game.clock?.running!==role||main>0||seconds<1||seconds>10||document.hidden)return;
@@ -160,9 +223,10 @@
   }
   document.addEventListener?.('pointerdown',unlockSound,{passive:true});document.addEventListener?.('touchend',unlockSound,{passive:true});document.addEventListener?.('click',unlockSound,{passive:true});document.addEventListener?.('keydown',unlockSound);
   document.addEventListener?.('visibilitychange',()=>{if(!document.hidden&&audioContext?.state!=='running')unlockSound()});
-  let studioTimer=null,studioClosing=false,studioTapped=false;
+  let studioTimer=null,studioClosing=false;
   function finishStudio(){if(studioClosing||$('brandIntro').classList.contains('hidden'))return;studioClosing=true;brandSoundPending=false;clearTimeout(studioTimer);$('brandIntro').classList.add('studio-out');setTimeout(()=>{$('brandIntro').classList.add('hidden');$('shell').inert=false;$('homePlay').focus?.()},650)}
-  function intro(){if(room||storage.get('13go:active-room')){brandSoundPending=false;return}$('brandIntro').classList.remove('hidden');$('shell').inert=true;$('brandIntro').focus?.();$('brandIntro').onclick=async()=>{if(studioTapped)return;studioTapped=true;await unlockSound();clearTimeout(studioTimer);studioTimer=setTimeout(finishStudio,1400)};unlockSound();}
+  function intro(){if(room||storage.get('13go:active-room')){brandSoundPending=false;return}$('brandIntro').classList.remove('hidden');$('shell').inert=true;$('brandIntro').focus?.();studioTimer=setTimeout(finishStudio,4200);$('brandIntro').onclick=()=>finishStudio();unlockSound();}
+
 
   $('confirmMoves').checked=true;
   const savedName=storage.get('13go:nickname');

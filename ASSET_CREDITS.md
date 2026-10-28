@@ -14,3 +14,6 @@ HQ MP3 preview (`588317_12616419-hq.mp3`), trimming 6.18–6.48 seconds, convert
 1.05 gain. The original recording was not made by this project. It is served from
 our own static assets, not hotlinked. A synthesized impact remains only as a
 network/decode fallback. Countdown and brand cues are original Web Audio tones.
+
+## Studio signature
+`brand-intro.wav` is an original synthesized 2.8-second glass/mallet chime created for this project, without external recordings. `generate_brand_sound.py` reproduces its E-major four-note phrase, restrained inharmonic partials and short diffuse echo tail. It is separate from the stone-placement sound. Automatic playback is attempted only during the company intro; browser autoplay restrictions can prevent it, and entry is never gated on a tap.
