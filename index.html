@@ -92,9 +92,9 @@
     try{const start=audioContext.currentTime+delay,osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type=type;osc.frequency.setValueAtTime(frequency,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(volume,start+.004);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain);gain.connect(audioContext.destination);osc.start(start);osc.stop(start+duration+.01)}catch{}
   }
   let woodenTapBuffer=null,recordedTapBuffer=null;
-  const stoneSampleBytes=fetch('/static/stone-placement.wav').then(r=>r.ok?r.arrayBuffer():null).catch(()=>null);
+  const stoneSampleBytes=fetch('/static/stone-placement.wav?v=2').then(r=>r.ok?r.arrayBuffer():null).catch(()=>null);
   let decodingStone=null;
-  function loadRecordedTap(){if(!audioContext||recordedTapBuffer||decodingStone)return;decodingStone=stoneSampleBytes.then(bytes=>bytes&&audioContext.decodeAudioData?audioContext.decodeAudioData(bytes):null).then(buffer=>{recordedTapBuffer=buffer}).catch(()=>{})}
+  function loadRecordedTap(){if(!audioContext||recordedTapBuffer||decodingStone)return;decodingStone=stoneSampleBytes.then(bytes=>bytes&&audioContext.decodeAudioData?audioContext.decodeAudioData(bytes):null).then(buffer=>{if(!buffer)return;const samples=buffer.getChannelData(0);let peak=0;for(let i=0;i<samples.length;i++)peak=Math.max(peak,Math.abs(samples[i]));if(peak>.001)recordedTapBuffer=buffer}).catch(()=>{})}
 
   function woodenTap(volume=.7,delay=0){
     if(!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return;
