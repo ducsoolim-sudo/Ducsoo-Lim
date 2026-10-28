@@ -3,7 +3,7 @@ import copy
 import unittest
 from unittest.mock import AsyncMock
 import server as s
-from adjudicator import adjudicate, validated, query, KataGo
+from adjudicator import adjudicate, validated, query, KataGo, settled_adjudication
 from aiohttp.test_utils import TestClient, TestServer
 
 
@@ -65,6 +65,57 @@ class AdjudicationTests(unittest.TestCase):
         self.assertEqual(request['rules'],'japanese')
 
 
+class SettledProofTests(unittest.TestCase):
+    def finished_board(self):
+        board = [1 if i % 13 < 6 else -1 for i in range(169)]
+        for p in (0, 2, 10, 12):
+            board[p] = 0
+        return board
+
+    def test_two_proven_living_sides_exact_territory_prisoners_and_komi(self):
+        verdict = settled_adjudication(self.finished_board(), {'black': 5, 'white': 1})
+        self.assertEqual(verdict['status'], 'ready')
+        self.assertEqual(verdict['score']['blackTerritory'], 2)
+        self.assertEqual(verdict['score']['whiteTerritory'], 2)
+        self.assertEqual(verdict['score']['black'], 7)
+        self.assertEqual(verdict['score']['white'], 9.5)
+        self.assertEqual(verdict['score']['margin'], 2.5)
+        self.assertEqual(verdict['score']['winner'], 'white')
+
+    def test_small_dead_group_does_not_bypass_specialist_review(self):
+        board = self.finished_board(); board[42] = -1; board[43] = 0
+        self.assertIsNone(settled_adjudication(board, {'black': 0, 'white': 0}))
+
+    def test_unfilled_dame_still_needs_play_or_specialist_review(self):
+        board = self.finished_board(); board[6*13+5] = 0
+        self.assertIsNone(settled_adjudication(board, {'black': 0, 'white': 0}))
+
+    def test_seki_unfinished_and_empty_positions_do_not_use_fast_path(self):
+        for board in ([0]*169, [1]+[0]*167+[-1]):
+            self.assertIsNone(settled_adjudication(board, {'black': 0, 'white': 0}))
+        board = self.finished_board()
+        board[2] = 1; board[10] = -1
+        board[6*13+5] = 0; board[7*13+6] = 0
+        self.assertIsNone(settled_adjudication(board, {'black': 0, 'white': 0}))
+
+    def test_rotation_preserves_exact_result(self):
+        board = self.finished_board()
+        self.assertEqual(settled_adjudication(board, {'black': 3, 'white': 2})['score'],
+                         settled_adjudication(board[::-1], {'black': 3, 'white': 2})['score'])
+
+    def test_invalid_board_rejected(self):
+        with self.assertRaises(ValueError):settled_adjudication([0]*168, {'black': 0, 'white': 0})
+
+
+class SettledEngineBypass(unittest.IsolatedAsyncioTestCase):
+    async def test_proven_finish_does_not_start_model_or_subprocess(self):
+        from types import SimpleNamespace
+        board = SettledProofTests().finished_board()
+        engine = KataGo(); engine.binary=''; engine.model=''; engine.run=AsyncMock()
+        verdict=await engine.analyze(SimpleNamespace(board=board,captures={'black':0,'white':0}))
+        self.assertEqual(verdict['status'],'ready');engine.run.assert_not_awaited()
+
+
 class EngineLifecycle(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.client=TestClient(TestServer(s.make_app(s.RoomStore(path=':memory:',database_url=''))))
@@ -82,7 +133,10 @@ class EngineLifecycle(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):self.room.act('black',{'type':'approve'})
         with self.assertLogs(level="ERROR"):
             await asyncio.gather(*self.app[s.JOBS])
-        self.assertEqual(self.room.adjudication['status'],'unavailable')
+        self.assertEqual(self.room.status,'playing')
+        self.assertIsNone(self.room.result)
+        self.assertIsNone(self.room.adjudication)
+        self.assertTrue(self.room.scoring_notice)
         self.assertIsNone(self.room.review_deadline)
         with self.assertRaises(ValueError):self.room.act('black',{'type':'approve'})
 

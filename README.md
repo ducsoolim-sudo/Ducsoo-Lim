@@ -175,3 +175,23 @@ two minutes for rematch before disconnecting. Server shutdown cancels bot client
 Home buttons contain only their names. Settings & rules live in My Page.
 Original company/app identity concepts are in `BRAND_REVIEW.md` and
 `brand-directions.svg`; no company name or replacement app logo is final.
+
+### Unsettled score safeguard (2026-10-28)
+A Japanese position with unresolved groups cannot be confirmed or exposed as a
+provisional winner/score. With no configured engine, two passes in such a position
+automatically continue play, preserve the board/clock and show a short notice.
+This avoids treating zero enclosed territory plus komi as a finished result.
+It is a conservative fallback, not complete automatic Japanese adjudication.
+
+### Current automatic adjudication policy (2026-10-29)
+For Japanese rooms, final confirmation requires a verified `ready` verdict.
+The ordinary finish fast path requires all original groups to be Benson
+pass-alive and every empty region single-color bounded; dead stones, dame,
+seki, ko-dependent, empty and unfinished positions cannot use it. Neural engine
+estimates retain all existing confidence gates. Public manual dead-stone changes
+are rejected. Without a configured engine, or on an uncertain/failed analysis,
+the game continues with its board and remaining time preserved. Only verified
+results start the 30-second confirmation timer. During checking, no preliminary
+score or confirm control is shown. This current policy supersedes the older
+manual-fallback development descriptions above; full Japanese adjudication is
+not yet a completed release feature.

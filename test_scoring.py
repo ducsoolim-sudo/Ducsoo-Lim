@@ -47,25 +47,30 @@ class JapaneseScoring(unittest.TestCase):
         dead, uncertain = automatic_dead(board)
         self.assertFalse(dead); self.assertEqual(uncertain, {84, 86})
 
-    def test_pass_marks_dead_before_confirmation_and_sgf_rules(self):
+    def test_bounded_dead_advice_requires_specialist_confirmation(self):
         room = s.Room('SCORE', solo=True); room.claim(None, 'A')
         room.board = [1]*169
         room.board[0] = room.board[2] = room.board[85] = 0
         room.board[84] = -1
         room.act('black', {'type': 'pass'}); room.act('black', {'type': 'pass'})
         self.assertEqual(room.dead, {84})
-        room.act('black', {'type': 'approve'})
-        self.assertEqual(room.result['black'], 5)
+        with self.assertRaises(ValueError):
+            room.act('black', {'type': 'approve'})
+        self.assertIsNone(room.result)
+        self.assertIsNone(room.review_deadline)
         self.assertIn('RU[Japanese]', room.sgf())
 
-    def test_user_correction_clears_acceptance(self):
+    def test_user_cannot_override_automatic_dead_stones(self):
         room = s.Room('REVIEW'); room.claim(None, 'A'); room.claim(None, 'B')
         room.board[0] = 1
         room.act('black', {'type': 'pass'}); room.act('white', {'type': 'pass'})
         with self.assertRaises(ValueError):
             room.act('black', {'type': 'approve'})
-        room.act('white', {'type': 'dead', 'index': 0})
+        with self.assertRaises(ValueError):
+            room.act('white', {'type': 'dead', 'index': 0})
         self.assertFalse(room.approvals)
+        self.assertFalse(room.dead)
+        self.assertTrue(room.score_uncertain)
         room.act('white', {'type': 'resume'})
         self.assertFalse(room.dead); self.assertFalse(room.score_uncertain)
 

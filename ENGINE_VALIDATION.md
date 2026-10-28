@@ -59,3 +59,25 @@ search budgets are rejected.
 
 Keep production and test deployment unchanged until these gates pass. No paid
 compute has been provisioned.
+
+## 2026-10-29 implementation and bounded real-engine diagnostic
+
+`settled_adjudication` now handles only ordinary, dame-free positions where
+both colors remain and every original group is proven unconditionally alive by
+Benson. Every empty region must have a single-color boundary. It rejects empty,
+unfinished, dead-stone, seki and ko-dependent positions. No threshold was relaxed.
+This proof path may be tested/deployed separately; activation of the neural
+engine is still gated by the release requirements above.
+
+Japanese confirmation now requires a `ready` adjudication. Bounded local death
+reading alone cannot authorize a final result. Manual dead-group input is
+rejected. No engine, review, or engine failure continues the same game safely
+without a score or review-forfeit deadline; it never invents a result.
+
+The checksum-pinned official installer restored KataGo1.16.3 Eigen and the
+b18c384nbt model in the development runtime. An explicitly diagnostic unfinished
+case at 32/128 visits took 40.15seconds: review, no dead stones,169 uncertain
+points, score_disagreement; leads -8.15958491/-8.1259562. This passes ONLY the
+unfinished-position rejection check. It does not pass the normal 256/1024 release
+budget, completed-game accuracy, rare-Japanese-rules, or deployment-latency gates.
+No heavy model or engine runtime has been activated on the hosted test service.

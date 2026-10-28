@@ -1,0 +1,22 @@
+[
+  {
+    "fixture": "unfinished",
+    "passed": true,
+    "visits": [
+      32,
+      128
+    ],
+    "status": "review",
+    "dead": [],
+    "uncertain": 169,
+    "margin": 6.5,
+    "reasons": [
+      "score_disagreement"
+    ],
+    "seconds": 40.15,
+    "leads": [
+      -8.15958491,
+      -8.1259562
+    ]
+  }
+]

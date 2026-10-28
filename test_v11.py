@@ -36,6 +36,8 @@ class ClockTests(unittest.TestCase):
 
     def test_scoring_pauses_clock_and_has_review_deadline(self):
         room=self.room()
+        room.board=[1 if i%13<6 else -1 for i in range(169)]
+        for point in (0,2,10,12):room.board[point]=0
         with patch('server.time.time',return_value=1001):room.act('black',{'type':'pass'})
         with patch('server.time.time',return_value=1002):room.act('white',{'type':'pass'})
         self.assertIsNone(room.clock(1020)['running'])

@@ -16,7 +16,7 @@ import copy
 import logging
 import auth
 from scoring import automatic_dead, territory_score
-from adjudicator import KataGo
+from adjudicator import KataGo, settled_adjudication
 import rules_policy as policy
 from preview_bot import run_bot
 
@@ -346,7 +346,7 @@ class Room:
             "dead": sorted(self.dead),
             "approvals": sorted(self.approvals),
             "rematch": sorted(self.rematch),
-            "score": self.calculate_score() if self.status == "scoring" and not self.score_uncertain and not (self.adjudication and self.adjudication.get("status") in ("analyzing", "review", "unavailable")) else None,
+            "score": self.calculate_score() if self.status == "scoring" and (self.rules != "Japanese" or self.adjudication and self.adjudication.get("status") == "ready") and not self.score_uncertain and not (self.adjudication and self.adjudication.get("status") in ("analyzing", "review", "unavailable")) else None,
             "rules": self.rules,
             "scoreUncertain": sorted(self.score_uncertain),
             "scoringNotice": self.scoring_notice,
@@ -443,25 +443,24 @@ class Room:
                 self.turn_started = None
                 self.review_deadline = None if self.solo else now + REVIEW_SECONDS
                 self.dead, self.score_uncertain = automatic_dead(self.board) if self.rules == "Japanese" else (set(), set())
-                if self.time_policy == policy.POLICY and self.score_uncertain:
+                if self.rules == "Japanese":
+                    proof = settled_adjudication(self.board, self.captures)
+                    self.adjudication = proof or {"status": "pending"}
+                    if proof:
+                        self.dead = set(proof['dead'])
+                        self.score_uncertain.clear()
+                    else:
+                        self.review_deadline = None
+                elif self.time_policy == policy.POLICY and self.score_uncertain:
                     self.review_deadline = None
                 self.approvals.clear()
         elif kind == "dead":
-            if self.status != "scoring":
-                raise ValueError("Dead stones can only be marked during scoring.")
-            index = action.get("index")
-            if type(index) is not int or not 0 <= index < N * N or not self.board[index]:
-                raise ValueError("Select a stone to mark its group as dead.")
-            group, _ = group_and_liberties(self.board, index)
-            if group.issubset(self.dead):
-                self.dead.difference_update(group)
-            else:
-                self.dead.update(group)
-            self.adjudication = {"status": "manual"}
-            self.approvals.clear()
+            raise ValueError("Dead stones are determined automatically.")
         elif kind == "approve":
             if self.status != "scoring":
                 raise ValueError("The score can only be accepted during scoring.")
+            if self.rules == "Japanese" and (not self.adjudication or self.adjudication.get("status") != "ready"):
+                raise ValueError("The score has not been verified yet.")
             if self.score_uncertain or (self.adjudication and self.adjudication.get("status") in ("analyzing", "review", "unavailable")):
                 raise ValueError("The position is not settled. The score cannot be confirmed.")
             self.approvals.update(("black", "white") if self.solo else (role,))
@@ -807,14 +806,29 @@ ENGINE = web.AppKey("engine", KataGo)
 JOBS = web.AppKey("adjudication_jobs", set)
 
 
+def continue_unsettled(room, notice):
+    room.act("black" if room.solo or room.turn == 1 else "white", {"type": "resume"})
+    room.scoring_notice = notice
+
+
 def schedule_adjudication(app, room):
-    if not app[ENGINE].configured and room.rules == "Japanese" and room.status == "scoring" and room.score_uncertain:
-        room.act("black" if room.solo or room.turn == 1 else "white", {"type": "resume"})
-        room.scoring_notice = "Position not settled. Continue playing."
+    if room.rules != "Japanese" or room.status != "scoring":
         return
-    if not app[ENGINE].configured or room.rules != "Japanese" or room.status != "scoring":
+    if room.adjudication and room.adjudication.get("status") == "ready":
         return
-    if room.adjudication and room.adjudication.get("status") != "analyzing":
+    proof = settled_adjudication(room.board, room.captures)
+    if proof:
+        room.adjudication = proof
+        room.dead = set(proof['dead'])
+        room.score_uncertain.clear()
+        room.approvals.clear()
+        room.review_deadline = None if room.solo else time.time() + REVIEW_SECONDS
+        return
+    if not app[ENGINE].configured:
+        continue_unsettled(room, "Position not settled. Continue playing.")
+        return
+    if room.adjudication and room.adjudication.get("status") not in ("pending", "analyzing"):
+        continue_unsettled(room, "Position not settled. Continue playing.")
         return
     # Mark before another event can accept the preliminary heuristic score.
     room.adjudication = {"status": "analyzing"}
@@ -842,6 +856,8 @@ def schedule_adjudication(app, room):
                 room.score_uncertain = set(result['uncertain'])
             # An engine error or uncertain result never starts a forfeit timer.
             room.review_deadline = time.time() + REVIEW_SECONDS if result['status'] == 'ready' and not room.solo else None
+            if result['status'] != 'ready':
+                continue_unsettled(room, "Score check unavailable. Continue playing." if result['status'] == 'unavailable' else "Position not settled. Continue playing.")
             try:
                 await app[STORE].save(room)
             except Exception as exc:

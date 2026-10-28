@@ -4,7 +4,7 @@ import json
 import math
 import os
 from pathlib import Path
-from scoring import group, regions, territory_score
+from scoring import group, regions, territory_score, pass_alive
 
 ROOT = Path(__file__).resolve().parent
 
@@ -93,6 +93,31 @@ def adjudicate(board, captures, first, second):
                 status='review' if uncertain else 'ready',source='KataGo',reasons=reasons)
 
 
+def settled_adjudication(board, captures):
+    """Prove an ordinary, dame-free finish without relying on neural estimates.
+
+    Every original group needs Benson pass-alive proof. Shared liberties,
+    ko-dependent pockets, seki and any unsettled group deliberately fall through to the specialist engine.
+    """
+    if len(board) != 169 or any(type(c) is not int or c not in (-1, 0, 1) for c in board):
+        raise ValueError('Invalid board for adjudication')
+    if not {1, -1} <= set(board):
+        return None
+    # Only original-board unconditional life is eligible. Bounded local death
+    # reading remains useful advice, but does not open this automatic gate.
+    dead = set()
+    clean = board
+    safe = pass_alive(clean)
+    if any(c and i not in safe for i, c in enumerate(clean)):
+        return None
+    for _, border in regions(clean):
+        if len({clean[p] for p in border}) != 1:
+            return None
+    return dict(dead=sorted(dead), uncertain=[], seki=[],
+                score=territory_score(board, dead, captures), status='ready',
+                source='Benson pass-alive proof', reasons=[])
+
+
 class KataGo:
     def __init__(self):
         self.binary=os.getenv('KATAGO_BINARY','')
@@ -105,6 +130,9 @@ class KataGo:
         return bool(self.binary and self.model)
 
     async def analyze(self,room):
+        proven = settled_adjudication(room.board, room.captures)
+        if proven is not None:
+            return proven
         if not self.configured:
             raise RuntimeError('KataGo engine/model is not configured')
         requests=[query(room,'quick',256),query(room,'deep',1024)]

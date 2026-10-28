@@ -76,7 +76,7 @@ t.ws.message({type:'state',state:manners});assert.equal(t.e('blackClock').textCo
 manners.clock.mainRemaining.black=200;manners.clock.remaining.black=200;manners.clock.turnElapsed=60;
 t.ws.message({type:'state',state:manners});assert(t.e('clockNote').textContent.includes('Please move'));
 manners.status='scoring';manners.adjudication={status:'analyzing'};manners.clock.running=null;manners.clock.reviewDeadline=null;
-t.ws.message({type:'state',state:manners});assert.equal(t.e('clockNote').textContent,'Checking the score…');assert.equal(t.e('approve').disabled,true);
+t.ws.message({type:'state',state:manners});assert.equal(t.e('status').textContent,'Checking…');assert.equal(t.e('clockNote').textContent,'');assert.equal(t.e('approve').disabled,true);assert(t.e('approve').classes.has('hidden'));
 console.log('PASS byoyomi periods, private delay warning, and no countdown during analysis');
 
 // Audio follows acknowledged actions, never previews, duplicate packets or passes.
@@ -145,3 +145,5 @@ t=setup(undefined,{'13go:active-room':'ABCDEFG'});t.ws.message({type:'welcome',r
 t=ready();t.ws.onclose({code:4001});assert.equal(t.values.get('13go:active-room'),'');assert(t.e('gameBoard').classes.has('hidden'));assert(!t.timers.some(x=>x.active&&x.delay===1000));console.log('PASS superseded seat closes without reconnect loop');
 
 const studioWav=fs.readFileSync(require('path').join(__dirname,'brand-intro.wav'));const studioData=studioWav.indexOf(Buffer.from('data'));let studioPeak=0;for(let i=studioData+8;i+1<studioWav.length;i+=2)studioPeak=Math.max(studioPeak,Math.abs(studioWav.readInt16LE(i)));assert(studioPeak>10000);assert(studioWav.length>200000);console.log('PASS original studio chime contains audible audio');
+
+t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let checking=playing('checking');checking.status='scoring';checking.adjudication={status:'analyzing'};checking.board[84]=1;t.ws.message({type:'state',state:checking});const beforeMarks=t.ws.messages.length;clickPoint(t,84);assert.equal(t.ws.messages.length,beforeMarks);assert(t.e('scoreResult').classes.has('hidden'));console.log('PASS automatic scoring blocks manual marks and hides unverified confirmation');

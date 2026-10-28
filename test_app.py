@@ -5,6 +5,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'python'))
 import server as s
 from aiohttp.test_utils import TestClient, TestServer
 
+def finished_board():
+    board=[1 if i%13<6 else -1 for i in range(169)]
+    for point in (0,2,10,12): board[point]=0
+    return board
+
 class Rules(unittest.TestCase):
     def test_rematch_has_new_game_id(self):
         r=self.room();old=r.game_id;r.act('black',{'type':'resign'});r.act('black',{'type':'rematch'})
@@ -39,7 +44,7 @@ class Rules(unittest.TestCase):
         b=[0]*169; result,_=s.try_move(b,0,1,set())
         with self.assertRaises(ValueError): s.try_move(b,0,1,{s.board_hash(result)})
     def test_scoring_and_rematch(self):
-        r=self.room();r.act('black',{'type':'pass'});r.act('black',{'type':'pass'});self.assertEqual(r.status,'scoring')
+        r=self.room();r.board=finished_board();r.act('black',{'type':'pass'});r.act('black',{'type':'pass'});self.assertEqual(r.status,'scoring')
         r.act('black',{'type':'approve'});self.assertEqual(r.status,'finished')
         r.act('black',{'type':'rematch'});self.assertEqual((r.status,r.moves),('playing',0))
     def test_resume(self):
@@ -57,7 +62,7 @@ class Rules(unittest.TestCase):
     def test_spectator(self):
         with self.assertRaises(ValueError):self.room().act('spectator',{'type':'move','index':0})
     def test_normal_agreement(self):
-        r=self.room(False);r.act('black',{'type':'pass'});r.act('white',{'type':'pass'});r.act('black',{'type':'approve'});self.assertEqual(r.status,'scoring');r.act('white',{'type':'approve'});self.assertEqual(r.status,'finished')
+        r=self.room(False);r.board=finished_board();r.act('black',{'type':'pass'});r.act('white',{'type':'pass'});r.act('black',{'type':'approve'});self.assertEqual(r.status,'scoring');r.act('white',{'type':'approve'});self.assertEqual(r.status,'finished')
 
 class API(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
