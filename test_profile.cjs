@@ -94,7 +94,7 @@ countdownGame.clock.remaining.black=9;t.ws.message({type:'state',state:countdown
 countdownGame.clock.running='white';countdownGame.clock.remaining.white=8;t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,2);
 console.log('PASS acknowledged stone sounds, removed sound button, and own-turn countdown deduplication');
 
-assert(html.includes('intro-out 2.6s'));assert(html.includes('woodenTapBuffer'));console.log('PASS wooden impact buffer and longer brand introduction');
+assert(html.includes('SAI STUDIO'));assert(html.includes('studio-in 1.1s'));assert(html.includes('studioTimer=setTimeout(finishStudio,3800)'));assert(html.includes('woodenTapBuffer'));console.log('PASS wooden impact buffer and longer brand introduction');
 
 assert(!html.includes('class="home-index"'));assert(!html.includes('<svg class="menu-arrow"'));
 assert(!html.includes('Options &amp; rules'));assert(html.indexOf('Settings &amp; rules')>html.indexOf('id="profilePage"'));
@@ -135,3 +135,5 @@ const stoneWav=fs.readFileSync(require('path').join(__dirname,'stone-placement.w
 
 // Both participants hear opening expiry; spectators do not, and locked audio can retry.
 t=setup(undefined,{},'?room=ABCDEFG',true);t.ws.message({type:'welcome',role:'white',token:'owner'});warning=playing('opening-both');warning.moves=0;warning.clock={policy:'byoyomi-manners-v1',running:'black',turnElapsed:20,remaining:{black:280,white:300},mainRemaining:{black:280,white:300},periods:{black:3,white:3}};t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineNumber').textContent,'10');assert.equal(t.soundEvents.length,0);t.listeners.touchend();assert.equal(t.soundEvents.length,1);t.ws.message({type:'state',state:warning});assert.equal(t.soundEvents.length,1);t.ws.message({type:'welcome',role:'spectator',token:'viewer'});assert(t.e('deadlineCountdown').classes.has('hidden'));console.log('PASS both players opening countdown and retry after audio unlock');
+
+t=setup(undefined,{},'');assert(!t.e('brandIntro').classes.has('hidden'));assert.equal(t.e('shell').inert,true);t.timers.find(x=>x.delay===3800).callback();t.timers.find(x=>x.delay===650).callback();assert(t.e('brandIntro').classes.has('hidden'));assert.equal(t.e('shell').inert,false);t=setup(undefined,{},'?room=ABCDEFG');assert(t.e('brandIntro').classes.has('hidden')||!t.e('shell').inert);console.log('PASS company intro timed exit and room entry bypass');
