@@ -14,11 +14,15 @@ def digest(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+def secure_request(request):
+    return request.secure or os.getenv('RENDER') == 'true' or os.getenv('PUBLIC_ORIGIN', '').startswith('https:')
+
+
 def same_origin(request):
     origin = request.headers.get('Origin', '')
     expected = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
     if not expected:
-        expected = f'{request.scheme}://{request.host}'
+        expected = f"{'https' if secure_request(request) else request.scheme}://{request.host}"
     if origin != expected:
         raise web.HTTPForbidden(text='Invalid origin')
 
@@ -31,7 +35,7 @@ async def identity(request, store):
 async def config(request):
     nonce = secrets.token_urlsafe(32)
     response = web.json_response({'clientId': os.getenv('GOOGLE_CLIENT_ID', ''), 'nonce': nonce}, headers={'Cache-Control': 'no-store'})
-    response.set_cookie(NONCE, nonce, httponly=True, secure=request.secure or os.getenv('PUBLIC_ORIGIN', '').startswith('https:'), samesite='Strict', max_age=300, path='/')
+    response.set_cookie(NONCE, nonce, httponly=True, secure=secure_request(request), samesite='Strict', max_age=300, path='/')
     return response
 
 
@@ -69,7 +73,7 @@ def setup(app, store_key):
             token = secrets.token_urlsafe(32)
             await store.auth_put('session:' + digest(token), user, time.time() + 30 * 86400)
         response = web.json_response({'user': user}, headers={'Cache-Control': 'no-store'})
-        response.set_cookie(COOKIE, token, httponly=True, secure=request.secure or os.getenv('PUBLIC_ORIGIN', '').startswith('https:'), samesite='Lax', max_age=30 * 86400, path='/')
+        response.set_cookie(COOKIE, token, httponly=True, secure=secure_request(request), samesite='Lax', max_age=30 * 86400, path='/')
         response.del_cookie(NONCE, path='/')
         return response
 
@@ -135,6 +139,6 @@ async def profile_for(request, store, initial_name=None):
 def profile_cookie(response, request, token):
     if token:
         response.set_cookie(PROFILE_COOKIE, token, httponly=True,
-            secure=request.secure or os.getenv('PUBLIC_ORIGIN', '').startswith('https:'),
+            secure=secure_request(request),
             samesite='Lax', max_age=365 * 86400, path='/')
     return response

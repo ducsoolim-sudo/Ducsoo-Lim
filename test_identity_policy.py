@@ -108,3 +108,13 @@ class ProfilePolicy(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(message['type'],'error');self.assertIn('rank',message['message'])
         self.assertIsNone(room.players['white'])
         await ws.close()
+
+class ProxyOrigin(unittest.TestCase):
+    def test_render_https_origin_and_secure_cookie_without_trusting_headers(self):
+        from types import SimpleNamespace
+        req=SimpleNamespace(headers={'Origin':'https://example.onrender.com','X-Forwarded-Proto':'garbage'},scheme='http',host='example.onrender.com',secure=False)
+        with patch.dict('os.environ',{'RENDER':'true','PUBLIC_ORIGIN':''}):
+            auth.same_origin(req)
+            self.assertTrue(auth.secure_request(req))
+            req.headers['Origin']='https://evil.example'
+            with self.assertRaises(s.web.HTTPForbidden):auth.same_origin(req)
