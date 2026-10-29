@@ -6,10 +6,10 @@ function setup(seedName,seedStorage={},search="?room=ABCDEFG",audioTest=false,or
   class AudioMock{constructor(){this.state="running";this.currentTime=0}createBuffer(channels,length){const data=new Float32Array(length);return {getChannelData(){return data}}}createBufferSource(){soundEvents.push("impact");return {connect(){},start(){}}}createOscillator(){soundEvents.push("tone");return {frequency:{setValueAtTime(){}},connect(){},start(){},stop(){}}}createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}resume(){return Promise.resolve()}}
   const values=new Map(seedName?[['13go:nickname',seedName]]:[]),elements=new Map();for(const [key,value] of Object.entries(seedStorage))values.set(key,value);
   class Element{constructor(){this.value='';this.textContent='';this.children=[];this.disabled=false;this.attrs={};this.classes=new Set();this.classList={toggle:(c,force)=>{const add=force===undefined?!this.classes.has(c):force;if(add)this.classes.add(c);else this.classes.delete(c);return add},add:(c)=>this.classes.add(c),remove:(c)=>this.classes.delete(c),contains:(c)=>this.classes.has(c)}}append(...x){this.children.push(...x)}replaceChildren(...x){this.children=x}setAttribute(k,v){this.attrs[k]=v}addEventListener(type,handler){this.events??={};this.events[type]=handler}getContext(){return new Proxy({createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>k in o?o[k]:()=>{}})}getBoundingClientRect(){return {left:0,top:0,width:720,height:720}}click(){}}
-  const document={addEventListener(type,callback){listeners[type]=callback},hidden:false,getElementById(id){if(!elements.has(id)){const el=new Element();if(id==='matchDialog')el.classes.add('hidden');elements.set(id,el)}return elements.get(id)},createElement(){return new Element()}};
+  const document={addEventListener(type,callback){listeners[type]=callback},hidden:false,getElementById(id){if(!elements.has(id)){const el=new Element();if(id==='matchDialog')el.classes.add('hidden');elements.set(id,el)}return elements.get(id)},createElement(tag){const el=new Element();el.tagName=tag.toUpperCase();return el}};
   class WS{static OPEN=1;constructor(){WS.last=this;this.readyState=1}send(value){this.sent=JSON.parse(value);this.messages??=[];this.messages.push(this.sent)}close(){}message(x){this.onmessage({data:JSON.stringify(x)})}}
   const sandbox={document,location:{search,protocol:'http:',host:'localhost',origin:'http://localhost',pathname:'/'},localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},WebSocket:WS,URLSearchParams,URL,Blob,history:{replaceState(){}},fetch:async()=>({ok:true,json:async()=>({online:0,playing:0,waiting:0,list:[]})}),setTimeout:(callback,delay)=>{timers.push({callback,delay,active:true});return timers.length},clearTimeout(id){if(timers[id-1])timers[id-1].active=false},setInterval(){},confirm:()=>true,window:{scrollTo(){},...(audioTest?{AudioContext:AudioMock}:{}),...(orbitTest?{requestAnimationFrame(callback){frames.push(callback);return frames.length}}:{})},navigator:{audioSession:{}},console};
-  vm.runInNewContext(code.replace(/\}\)\(\);\s*$/,'window.testLoadProfile=loadProfile;})();'),sandbox);if(search||seedStorage["13go:active-room"])WS.last.onopen();return {sandbox,ws:WS.last,e:id=>document.getElementById(id),values,soundEvents,listeners,frames,timers};
+  vm.runInNewContext(code.replace(/\}\)\(\);\s*$/,'window.testLoadProfile=loadProfile;window.testLoadLobby=loadLobby;})();'),sandbox);if(search||seedStorage["13go:active-room"])WS.last.onopen();return {sandbox,ws:WS.last,e:id=>document.getElementById(id),values,soundEvents,listeners,frames,timers};
 }
 function game(id,result,solo=false){return {room:'ABCDEFG',gameId:id,solo,status:'finished',turn:'white',board:Array(169).fill(0),players:{black:{name:'Alice',connected:true},white:{name:'Bob',connected:true}},captures:{black:0,white:0},passes:0,moves:42,lastMove:null,dead:[],approvals:[],rematch:[],result:{winner:result,reason:'resign'}}}
 let t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});t.ws.message({type:'state',state:game('g1','black')});t.ws.message({type:'state',state:game('g1','black')});t.ws.message({type:'state',state:game('g2','white')});t.e('navProfile').onclick();assert.equal(t.e('statGames').textContent,2);assert.equal(t.e('statWins').textContent,1);assert.equal(t.e('statLosses').textContent,1);assert.equal(t.e('statRate').textContent,'50%');assert.equal(t.e('historyRows').children.length,2);console.log('PASS profile wins/losses/rate and duplicate result protection');
@@ -205,3 +205,23 @@ t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.ws.messag
 t.sandbox.document.hidden=true;t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,0);
 t.sandbox.document.hidden=false;t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,0);
 console.log('PASS restrained match/end cues, duplicate suppression, reconnect and hidden-tab silence');
+
+(async()=>{
+ const ui=setup(undefined,{},'');await Promise.resolve();await Promise.resolve();
+ const payload=list=>({online:2,playing:1,waiting:0,list});
+ ui.sandbox.fetch=async()=>({ok:true,json:async()=>payload([])});
+ await ui.sandbox.window.testLoadLobby();
+ const empty=ui.e('watchRooms').children[0];assert.equal(empty.children[0].textContent,'Play');empty.children[0].onclick();assert(!ui.e('playPage').classes.has('hidden'));
+ const item={room:'WATCH01',black:'Long Player Name',white:'Opponent',status:'playing',moves:8,spectators:0};
+ ui.sandbox.fetch=async()=>({ok:true,json:async()=>payload([item])});await ui.sandbox.window.testLoadLobby();
+ const row=ui.e('watchRooms').children[0];assert.equal(row.tagName,'BUTTON');assert.equal(row.children[1].tagName,'SPAN');row.onclick();assert.equal(ui.ws,undefined);assert.equal(ui.e('homePage').classes.has('hidden'),true);
+ const pending=[];ui.sandbox.fetch=()=>new Promise(resolve=>pending.push(resolve));
+ const old=ui.sandbox.window.testLoadLobby(),fresh=ui.sandbox.window.testLoadLobby();
+ pending[1]({ok:true,json:async()=>payload([item])});await fresh;
+ pending[0]({ok:true,json:async()=>payload([])});await old;
+ assert.equal(ui.e('watchRooms').children[0].tagName,'BUTTON');
+ ui.sandbox.fetch=async()=>{throw new Error('offline')};await ui.sandbox.window.testLoadLobby();
+ const retry=ui.e('watchRooms').children[0].children[0];assert.equal(retry.textContent,'Retry');
+ ui.sandbox.fetch=async()=>({ok:true,json:async()=>payload([])});await retry.onclick();assert.equal(ui.e('watchRooms').children[0].children[0].textContent,'Play');
+ console.log('PASS empty-watch action, accessible whole-row watch, stale-response rejection and retry recovery');
+})().catch(error=>{console.error(error);process.exitCode=1});
