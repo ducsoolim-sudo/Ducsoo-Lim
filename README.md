@@ -199,3 +199,7 @@ not yet a completed release feature.
 
 ## Restart recovery validation (2026-10-29)
 Restored online games freeze at the durable checkpoint until both seats reconnect. First-action, idle, overtime, review and absence timers exclude server downtime and recovery waiting. Pre-existing absence remains chargeable. Unsettled adjudication waits for both seats before resuming. See `test_recovery.py` and run `python verify_restart_process.py` for a real killed-process restart check (31-second one-seat wait, board/token recovery and a legal next move). The latter uses a temporary local database. The disposable hosted preview cannot establish durable deployment recovery; a separate persistent test database remains required.
+
+
+## Preview opponent tactics (2026-10-29)
+The unrated preview opponent now prioritizes captures, escaping atari, connecting groups, preserving eyes and third/fourth-line development. A bounded ten-candidate tactical reply check penalizes immediate captures and atari. It honors the previous-position ko restriction and only answers a human pass with a pass when the ordinary settled-position proof succeeds (otherwise it keeps playing). Move selection runs in a thread so it does not block the server event loop. This improves basic tactics; it is not a KataGo-strength opponent or a certified kyu/dan level. Seven tactical regression cases and the actual socket/rematch checks cover this change.
