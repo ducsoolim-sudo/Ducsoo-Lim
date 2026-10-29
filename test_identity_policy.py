@@ -83,6 +83,9 @@ class ProfilePolicy(unittest.IsolatedAsyncioTestCase):
         ws=await self.client.ws_connect('/ws');await ws.send_json({'type':'join',**seat,'name':'Fake'})
         await ws.receive_json();d=await ws.receive_json()
         self.assertEqual(d['state']['players']['black']['name'],'Fixed')
+        self.assertEqual(d['state']['players']['black']['rank'],'18k')
+        self.assertIsNone(d['state']['players']['black']['mannerScore'])
+        self.assertNotIn('profile_key',d['state']['players']['black'])
         await ws.close()
 
     async def test_stale_room_save_does_not_lock_profile(self):

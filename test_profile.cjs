@@ -186,3 +186,5 @@ console.log('PASS recovery clears an unacknowledged pre-restart move before resu
  p.e('nickname').value='Bypass';p.e('nickname').onchange();assert.equal(p.e('nickname').value,'Bob');
  console.log('PASS profile updates use server policy, cooldown and rank lock');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+t=ready();let tagged=playing('tagged');tagged.players.black.rank='5k';tagged.players.white.rank='2d';t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackRank').textContent,'5k');assert.equal(t.e('whiteRank').textContent,'2d');assert.equal(t.e('blackManner').textContent,'Manners —');tagged=playing('legacy');t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackRank').textContent,'—');tagged.solo=true;t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackIdentity').classList.contains('hidden'),true);console.log('PASS name-adjacent declared ranks and unmeasured manners without invented scores');

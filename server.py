@@ -354,7 +354,7 @@ class Room:
             "board": self.board,
             "turn": "black" if self.turn == 1 else "white",
             "status": self.status,
-            "players": {role: ({"name": self.players[role]["name"], "connected": self.connected(role)}
+            "players": {role: ({"name": self.players[role]["name"], "rank": self.players[role].get("rank"), "mannerScore": None, "connected": self.connected(role)}
                               if self.players[role] else None) for role in ("black", "white")},
             "captures": self.captures,
             "passes": self.passes,
@@ -643,7 +643,7 @@ def bind_profile(room, role, key, profile, user):
     owner = player.get('profile_id')
     if owner and owner != profile['id']:
         raise ValueError('This seat belongs to another profile.')
-    player.update(profile_id=profile['id'], profile_key=key)
+    player.update(profile_id=profile['id'], profile_key=key, rank=profile['rank'])
     if user:
         old = player.get('account_id')
         if old and old != user['id']:
