@@ -122,6 +122,7 @@ class DurabilityTests(unittest.IsolatedAsyncioTestCase):
         client=TestClient(TestServer(s.make_app(s.RoomStore(path=':memory:',database_url=''))))
         await client.start_server()
         try:
+            await client.post('/api/profile',json={'rank':'18k'},headers={'Origin':str(client.make_url('/')).rstrip('/')})
             a=await (await client.post('/api/match',json={'name':'A'})).json()
             ws=await client.ws_connect('/ws');await ws.send_json({'type':'join',**a})
             await ws.receive_json();await ws.receive_json()

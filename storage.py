@@ -54,7 +54,15 @@ class RoomStore:
         rows = await self.auth_query('SELECT payload FROM go13_account_games WHERE subject=? ORDER BY updated DESC LIMIT 200', (subject,))
         return [json.loads(row[0]) for row in rows]
 
+    async def profile_get(self, key):
+        rows = await self.auth_query('SELECT payload FROM go13_profiles WHERE key=?', (key,))
+        return json.loads(rows[0][0]) if rows else None
+
+    async def profile_put(self, key, profile):
+        await self.auth_query('INSERT INTO go13_profiles VALUES (?,?) ON CONFLICT(key) DO UPDATE SET payload=excluded.payload', (key, json.dumps(profile)))
+
     async def init_accounts(self):
+        await self.auth_query('CREATE TABLE IF NOT EXISTS go13_profiles (key TEXT PRIMARY KEY, payload TEXT NOT NULL)')
         await self.auth_query('CREATE TABLE IF NOT EXISTS go13_auth (key TEXT PRIMARY KEY, payload TEXT NOT NULL, expires DOUBLE PRECISION NOT NULL)')
         await self.auth_query('CREATE TABLE IF NOT EXISTS go13_account_games (subject TEXT NOT NULL, game_id TEXT NOT NULL, payload TEXT NOT NULL, updated DOUBLE PRECISION NOT NULL, PRIMARY KEY(subject,game_id))')
 
@@ -71,6 +79,14 @@ class RoomStore:
         snapshot['revision'] = room.revision + 1
         values = (room.code, json.dumps(snapshot), time.time(), room.revision + 1, room.revision)
         archive = (room.game_id, json.dumps(room.state()), time.time()) if room.status == 'finished' else None
+        locked_profiles = []
+        if room.status == 'playing' and not room.solo and not room.test_bot:
+            for player in room.players.values():
+                if player and player.get('profile_key'):
+                    profile = await self.profile_get(player['profile_key'])
+                    if profile and not profile['rankLocked']:
+                        profile['rankLocked'] = True
+                        locked_profiles.append((json.dumps(profile), player['profile_key']))
         account_records = []
         if archive and not room.solo and not room.test_bot:
             for color, player in room.players.items():
@@ -84,6 +100,8 @@ class RoomStore:
                 if not await cursor.fetchone():
                     cursor = await self.connection.execute('SELECT payload FROM go13_rooms WHERE code=%s', (room.code,))
                     raise StaleRoom(json.loads((await cursor.fetchone())[0]))
+                for record in locked_profiles:
+                    await self.connection.execute('UPDATE go13_profiles SET payload=%s WHERE key=%s', record)
                 if archive:
                     await self.connection.execute('INSERT INTO go13_games VALUES (%s,%s,%s) ON CONFLICT(game_id) DO NOTHING', archive)
                 for record in account_records:
@@ -94,6 +112,8 @@ class RoomStore:
                 if not cursor.fetchone():
                     row = self.connection.execute('SELECT payload FROM go13_rooms WHERE code=?', (room.code,)).fetchone()
                     raise StaleRoom(json.loads(row[0]))
+                for record in locked_profiles:
+                    self.connection.execute('UPDATE go13_profiles SET payload=? WHERE key=?', record)
                 if archive:
                     self.connection.execute('INSERT INTO go13_games VALUES (?,?,?) ON CONFLICT(game_id) DO NOTHING', archive)
                 for record in account_records:

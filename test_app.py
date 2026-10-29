@@ -69,6 +69,7 @@ class API(unittest.IsolatedAsyncioTestCase):
         s.ROOMS.clear();s.REQUEST_TIMES.clear();s.ROOT.joinpath('static').mkdir(exist_ok=True)
         s.ROOT.joinpath('static/index.html').write_text(s.ROOT.joinpath('index.html').read_text(encoding='utf-8'),encoding='utf-8')
         self.client=TestClient(TestServer(s.make_app(s.RoomStore(path=':memory:', database_url=''))));await self.client.start_server()
+        await self.client.post('/api/profile',json={'rank':'18k'},headers={'Origin':str(self.client.make_url('/')).rstrip('/')})
     async def asyncTearDown(self):await self.client.close()
     async def test_health_and_home(self):
         self.assertTrue((await (await self.client.get('/health')).json())['ok'])
@@ -88,6 +89,7 @@ class API(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(a['room'],b['room']);self.assertEqual(b['role'],'white')
         lobby=await (await self.client.get('/api/lobby')).json();self.assertEqual(lobby['playing'],1)
     async def test_two_players_reconnect_score_and_sgf(self):
+        await self.client.post('/api/profile',json={'name':'A]\\test'},headers={'Origin':str(self.client.make_url('/')).rstrip('/')})
         a=await (await self.client.post('/api/match',json={'name':'A]\\test'})).json()
         b=await (await self.client.post('/api/match',json={'name':'B'})).json()
         async def join(player):

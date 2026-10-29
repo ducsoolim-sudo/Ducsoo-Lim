@@ -9,13 +9,13 @@ function setup(seedName,seedStorage={},search="?room=ABCDEFG",audioTest=false,or
   const document={addEventListener(type,callback){listeners[type]=callback},hidden:false,getElementById(id){if(!elements.has(id)){const el=new Element();if(id==='matchDialog')el.classes.add('hidden');elements.set(id,el)}return elements.get(id)},createElement(){return new Element()}};
   class WS{static OPEN=1;constructor(){WS.last=this;this.readyState=1}send(value){this.sent=JSON.parse(value);this.messages??=[];this.messages.push(this.sent)}close(){}message(x){this.onmessage({data:JSON.stringify(x)})}}
   const sandbox={document,location:{search,protocol:'http:',host:'localhost',origin:'http://localhost',pathname:'/'},localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},WebSocket:WS,URLSearchParams,URL,Blob,history:{replaceState(){}},fetch:async()=>({ok:true,json:async()=>({online:0,playing:0,waiting:0,list:[]})}),setTimeout:(callback,delay)=>{timers.push({callback,delay,active:true});return timers.length},clearTimeout(id){if(timers[id-1])timers[id-1].active=false},setInterval(){},confirm:()=>true,window:{scrollTo(){},...(audioTest?{AudioContext:AudioMock}:{}),...(orbitTest?{requestAnimationFrame(callback){frames.push(callback);return frames.length}}:{})},navigator:{audioSession:{}},console};
-  vm.runInNewContext(code,sandbox);if(search||seedStorage["13go:active-room"])WS.last.onopen();return {ws:WS.last,e:id=>document.getElementById(id),values,soundEvents,listeners,frames,timers};
+  vm.runInNewContext(code.replace(/\}\)\(\);\s*$/,'window.testLoadProfile=loadProfile;})();'),sandbox);if(search||seedStorage["13go:active-room"])WS.last.onopen();return {sandbox,ws:WS.last,e:id=>document.getElementById(id),values,soundEvents,listeners,frames,timers};
 }
 function game(id,result,solo=false){return {room:'ABCDEFG',gameId:id,solo,status:'finished',turn:'white',board:Array(169).fill(0),players:{black:{name:'Alice',connected:true},white:{name:'Bob',connected:true}},captures:{black:0,white:0},passes:0,moves:42,lastMove:null,dead:[],approvals:[],rematch:[],result:{winner:result,reason:'resign'}}}
 let t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});t.ws.message({type:'state',state:game('g1','black')});t.ws.message({type:'state',state:game('g1','black')});t.ws.message({type:'state',state:game('g2','white')});t.e('navProfile').onclick();assert.equal(t.e('statGames').textContent,2);assert.equal(t.e('statWins').textContent,1);assert.equal(t.e('statLosses').textContent,1);assert.equal(t.e('statRate').textContent,'50%');assert.equal(t.e('historyRows').children.length,2);console.log('PASS profile wins/losses/rate and duplicate result protection');
 t.ws.message({type:'state',state:game('solo1','black',true)});t.e('navProfile').onclick();assert.equal(t.e('statGames').textContent,2);assert.equal(t.e('practiceCount').textContent,'1 solo sessions completed');console.log('PASS solo practice tracked separately');
 t=setup();t.ws.message({type:'welcome',role:'spectator'});t.ws.message({type:'state',state:game('watched','black')});t.e('navProfile').onclick();assert.equal(t.e('statGames').textContent,0);console.log('PASS watched games excluded from record');
-t.e('profileNickname').value='Global Player';t.e('saveProfile').onclick();assert.equal(t.values.get('13go:nickname'),'Global Player');assert.equal(t.e('profileName').textContent,'Global Player');console.log('PASS profile display name saved');
+t.e('profileNickname').value='Global Player';t.e('saveProfile').onclick();assert.notEqual(t.values.get('13go:nickname'),'Global Player');console.log('PASS name cannot be saved locally without a server profile');
 t.values.set('13go:history','invalid json');t.e('navProfile').onclick();assert.equal(t.e('statGames').textContent,0);console.log('PASS malformed browser history handled');
 assert(!/[가-힣]/.test(html));assert(!html.includes('id="create"'));console.log('PASS English UI and private-room button removed');
 
@@ -166,3 +166,23 @@ t=ready();clickPoint(t,84);clickPoint(t,84);assert.equal(t.e('pass').disabled,tr
 let recoveredPending=playing('mobile');recoveredPending.clock={recovering:true,running:null,remaining:{black:295,white:300}};t.ws.message({type:'state',state:recoveredPending});
 recoveredPending={...recoveredPending,clock:{...recoveredPending.clock,recovering:false,running:'black'}};t.ws.message({type:'state',state:recoveredPending});assert.equal(t.e('pass').disabled,false);clickPoint(t,85);clickPoint(t,85);assert.equal(t.ws.messages.at(-1).index,85);
 console.log('PASS recovery clears an unacknowledged pre-restart move before resuming');
+
+(async()=>{
+ const p=setup(null,{},'');
+ let profile={id:'fixed',name:'Alice',rank:null,rankLocked:false,nameChangeAt:0},posts=[];
+ p.sandbox.fetch=async(url,options)=>{
+  if(url==='/api/profile'){
+   if(options?.method==='POST'){posts.push(JSON.parse(options.body));profile={...profile,...posts.at(-1),nameChangeAt:Date.now()/1000+30*86400}}
+   return {ok:true,json:async()=>({profile})};
+  }
+  return {ok:true,json:async()=>({user:null,games:[]})};
+ };
+ await p.sandbox.window.testLoadProfile();
+ await p.e('match').onclick();assert.equal(p.e('profilePage').classList.contains('hidden'),false);assert.equal(posts.length,0);assert.equal(p.e('profileName').textContent,'Alice');
+ p.e('profileNickname').value='Bob';p.e('profileRank').value='5k';await p.e('saveProfile').onclick();
+ assert.deepEqual(posts[0],{name:'Bob',rank:'5k'});assert.equal(p.e('profileNickname').disabled,true);
+ profile={...profile,rankLocked:true};await p.sandbox.window.testLoadProfile();
+ assert.equal(p.e('profileRank').disabled,true);assert.equal(p.e('saveProfile').disabled,true);
+ p.e('nickname').value='Bypass';p.e('nickname').onchange();assert.equal(p.e('nickname').value,'Bob');
+ console.log('PASS profile updates use server policy, cooldown and rank lock');
+})().catch(error=>{console.error(error);process.exitCode=1});

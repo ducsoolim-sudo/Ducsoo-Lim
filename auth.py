@@ -95,3 +95,46 @@ def setup(app, store_key):
 
 
 AUTH_LOCK = web.AppKey('auth_lock', asyncio.Lock)
+
+
+PROFILE_COOKIE = 'go13_profile'
+NAME_INTERVAL = 30 * 86400
+RANKS = {str(n)+'k' for n in range(1,19)} | {str(n)+'d' for n in range(1,6)}
+
+
+def clean_name(value):
+    if not isinstance(value, str):
+        raise ValueError('Enter a display name.')
+    name = ' '.join(value.split())
+    if not name or len(name) > 16 or any(ord(c) < 32 for c in name):
+        raise ValueError('Use a display name of 1–16 characters.')
+    return name
+
+
+async def profile_for(request, store, initial_name=None):
+    user = await identity(request, store)
+    token = None
+    if user:
+        key = 'account:' + user['id']
+    else:
+        token = request.cookies.get(PROFILE_COOKIE, '')
+        if len(token) != 43:
+            token = secrets.token_urlsafe(32)
+        key = 'guest:' + digest(token)
+    profile = await store.profile_get(key)
+    if profile is None:
+        profile = {'id': secrets.token_urlsafe(18), 'name': 'Player', 'nameSet': False,
+                   'rank': None, 'rankLocked': False, 'nameChangeAt': 0}
+        if initial_name and initial_name != 'Player':
+            profile['name'] = clean_name(initial_name)
+            profile['nameSet'] = True
+        await store.profile_put(key, profile)
+    return key, profile, token, user
+
+
+def profile_cookie(response, request, token):
+    if token:
+        response.set_cookie(PROFILE_COOKIE, token, httponly=True,
+            secure=request.secure or os.getenv('PUBLIC_ORIGIN', '').startswith('https:'),
+            samesite='Lax', max_age=365 * 86400, path='/')
+    return response

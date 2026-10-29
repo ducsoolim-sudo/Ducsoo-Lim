@@ -630,18 +630,84 @@ async def lobby(request):
     return web.json_response(lobby_snapshot())
 
 
+def profile_active(profile_id):
+    return any(r.status in ('waiting', 'playing', 'scoring') and
+               any(p and p.get('profile_id') == profile_id for p in r.players.values())
+               for r in ROOMS.values())
+
+
+def bind_profile(room, role, key, profile, user):
+    if role not in ('black', 'white'):
+        return
+    player = room.players[role]
+    owner = player.get('profile_id')
+    if owner and owner != profile['id']:
+        raise ValueError('This seat belongs to another profile.')
+    player.update(profile_id=profile['id'], profile_key=key)
+    if user:
+        old = player.get('account_id')
+        if old and old != user['id']:
+            raise ValueError('This seat belongs to another account.')
+        player['account_id'] = user['id']
+
+
+async def get_profile(request):
+    async with request.app[LOCK]:
+        _, profile, cookie, _ = await auth.profile_for(request, request.app[STORE])
+        return auth.profile_cookie(web.json_response({'profile': profile}, headers={'Cache-Control':'no-store'}), request, cookie)
+
+
+async def edit_profile(request):
+    auth.same_origin(request)
+    data = await input_json(request)
+    if not data or set(data) - {'name', 'rank'}:
+        raise web.HTTPBadRequest(text='Only display name and initial rank can be changed.')
+    async with request.app[LOCK]:
+        key, profile, cookie, _ = await auth.profile_for(request, request.app[STORE])
+        updated = copy.deepcopy(profile)
+        if 'name' in data:
+            try:
+                name = auth.clean_name(data['name'])
+            except ValueError as exc:
+                raise web.HTTPBadRequest(text=str(exc))
+            if name != profile['name']:
+                if profile_active(profile['id']):
+                    raise web.HTTPConflict(text='Finish or cancel your game before editing your profile.')
+                if time.time() < profile['nameChangeAt']:
+                    raise web.HTTPConflict(text='Display names can be changed once every 30 days.')
+                updated['name'] = name
+                updated['nameChangeAt'] = time.time() + auth.NAME_INTERVAL if profile['nameSet'] else 0
+                updated['nameSet'] = True
+        if 'rank' in data:
+            rank = data['rank']
+            if not isinstance(rank, str) or rank not in auth.RANKS:
+                raise web.HTTPBadRequest(text='Choose a rank from 18 kyu to 5 dan.')
+            if rank != profile['rank']:
+                if profile['rankLocked']:
+                    raise web.HTTPConflict(text='Your initial rank is locked after your first online game starts.')
+                if profile_active(profile['id']):
+                    raise web.HTTPConflict(text='Finish or cancel your game before editing your profile.')
+                updated['rank'] = rank
+        await request.app[STORE].profile_put(key, updated)
+        return auth.profile_cookie(web.json_response({'profile': updated}, headers={'Cache-Control':'no-store'}), request, cookie)
+
+
 async def create_room(request):
     check_rate(request)
     data = await input_json(request)
     async with request.app[LOCK]:
+        key, profile, cookie, user = await auth.profile_for(request, request.app[STORE], request_name(data))
+        if data.get('solo') is not True and profile['rank'] is None:
+            raise web.HTTPBadRequest(text='Choose your initial rank in My Page.')
         room = new_room(public=bool(data.get("public", False)), solo=data.get("solo") is True)
-        role, token = room.claim(None, request_name(data))
+        role, token = room.claim(None, profile["name"])
+        bind_profile(room, role, key, profile, user)
         try:
             await request.app[STORE].save(room)
         except Exception:
             ROOMS.pop(room.code, None)
             raise web.HTTPServiceUnavailable(text="Unable to save this game. Please try again.")
-    return web.json_response({"room": room.code, "token": token, "role": role})
+    return auth.profile_cookie(web.json_response({"room": room.code, "token": token, "role": role}), request, cookie)
 
 
 async def test_match(request):
@@ -652,9 +718,11 @@ async def test_match(request):
         raise web.HTTPServiceUnavailable(text='Test opponents are busy. Please retry shortly.')
     data = await input_json(request)
     async with request.app[LOCK]:
+        key, profile, cookie, user = await auth.profile_for(request, request.app[STORE], request_name(data))
         room = new_room(public=False, solo=False)
         room.test_bot = True
-        role, token = room.claim(None, request_name(data))
+        role, token = room.claim(None, profile["name"])
+        bind_profile(room, role, key, profile, user)
         try:
             await request.app[STORE].save(room)
         except Exception:
@@ -673,20 +741,24 @@ async def test_match(request):
             room.status='cancelled'
             await request.app[STORE].save(room)
         raise web.HTTPServiceUnavailable(text='Test opponent unavailable. Please retry.')
-    return web.json_response({'room':room.code,'token':token,'role':role,'testBot':True})
+    return auth.profile_cookie(web.json_response({'room':room.code,'token':token,'role':role,'testBot':True}), request, cookie)
 
 
 async def match_room(request):
     check_rate(request)
     data = await input_json(request)
     async with request.app[LOCK]:
+        key, profile, cookie, user = await auth.profile_for(request, request.app[STORE], request_name(data))
+        if profile['rank'] is None:
+            raise web.HTTPBadRequest(text='Choose your initial rank in My Page.')
         now = time.time()
         candidates = [r for r in ROOMS.values() if r.public and r.status == "waiting"
                       and r.players["black"] is not None and r.players["white"] is None
                       and (r.connected("black") or now - r.modified < 30)]
         room = min(candidates, key=lambda r: (not r.connected("black"), r.modified)) if candidates else new_room(public=True)
         before = room.snapshot()
-        role, token = room.claim(None, request_name(data))
+        role, token = room.claim(None, profile["name"])
+        bind_profile(room, role, key, profile, user)
         room.connection_changed()
         try:
             await request.app[STORE].save(room)
@@ -696,7 +768,7 @@ async def match_room(request):
                 ROOMS.pop(room.code, None)
             raise web.HTTPServiceUnavailable(text="Unable to save this game. Please try again.")
         await room.broadcast()
-    return web.json_response({"room": room.code, "token": token, "role": role, "matched": role == "white"})
+    return auth.profile_cookie(web.json_response({"room": room.code, "token": token, "role": role, "matched": role == "white"}), request, cookie)
 
 
 async def websocket_handler(request):
@@ -704,6 +776,9 @@ async def websocket_handler(request):
     client_count = sum(len(r.clients) for r in ROOMS.values())
     if client_count >= MAX_CLIENTS:
         raise web.HTTPServiceUnavailable(text="The connection limit has been reached.")
+    async with request.app[LOCK]:
+        profile_key, socket_profile, profile_token, socket_user = await auth.profile_for(request, request.app[STORE])
+    auth.profile_cookie(socket, request, profile_token)
     await socket.prepare(request)
     room: Room | None = None
     role = "spectator"
@@ -733,18 +808,20 @@ async def websocket_handler(request):
                             raise ValueError("Game not found. Please start a new game.")
                         before = candidate.snapshot()
                         token = data.get("token") if isinstance(data.get("token"), str) else None
-                        name = request_name(data)
+                        socket_profile = await request.app[STORE].profile_get(profile_key)
+                        name = socket_profile["name"]
                         if data.get("mode") == "watch" or candidate.status == "cancelled":
                             role, token = "spectator", None
                         else:
+                            reconnect = token and any(p and p.get('token') == token for p in candidate.players.values())
+                            if not reconnect and not candidate.solo and not candidate.test_bot and socket_profile['rank'] is None:
+                                raise ValueError('Choose your initial rank in My Page.')
                             role, token = candidate.claim(token, name)
-                            user = await auth.identity(request, request.app[STORE])
-                            if user and role in ('black', 'white'):
-                                owner = candidate.players[role].get('account_id')
-                                if owner and owner != user['id']:
-                                    candidate.restore(before)
-                                    raise ValueError('This seat belongs to another account.')
-                                candidate.players[role]['account_id'] = user['id']
+                            try:
+                                bind_profile(candidate, role, profile_key, socket_profile, socket_user)
+                            except ValueError:
+                                candidate.restore(before)
+                                raise
                         if role == "spectator" and sum(r == "spectator" for r in candidate.clients.values()) >= MAX_SPECTATORS_PER_ROOM:
                             candidate.restore(before)
                             raise ValueError("This game has reached its spectator limit.")
@@ -956,6 +1033,8 @@ def make_app(store=None):
     app[JOBS] = set()
     app[BOT_JOBS] = {}
     auth.setup(app, STORE)
+    app.router.add_get("/api/profile", get_profile)
+    app.router.add_post("/api/profile", edit_profile)
     app.router.add_get("/", index)
     app.router.add_post("/api/rooms", create_room)
     app.router.add_post("/api/match", match_room)

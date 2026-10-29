@@ -20,6 +20,7 @@ class AutomaticScoreFlow(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.client=TestClient(TestServer(s.make_app(s.RoomStore(path=':memory:',database_url=''))))
         await self.client.start_server()
+        await self.client.post('/api/profile',json={'rank':'18k'},headers={'Origin':str(self.client.make_url('/')).rstrip('/')})
 
     async def asyncTearDown(self):
         await self.client.close()

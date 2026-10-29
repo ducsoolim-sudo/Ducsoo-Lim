@@ -23,6 +23,7 @@ async def main():
   try:
    async with aiohttp.ClientSession() as c:
     base='http://127.0.0.1:18085'
+    await c.post(base+'/api/profile',json={'rank':'18k'},headers={'Origin':base})
     seat=await (await c.post(base+'/api/rooms',json={'name':'Recovery B'})).json()
     a=await c.ws_connect(base+'/ws');await a.send_json({'type':'join',**seat});await a.receive_json();await state(a)
     b=await c.ws_connect(base+'/ws');await b.send_json({'type':'join','room':seat['room'],'name':'Recovery W'});welcome=await b.receive_json();bt=welcome['token'];await state(b)
