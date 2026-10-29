@@ -190,3 +190,18 @@ console.log('PASS recovery clears an unacknowledged pre-restart move before resu
 t=ready();let tagged=playing('tagged');tagged.players.black.rank='5k';tagged.players.white.rank='2d';t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackRank').textContent,'5k');assert.equal(t.e('whiteRank').textContent,'2d');assert.equal(t.e('blackManner').textContent,'Manners —');tagged=playing('legacy');t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackRank').textContent,'—');tagged.solo=true;t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackIdentity').classList.contains('hidden'),true);console.log('PASS name-adjacent declared ranks and unmeasured manners without invented scores');
 
 t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let badgePopup=playing('popup-identity');badgePopup.clock={running:'black',remaining:{black:300,white:300}};badgePopup.players.black.rank='5k';badgePopup.players.white.rank='2d';t.ws.message({type:'state',state:badgePopup});assert.equal(t.e('matchDialogPlayers').children[0].children[2].children[0].textContent,'5k');assert.equal(t.e('matchDialogPlayers').children[1].children[2].children[0].textContent,'2d');assert.equal(t.e('matchDialogPlayers').children[0].children[2].children[1].textContent,'Manners —');console.log('PASS match popup shows both declared ranks and unmeasured manners');
+
+// Event audio follows actual transitions, never reconnect snapshots or duplicates.
+t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.ws.message({type:'welcome',role:'black',token:'owner'});
+let cueWait=playing('cue-events');cueWait.status='waiting';cueWait.clock={running:null};
+t.ws.message({type:'state',state:cueWait});t.soundEvents.length=0;
+let cuePlay={...cueWait,status:'playing',clock:{running:'black',remaining:{black:300,white:300}}};
+t.ws.message({type:'state',state:cuePlay});assert.equal(t.soundEvents.length,2);
+t.ws.message({type:'state',state:cuePlay});assert.equal(t.soundEvents.length,2);
+let cueEnd={...cuePlay,status:'finished',result:{reason:'resign',winner:'white'},clock:{running:null}};
+t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,4);
+t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,4);
+t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.ws.message({type:'welcome',role:'black',token:'owner'});t.ws.message({type:'state',state:cuePlay});assert.equal(t.soundEvents.length,0);
+t.sandbox.document.hidden=true;t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,0);
+t.sandbox.document.hidden=false;t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,0);
+console.log('PASS restrained match/end cues, duplicate suppression, reconnect and hidden-tab silence');
