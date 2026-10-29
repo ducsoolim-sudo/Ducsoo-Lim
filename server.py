@@ -858,7 +858,7 @@ def schedule_adjudication(app, room):
         continue_unsettled(room, "Position not settled. Continue playing.")
         return
     # Mark before another event can accept the preliminary heuristic score.
-    room.adjudication = {"status": "analyzing"}
+    room.adjudication = {"status": "analyzing", "job": secrets.token_urlsafe(12)}
     room.review_deadline = None
     game_id = room.game_id
     snapshot = Room.from_snapshot(room.snapshot())
@@ -872,26 +872,43 @@ def schedule_adjudication(app, room):
         except Exception:
             logging.exception("Automatic adjudication unavailable")
             result = {"status": "unavailable"}
-        async with app[LOCK]:
-            if room.status != "scoring" or room.game_id != game_id or room.adjudication is not marker:
-                return
-            before = room.snapshot()
-            room.adjudication = result
-            room.approvals.clear()
-            if result['status'] in ('ready', 'review'):
-                room.dead = set(result['dead'])
-                room.score_uncertain = set(result['uncertain'])
-            # An engine error or uncertain result never starts a forfeit timer.
-            room.review_deadline = time.time() + REVIEW_SECONDS if result['status'] == 'ready' and not room.solo else None
-            if result['status'] != 'ready':
-                continue_unsettled(room, "Score check unavailable. Continue playing." if result['status'] == 'unavailable' else "Position not settled. Continue playing.")
-            try:
-                await app[STORE].save(room)
-            except Exception as exc:
-                room.restore(exc.snapshot if isinstance(exc, StaleRoom) else before)
-                logging.exception("Unable to save automatic adjudication")
-                return
-            await room.broadcast()
+        retry_delay = 1
+        while True:
+            async with app[LOCK]:
+                if (room.status != "scoring" or room.game_id != game_id
+                        or not room.adjudication
+                        or room.adjudication.get("job") != marker["job"]
+                        or room.recovery_anchor is not None):
+                    return
+                before = room.snapshot()
+                room.adjudication = result
+                room.approvals.clear()
+                if result['status'] in ('ready', 'review'):
+                    room.dead = set(result['dead'])
+                    room.score_uncertain = set(result['uncertain'])
+                # Only a durably saved result may start the confirmation budget.
+                # Reset its deadline on each attempt so storage downtime cannot
+                # consume the player's review time.
+                room.review_deadline = time.time() + REVIEW_SECONDS if result['status'] == 'ready' and not room.solo else None
+                if result['status'] != 'ready':
+                    continue_unsettled(room, "Score check unavailable. Continue playing." if result['status'] == 'unavailable' else "Position not settled. Continue playing.")
+                try:
+                    await app[STORE].save(room)
+                except StaleRoom as exc:
+                    # A newer writer owns this state; never apply an old result.
+                    room.restore(exc.snapshot)
+                    logging.exception("Automatic adjudication superseded by a newer save")
+                    return
+                except Exception:
+                    room.restore(before)
+                    logging.exception("Unable to save automatic adjudication; retrying")
+                else:
+                    await room.broadcast()
+                    return
+            # Keep the analyzed result, not the global room lock, while storage
+            # recovers. Cancellation and state/game changes invalidate retries.
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, 30)
     task = asyncio.create_task(run())
     app[JOBS].add(task)
     task.add_done_callback(app[JOBS].discard)

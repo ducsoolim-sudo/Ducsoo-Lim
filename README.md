@@ -44,8 +44,8 @@ old server; confirm restoration and health on the new instance.
   unresolved scoring do not start a review-forfeit deadline. One acceptance and
   one nonresponse forfeits; neither accepting cancels (operational default).
 - Solo practice has no clock and does not affect the win record.
-- Server downtime still affects running wall-clock deadlines: outage exemption
-  and restart recovery remain a release blocker, documented in the manual.
+- Restored games freeze at the durable checkpoint until both seats reconnect.
+  Hosted persistence acceptance still requires a separate durable test store.
 - Rules are versioned in `rules_policy.py`; `test_manners.py` exercises boundary,
   overtime, repeated-reconnect, persistence, and scoring timeout behavior.
 - Product decisions and status are maintained in the separately saved **13GO

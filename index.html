@@ -219,7 +219,7 @@
 
   function stoneSound(previous,next){if(previous&&previous.gameId===next.gameId&&next.moves===previous.moves+1&&next.lastMove!==null&&next.lastMove!==undefined)woodenTap()}
   function countdownSound(role,seconds,periods,main){
-    if(!game||game.status!=='playing'||game.solo||role!==myRole||game.clock?.running!==role||main>0||seconds<1||seconds>10||document.hidden)return;
+    if(!game||game.status!=='playing'||game.solo||game.clock?.recovering||role!==myRole||game.clock?.running!==role||main>0||seconds<1||seconds>10||document.hidden)return;
     const key=[game.gameId,game.moves,role,periods,seconds].join(':');if(key===lastCountdown)return;lastCountdown=key;tone(seconds<=3?1040:740,.065,seconds<=3?.055:.035);
   }
   document.addEventListener?.('pointerdown',unlockSound,{passive:true});document.addEventListener?.('touchend',unlockSound,{passive:true});document.addEventListener?.('click',unlockSound,{passive:true});document.addEventListener?.('keydown',unlockSound);
@@ -229,7 +229,7 @@
   function intro(){if(room||storage.get('13go:active-room')){brandSoundPending=false;return}$('brandIntro').classList.remove('hidden');$('shell').inert=true;$('brandIntro').focus?.();studioTimer=setTimeout(finishStudio,4200);$('brandIntro').onclick=()=>finishStudio();unlockSound();}
 
 
-  $('confirmMoves').checked=true;
+  $('confirmMoves').checked=true;canvas.setAttribute('aria-disabled',String(!canSelectMove()));
   const savedName=storage.get('13go:nickname');
   $('nickname').value=savedName==='\ub300\uad6d\uc790'?'Player':savedName||'';
   if(savedName==='\ub300\uad6d\uc790')storage.set('13go:nickname','Player');
@@ -308,13 +308,13 @@
   $('googleLogout').onclick=async()=>{try{const response=await fetch('/api/auth/logout',{method:'POST'});if(!response.ok)throw new Error();await loadAccount();if(socket){socket.onclose=null;socket.close();connect()}}catch{toast('Please try again.')}};
   setupGoogle();
   function downloadSgf(text,id){if(!text){toast('No move record is available for this game.');return}const blob=new Blob([text],{type:'application/x-go-sgf;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='13go-'+id+'.sgf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-  function send(type,extras={}){if(socket?.readyState!==WebSocket.OPEN){toast('Please check your connection.');return false}if(['move','pass'].includes(type)){if(awaitingMove)return false;awaitingMove={gameId:game?.gameId,moves:game?.moves};selectedMove=null}socket.send(JSON.stringify({type,...extras}));renderPlacement();return true}
+  function send(type,extras={}){if(game?.clock?.recovering&&type!=='join')return false;if(socket?.readyState!==WebSocket.OPEN){toast('Please check your connection.');return false}if(['move','pass'].includes(type)){if(awaitingMove)return false;awaitingMove={gameId:game?.gameId,moves:game?.moves};selectedMove=null}socket.send(JSON.stringify({type,...extras}));renderPlacement();return true}
   function connect(){
     if(!room)return;if(socket){socket.onclose=null;socket.close()}
     connection('Connecting');const protocol=location.protocol==='https:'?'wss:':'ws:';
     const ws=new WebSocket(protocol+'//'+location.host+'/ws');socket=ws;
     ws.onopen=()=>{if(socket!==ws)return;retry=0;connection('Connected',true);send('join',{room,token:storage.get('13go:'+room),name:myName(),mode:watching?'watch':'play'})};
-    ws.onmessage=e=>{if(socket!==ws)return;let data;try{data=JSON.parse(e.data)}catch{return}if(data.type==='welcome'){myRole=data.role;storeToken(room,data.token);update()}else if(data.type==='state'){stoneSound(game,data.state);if(!game||game.gameId!==data.state.gameId||game.moves!==data.state.moves)lastCountdown=null;game=data.state;clockReceived=Date.now();if(awaitingMove&&(game.gameId!==awaitingMove.gameId||game.moves!==awaitingMove.moves||game.status!=='playing'))awaitingMove=null;if(game.status==='cancelled'){leaveRoom('Game cancelled. You can find a new opponent.');return}if(!watching&&myRole!=='spectator')storage.set('13go:active-room',room);recordResult();update();draw()}else if(data.type==='error'){awaitingMove=null;selectedMove=null;renderPlacement();draw();toast(data.message);if(data.message.includes('Game not found')){leaveRoom('Previous game is no longer available.')}}};
+    ws.onmessage=e=>{if(socket!==ws)return;let data;try{data=JSON.parse(e.data)}catch{return}if(data.type==='welcome'){myRole=data.role;storeToken(room,data.token);update()}else if(data.type==='state'){stoneSound(game,data.state);if(!game||game.gameId!==data.state.gameId||game.moves!==data.state.moves)lastCountdown=null;game=data.state;clockReceived=Date.now();if(awaitingMove&&(game.clock?.recovering||game.gameId!==awaitingMove.gameId||game.moves!==awaitingMove.moves||game.status!=='playing'))awaitingMove=null;if(game.status==='cancelled'){leaveRoom('Game cancelled. You can find a new opponent.');return}if(!watching&&myRole!=='spectator')storage.set('13go:active-room',room);recordResult();update();draw()}else if(data.type==='error'){awaitingMove=null;selectedMove=null;renderPlacement();draw();toast(data.message);if(data.message.includes('Game not found')){leaveRoom('Previous game is no longer available.')}}};
     ws.onclose=event=>{if(socket!==ws)return;if(event?.code===4001){clearTimeout(reconnectTimeout);leaveRoom('Game opened in another tab.');return}connection('Reconnecting');awaitingMove=null;selectedMove=null;renderPlacement();draw();if(room){clearTimeout(reconnectTimeout);reconnectTimeout=setTimeout(connect,Math.min(1000*Math.pow(1.7,retry++),8000))}};ws.onerror=()=>connection('Connection issue');
   }
   function enterRoom(code,token=null,watch=false){closeMatchDialog();room=code;watching=watch;if(token)storeToken(room,token);history.replaceState({},'','?room='+encodeURIComponent(room)+(watch?'&watch=1':''));myRole='spectator';game=null;selectedMove=null;awaitingMove=null;retry=0;clearTimeout(reconnectTimeout);showPage('play');connect();update();draw()}
@@ -338,7 +338,7 @@
     }catch{$('lobbyRooms').textContent='Lobby unavailable. Please refresh.';$('watchRooms').textContent='Unable to load games. Please try Refresh games.'}
   }
   function update(){
-    const spectator=myRole==='spectator',active=game?.status==='playing',scoring=game?.status==='scoring',finished=game?.status==='finished';
+    const spectator=myRole==='spectator',active=game?.status==='playing',scoring=game?.status==='scoring',finished=game?.status==='finished',recovering=!!game?.clock?.recovering;
     const boardVisible=!!game&&(game.status!=='waiting'||spectator);
     $('shell').classList.toggle('game-view',page==='play'&&boardVisible);$('gameBoard').classList.toggle('hidden',!boardVisible);$('playPage').classList.toggle('game-only',boardVisible);$('playPage').classList.toggle('setup-only',!boardVisible);
     $('watchBanner').classList.toggle('hidden',!game||(!spectator&&!game.testBot));$('watchBanner').textContent=game?.testBot?'Test opponent · Unrated':'Watching';$('codeBox').classList.toggle('hidden',!room||game?.solo);$('finalResult').classList.toggle('hidden',!finished);$('code').textContent=room;
@@ -351,38 +351,38 @@
     renderClocks();
 
     renderPlacement();
-    $('pass').disabled=!active||spectator||!!awaitingMove||(!game?.solo&&myRole!==game?.turn);$('resign').disabled=!game||spectator||!active&&!scoring;
+    $('pass').disabled=recovering||!active||spectator||!!awaitingMove||(!game?.solo&&myRole!==game?.turn);$('resign').disabled=recovering||!game||spectator||!active&&!scoring;
     if(!game){$('status').textContent=room?'Connecting to your game…':'Your next game starts here';$('moveCount').textContent='13 × 13';$('myRole').textContent='Find an opponent for a public game, or practice both colors on your own.';$('gameHint').textContent='Black plays first. Two consecutive passes start scoring.';return}
     // Seat identity stays stable; a solo owner controls both turns.
     $('blackName').textContent=game.solo?'Black':game.players.black?(game.players.black.name+(game.players.black.connected?' ●':' · offline')):'Waiting';
     $('whiteName').textContent=game.solo?'White':game.players.white?(game.players.white.name+(game.players.white.connected?' ●':' · offline')):'Waiting';
     $('blackCaptures').textContent='Captured '+game.captures.black;$('whiteCaptures').textContent='Captured '+game.captures.white;$('moveCount').textContent=game.moves+(game.moves===1?' move':' moves');
-    $('blackCard').classList.toggle('turn',active&&game.turn==='black');$('whiteCard').classList.toggle('turn',active&&game.turn==='white');
+    $('blackCard').classList.toggle('turn',active&&!recovering&&game.turn==='black');$('whiteCard').classList.toggle('turn',active&&!recovering&&game.turn==='white');
     $('pass').textContent=game.passes===1?'Pass & score':'Pass';
     $('myRole').textContent=spectator?'Spectator · enjoy the game.':game.solo?'Solo practice · you control both colors.':'You are playing '+roles[myRole]+'.';
     $('inviteHint').textContent=game.solo?'Practice is private and does not affect your record.':spectator?'Spectators can watch but cannot play moves.':'Your game is public. Share its spectator link.';
-    $('gameHint').classList.toggle('hidden',finished||scoring||(!scoring&&game.passes!==1&&!game.scoringNotice));
+    $('gameHint').classList.toggle('hidden',recovering||finished||scoring||(!scoring&&game.passes!==1&&!game.scoringNotice));
     $('gameHint').textContent=game.scoringNotice|| (game.status==='waiting'?'Waiting for a second player. Others can join from the lobby.':active?(game.passes===1?'Last turn was a pass. Pass now to start scoring.':'Two consecutive passes start scoring.'):scoring?(spectator?'The players are reviewing dead groups and the final score.':'Confirm the score.'):'');
-    if(game.status==='waiting')$('status').textContent='Looking for an opponent…';else if(active)$('status').textContent=(game.solo?roles[game.turn]+' to play':game.turn===myRole&&!spectator?'Your turn':roles[game.turn]+' to play')+(game.passes===1?' · passed last turn':'');else if(scoring){$('status').textContent=['pending','analyzing'].includes(game.adjudication?.status)?'Checking…':'Score';renderScore()}else{$('status').textContent='';renderFinal()}
-    const scoreReady=scoring&&!!game.score&&!game.scoreUncertain?.length&&!['pending','analyzing','review','unavailable'].includes(game.adjudication?.status);
+    if(recovering)$('status').textContent='Paused';else if(game.status==='waiting')$('status').textContent='Looking for an opponent…';else if(active)$('status').textContent=(game.solo?roles[game.turn]+' to play':game.turn===myRole&&!spectator?'Your turn':roles[game.turn]+' to play')+(game.passes===1?' · passed last turn':'');else if(scoring){$('status').textContent=['pending','analyzing'].includes(game.adjudication?.status)?'Checking…':'Score';renderScore()}else{$('status').textContent='';renderFinal()}
+    const scoreReady=!recovering&&scoring&&!!game.score&&!game.scoreUncertain?.length&&!['pending','analyzing','review','unavailable'].includes(game.adjudication?.status);
     $('scoringHint').classList.add('hidden');$('scoreResult').classList.toggle('hidden',!scoreReady);$('approve').classList.toggle('hidden',!scoreReady);
-    $('approve').disabled=spectator||!scoreReady||game.approvals.includes(myRole);$('approve').textContent=game.approvals.includes(myRole)?'Waiting…':'Confirm';
-    $('status').classList.toggle('score-checking',scoring&&['pending','analyzing'].includes(game.adjudication?.status));
+    $('approve').disabled=recovering||spectator||!scoreReady||game.approvals.includes(myRole);$('approve').textContent=game.approvals.includes(myRole)?'Waiting…':'Confirm';
+    $('status').classList.toggle('score-checking',!recovering&&scoring&&['pending','analyzing'].includes(game.adjudication?.status));
     $('rematch').classList.toggle('hidden',spectator);
     $('rematch').disabled=spectator||game.rematch.includes(myRole);$('rematch').textContent=game.solo?'Practice again':game.rematch.includes(myRole)?'Rematch requested · waiting':'Request rematch';updateMatchDialog();
   }
   function coordinate(index){return 'ABCDEFGHJKLMN'[index%N]+(N-Math.floor(index/N))}
-  function canSelectMove(){return game?.status==='playing'&&myRole!=='spectator'&&(game.solo||myRole===game.turn)&&socket?.readyState===WebSocket.OPEN&&!awaitingMove}
+  function canSelectMove(){return game?.status==='playing'&&!game.clock?.recovering&&myRole!=='spectator'&&(game.solo||myRole===game.turn)&&socket?.readyState===WebSocket.OPEN&&!awaitingMove}
   function validSelection(){return selectedMove&&canSelectMove()&&selectedMove.gameId===game.gameId&&selectedMove.moves===game.moves&&selectedMove.turn===game.turn&&game.board[selectedMove.index]===0}
   function renderPlacement(){
-    $('confirmMoves').checked=true;
+    $('confirmMoves').checked=true;canvas.setAttribute('aria-disabled',String(!canSelectMove()));
     if(selectedMove&&!validSelection())selectedMove=null;
     $('placementControls').classList.toggle('hidden',!game||game.status!=='playing'||myRole==='spectator');
     $('pass').disabled=!canSelectMove();
-    $('placementActions').classList.toggle('hidden',!selectedMove);$('selectionHint').classList.toggle('hidden',!awaitingMove&&socket?.readyState===WebSocket.OPEN&&canSelectMove());
+    $('placementActions').classList.toggle('hidden',!selectedMove);$('selectionHint').classList.toggle('hidden',!!game?.clock?.recovering||!awaitingMove&&socket?.readyState===WebSocket.OPEN&&canSelectMove());
     const valid=!!validSelection();$('placeMove').disabled=!valid;$('clearMove').disabled=!valid;
     $('placeMove').textContent=valid?'Place '+coordinate(selectedMove.index):awaitingMove?'Sending…':'Place stone';
-    $('selectionHint').textContent=awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':valid?'':!canSelectMove()?'Your opponent is thinking.':'';
+    $('selectionHint').textContent=game?.clock?.recovering?'':awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':valid?'':!canSelectMove()?'Your opponent is thinking.':'';
   }
   function selectMove(index){
     if(!canSelectMove())return;
@@ -395,7 +395,7 @@
 
   function deadlineWarning(clock,elapsed){
     let remaining=null,kind='';
-    if(game?.status==='playing'&&!game.solo&&clock?.policy==='byoyomi-manners-v1'&&(myRole==='black'||myRole==='white')&&clock.running&&(game.moves===0||clock.running===myRole)){
+    if(game?.status==='playing'&&!game.solo&&!clock?.recovering&&clock?.policy==='byoyomi-manners-v1'&&(myRole==='black'||myRole==='white')&&clock.running&&(game.moves===0||clock.running===myRole)){
       const spent=(clock.turnElapsed||0)+elapsed;
       if(game.moves===0){remaining=30-spent;kind='First move'}
       else if((clock.mainRemaining?.[myRole]||0)>elapsed){remaining=90-spent;kind='Move now'}
@@ -409,7 +409,7 @@
   }
   function renderClocks(){
     const clock=game?.clock,elapsed=Math.max(0,(Date.now()-clockReceived)/1000);deadlineWarning(clock,elapsed);$('clockNote').classList.toggle('hidden',game?.status==='finished');
-    for(const role of ['black','white']){const el=$(role+'Clock');if(game?.solo){el.textContent='∞';el.classList.remove('urgent');continue}let seconds=clock?.remaining?.[role]??300,periods=clock?.periods?.[role]??3,main=clock?.mainRemaining?.[role]??300;const modern=clock?.policy==='byoyomi-manners-v1';if(clock?.running===role){if(modern){if(main>0){const overtime=elapsed-main;if(overtime>=0){periods=Math.max(0,periods-Math.floor(overtime/30));seconds=periods?30-overtime%30:0}else seconds=main-elapsed;main=Math.max(0,main-elapsed)}else{const left=seconds-elapsed;if(left<=0){periods=Math.max(0,periods-(1+Math.floor(-left/30)));seconds=periods?30-(-left)%30:0}else seconds=left}}else seconds-=elapsed}seconds=Math.max(0,Math.ceil(seconds));if(modern)countdownSound(role,seconds,periods,main);el.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')+(modern&&main<=0?' ×'+periods:'');el.classList.toggle('urgent',modern?main<=0:seconds<=30)}
+    for(const role of ['black','white']){const el=$(role+'Clock');if(game?.solo){el.textContent='∞';el.classList.remove('urgent');continue}let seconds=clock?.remaining?.[role]??300,periods=clock?.periods?.[role]??3,main=clock?.mainRemaining?.[role]??300;const modern=clock?.policy==='byoyomi-manners-v1';if(!clock?.recovering&&clock?.running===role){if(modern){if(main>0){const overtime=elapsed-main;if(overtime>=0){periods=Math.max(0,periods-Math.floor(overtime/30));seconds=periods?30-overtime%30:0}else seconds=main-elapsed;main=Math.max(0,main-elapsed)}else{const left=seconds-elapsed;if(left<=0){periods=Math.max(0,periods-(1+Math.floor(-left/30)));seconds=periods?30-(-left)%30:0}else seconds=left}}else seconds-=elapsed}seconds=Math.max(0,Math.ceil(seconds));if(modern)countdownSound(role,seconds,periods,main);el.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')+(modern&&main<=0?' ×'+periods:'');el.classList.toggle('urgent',modern?main<=0:seconds<=30)}
     if(game?.status==='waiting'){const seconds=Math.max(0,Math.floor((Date.now()/1000)-(game.queueSince||Date.now()/1000)));$('queueMessage').textContent='Finding an opponent · '+seconds+'s'}
     if(!game||game.solo){$('clockNote').textContent=game?.solo?'Practice':'5 min + 30 sec × 3';return}
     const now=(clock?.serverTime||Date.now()/1000)+elapsed;
@@ -482,7 +482,7 @@
   canvas.addEventListener('click',e=>{
     if(!game){toast('Start a game first.');return}
     const index=position(e);if(index<0)return;
-    if(game.status==='scoring')return;
+    if(game.status==='scoring'||game.clock?.recovering)return;
     if(game.status!=='playing'){toast('You cannot play right now.');return}
     if(myRole==='spectator'||(!game.solo&&myRole!==game.turn)){toast(myRole==='spectator'?'You are watching this game.':'It is your opponent’s turn.');return}
     selectMove(index);

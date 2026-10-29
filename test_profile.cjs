@@ -147,3 +147,22 @@ t=ready();t.ws.onclose({code:4001});assert.equal(t.values.get('13go:active-room'
 const studioWav=fs.readFileSync(require('path').join(__dirname,'brand-intro.wav'));const studioData=studioWav.indexOf(Buffer.from('data'));let studioPeak=0;for(let i=studioData+8;i+1<studioWav.length;i+=2)studioPeak=Math.max(studioPeak,Math.abs(studioWav.readInt16LE(i)));assert(studioPeak>10000);assert(studioWav.length>200000);console.log('PASS original studio chime contains audible audio');
 
 t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let checking=playing('checking');checking.status='scoring';checking.adjudication={status:'analyzing'};checking.board[84]=1;t.ws.message({type:'state',state:checking});const beforeMarks=t.ws.messages.length;clickPoint(t,84);assert.equal(t.ws.messages.length,beforeMarks);assert(t.e('scoreResult').classes.has('hidden'));console.log('PASS automatic scoring blocks manual marks and hides unverified confirmation');
+
+
+// A recovered game must look paused and reject touch/keyboard/control actions until both seats return.
+t=ready();clickPoint(t,84);assert.equal(t.e('clearMove').disabled,false);
+let recovering=playing('mobile');recovering.moves=8;recovering.clock={recovering:true,policy:'byoyomi-manners-v1',remaining:{black:10,white:200},mainRemaining:{black:0,white:200},periods:{black:2,white:3},running:null,turnElapsed:20};
+t.ws.message({type:'state',state:recovering});
+assert.equal(t.e('status').textContent,'Paused');assert.equal(t.e('clockNote').textContent,'Waiting for both players to reconnect.');assert.equal(t.e('blackClock').textContent,'0:10 ×2');
+assert.equal(t.e('pass').disabled,true);assert.equal(t.e('resign').disabled,true);assert.equal(t.e('clearMove').disabled,true);assert.equal(t.e('board').attrs['aria-disabled'],'true');assert(t.e('selectionHint').classes.has('hidden'));assert(!t.e('blackCard').classes.has('turn'));
+const pausedPackets=t.ws.messages.length;clickPoint(t,84);clickPoint(t,84);t.e('board').events.keydown({key:'Enter',preventDefault(){}});t.e('pass').onclick();t.e('resign').onclick();assert.equal(t.ws.messages.length,pausedPackets);
+recovering={...recovering,status:'scoring',score:{black:2,white:8.5,winner:'white',margin:6.5,komi:6.5},adjudication:{status:'ready'}};
+t.ws.message({type:'state',state:recovering});assert.equal(t.e('approve').disabled,true);assert(t.e('scoreResult').classes.has('hidden'));t.e('approve').onclick();assert.equal(t.ws.messages.length,pausedPackets);
+recovering={...recovering,status:'playing',clock:{...recovering.clock,recovering:false,running:'black'}};t.ws.message({type:'state',state:recovering});assert.equal(t.e('status').textContent,'Your turn');assert.equal(t.e('pass').disabled,false);assert.equal(t.e('resign').disabled,false);assert.equal(t.e('board').attrs['aria-disabled'],'false');clickPoint(t,84);clickPoint(t,84);assert.equal(t.ws.messages.at(-1).type,'move');
+console.log('PASS recovery pause locks touch, keyboard and actions, then restores play without a stale selection');
+
+// An unacknowledged pre-restart move cannot leave the restored board permanently sending.
+t=ready();clickPoint(t,84);clickPoint(t,84);assert.equal(t.e('pass').disabled,true);
+let recoveredPending=playing('mobile');recoveredPending.clock={recovering:true,running:null,remaining:{black:295,white:300}};t.ws.message({type:'state',state:recoveredPending});
+recoveredPending={...recoveredPending,clock:{...recoveredPending.clock,recovering:false,running:'black'}};t.ws.message({type:'state',state:recoveredPending});assert.equal(t.e('pass').disabled,false);clickPoint(t,85);clickPoint(t,85);assert.equal(t.ws.messages.at(-1).index,85);
+console.log('PASS recovery clears an unacknowledged pre-restart move before resuming');
