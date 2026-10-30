@@ -171,6 +171,19 @@
 .shell:not(.home-view) .online{display:none}
 }
 .game-view .nav{display:none!important}
+/* Compact the game header without narrowing the board. */
+.shell.game-view{padding-top:4px}
+.shell.game-view .brand{margin-bottom:4px;gap:4px}
+.game-view .board-head{padding-bottom:4px}
+.game-view .mini-player-row{margin-bottom:4px}
+@media(max-width:700px){
+.shell.game-view .brand{margin-bottom:2px;padding:0 8px;gap:2px}
+.game-view .player-detail{gap:2px}
+.game-view .player{padding:4px 6px}
+.game-view .identity-line{gap:1px 4px}
+.game-view .clock{font-size:20px;line-height:1.05}
+.game-view .mini-player-row{margin-bottom:4px}
+}
 </style>
 </head>
 <body>
