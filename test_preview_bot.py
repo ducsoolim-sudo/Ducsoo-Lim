@@ -1,4 +1,6 @@
 import os
+import asyncio
+import time
 import unittest
 from unittest.mock import patch
 from aiohttp.test_utils import TestClient,TestServer
@@ -54,3 +56,60 @@ class PreviewBot(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(response.status,404)
             html=await (await self.client.get('/')).text()
             self.assertIn('id="testMatch" class="button secondary hidden"',html)
+
+    async def test_paused_white_turn_waits_then_resumes_without_new_move(self):
+        store=self.client.server.app[s.STORE]
+        save=store.save
+        paused=False
+        async def pause_after_black(room):
+            nonlocal paused
+            if room.moves==1 and not paused:
+                paused=True
+                room.recovery_anchor=time.time()
+            await save(room)
+        with patch.object(store,'save',side_effect=pause_after_black), \
+                patch('preview_bot.strong_bot.configured',return_value=False), \
+                patch('preview_bot.choose_action',return_value={'type':'move','index':1}) as choose:
+            response=await self.client.post('/api/test-match',json={'name':'Human'})
+            player=await response.json();ws=await self.client.ws_connect('/ws')
+            await ws.send_json({'type':'join',**player});await ws.receive_json()
+            await self.state(ws,lambda _:True)
+            await ws.send_json({'type':'move','index':0})
+            state=await self.state(ws,lambda g:g['moves']==1 and g['clock']['recovering'])
+            self.assertEqual(state['turn'],'white')
+            await asyncio.sleep(.75)
+            choose.assert_not_called()
+            room=s.ROOMS[player['room']]
+            room.recovery_anchor=None
+            room.turn_started=time.time()
+            await save(room)
+            await room.broadcast()
+            state=await self.state(ws,lambda g:g['moves']==2)
+            self.assertEqual(state['turn'],'black')
+            choose.assert_called_once()
+            await ws.close()
+
+    async def test_transient_bot_move_save_failure_retries_same_command(self):
+        store=self.client.server.app[s.STORE]
+        save=store.save
+        failures=0
+        async def fail_once(room):
+            nonlocal failures
+            if room.moves==2 and failures==0:
+                failures+=1
+                raise OSError('Injected temporary save failure')
+            await save(room)
+        with patch.object(store,'save',side_effect=fail_once), \
+                patch('preview_bot.strong_bot.configured',return_value=False), \
+                patch('preview_bot.choose_action',return_value={'type':'move','index':1}) as choose:
+            response=await self.client.post('/api/test-match',json={'name':'Human'})
+            player=await response.json();ws=await self.client.ws_connect('/ws')
+            await ws.send_json({'type':'join',**player});await ws.receive_json()
+            await self.state(ws,lambda _:True)
+            await ws.send_json({'type':'move','index':0})
+            state=await self.state(ws,lambda g:g['moves']==2)
+            self.assertEqual(failures,1)
+            self.assertEqual(state['board'][1],-1)
+            self.assertEqual(state['turn'],'black')
+            choose.assert_called_once()
+            await ws.close()

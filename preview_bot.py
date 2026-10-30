@@ -91,6 +91,15 @@ async def run_bot(port, code, ready, try_move, board_hash):
                     completed=False
                     last_board=None
                     previous_position=None
+                    pending_action=None
+                    pending_retries=0
+
+                    async def send_action(action):
+                        nonlocal pending_action,pending_retries
+                        pending_action=action.copy()
+                        pending_retries=0
+                        await socket.send_json(action)
+
                     while True:
                         event=await socket.receive(timeout=120 if completed else None)
                         if event.type!=WSMsgType.TEXT:break
@@ -99,6 +108,13 @@ async def run_bot(port, code, ready, try_move, board_hash):
                             if message['role']!='white':raise RuntimeError('Bot seat unavailable')
                             if not ready.done():ready.set_result(True)
                         if message['type']=='error':
+                            # A failed durable save rolled the action back. Retry that
+                            # same command briefly; never invent a replacement move.
+                            if (message.get('message')=='Move not saved. Please try again.'
+                                    and pending_action is not None and pending_retries<2):
+                                pending_retries+=1
+                                await asyncio.sleep(2**(pending_retries-1))
+                                await socket.send_json(pending_action)
                             # A rejected ko candidate is recovered safely by a pass.
                             if 'Ko:' in message.get('message',''):
                                 await socket.send_json({'type':'pass'})
@@ -109,16 +125,24 @@ async def run_bot(port, code, ready, try_move, board_hash):
                             previous_position=board_hash(last_board)
                         last_board=state['board'].copy()
                         completed=state['status']=='finished'
-                        marker=(state['gameId'],state['moves'],state['status'],tuple(state['rematch']),tuple(state['dead']),tuple(state['approvals']),str(state.get('adjudication',{})))
+                        recovering=bool((state.get('clock') or {}).get('recovering'))
+                        marker=(state['gameId'],state['moves'],state['status'],tuple(state['rematch']),tuple(state['dead']),tuple(state['approvals']),str(state.get('adjudication',{})),recovering)
+                        if recovering:
+                            # Recovery can end without a new move. Do not let a
+                            # rejected pre-pause command suppress that same turn.
+                            last_action=None
+                            pending_action=None
+                            continue
                         if marker==last_action:continue
+                        pending_action=None
                         if state['status']=='cancelled':break
                         if state['status']=='finished' and 'black' in state['rematch'] and 'white' not in state['rematch']:
-                            last_action=marker;await socket.send_json({'type':'rematch'})
+                            last_action=marker;await send_action({'type':'rematch'})
                         elif state['status']=='scoring' and state.get('adjudication',{}):
                             if state['adjudication'].get('status')=='ready' and 'white' not in state['approvals']:
-                                last_action=marker;await socket.send_json({'type':'approve'})
+                                last_action=marker;await send_action({'type':'approve'})
                         elif state['status']=='scoring' and not state.get('scoreUncertain') and 'white' not in state['approvals']:
-                            last_action=marker;await socket.send_json({'type':'approve'})
+                            last_action=marker;await send_action({'type':'approve'})
                         elif state['status']=='playing' and state['turn']=='white':
                             last_action=marker
                             await asyncio.sleep(.65)
@@ -131,7 +155,7 @@ async def run_bot(port, code, ready, try_move, board_hash):
                                     action=await asyncio.to_thread(choose_action,state,try_move,board_hash,previous_position)
                             else:
                                 action=await asyncio.to_thread(choose_action,state,try_move,board_hash,previous_position)
-                            await socket.send_json(action)
+                            await send_action(action)
     except asyncio.CancelledError:
         raise
     except Exception as exc:

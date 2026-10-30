@@ -184,6 +184,14 @@
 .game-view .clock{font-size:20px;line-height:1.05}
 .game-view .mini-player-row{margin-bottom:4px}
 }
+/* Keep spectator count and Home in one header cell on narrow screens. */
+@container app (max-width:700px){
+.shell.game-view .brand{grid-template-columns:minmax(0,1fr) auto}
+.shell.game-view .brand-right{display:flex;grid-column:2;grid-row:1;align-items:center;gap:8px}
+}
+/* Dialogs sit outside app-frame; phone rules must not depend on that container. */
+.phone-portrait .match-player{align-items:center}
+.phone-portrait .match-player .identity-tags{margin-left:33px;flex-basis:100%}
 /* Quiet board: the player highlight already communicates whose turn it is. */
 .game-view #status.quiet-turn,.game-view #moveCount,.game-view #gameHint,.game-view #myRole{display:none}
 .game-view .board-head:has(#status.quiet-turn):not(:has(#deadlineCountdown:not(.hidden))){display:none}
