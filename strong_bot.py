@@ -59,6 +59,7 @@ class ResidentEngine:
 
 
 _ENGINE = ResidentEngine()
+completed_moves = 0
 
 
 async def shutdown():
@@ -127,4 +128,7 @@ async def choose_action(state, try_move, board_hash, ko_position=None):
     query = dict(id='preview-move', moves=move_history(state), rules='japanese', komi=6.5,
                  boardXSize=13, boardYSize=13, maxVisits=visits, analysisPVLen=1)
     result = await _ENGINE.query(binary, model, query)
-    return select_action(result, state, try_move, board_hash, ko_position)
+    action = select_action(result, state, try_move, board_hash, ko_position)
+    global completed_moves
+    completed_moves += 1
+    return action

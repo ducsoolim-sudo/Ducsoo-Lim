@@ -468,7 +468,7 @@
     const spectator=myRole==='spectator',active=game?.status==='playing',scoring=game?.status==='scoring',finished=game?.status==='finished',recovering=!!game?.clock?.recovering;
     const boardVisible=!!game&&(game.status!=='waiting'||spectator);
     $('shell').classList.toggle('game-view',page==='play'&&boardVisible);$('gameBoard').classList.toggle('hidden',!boardVisible);$('playPage').classList.toggle('game-only',boardVisible);$('playPage').classList.toggle('setup-only',!boardVisible);
-    $('watchBanner').classList.toggle('hidden',!game||(!spectator&&!game.testBot));$('watchBanner').textContent=game?.testBot?'Test opponent · Unrated':'Watching';$('codeBox').classList.toggle('hidden',!room||game?.solo);$('finalResult').classList.toggle('hidden',!finished);$('code').textContent=room;
+    $('watchBanner').classList.toggle('hidden',!game||!spectator);$('watchBanner').textContent='Watching';$('codeBox').classList.toggle('hidden',!room||game?.solo);$('finalResult').classList.toggle('hidden',!finished);$('code').textContent=room;
     $('playActions').classList.toggle('hidden',!active||spectator);$('scoreActions').classList.toggle('hidden',!scoring);$('finishActions').classList.toggle('hidden',!finished);
     const searching=!!game&&game.status==='waiting'&&!spectator;
     $('startActions').classList.toggle('hidden',searching);

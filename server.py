@@ -624,7 +624,7 @@ async def health(request):
                 await request.app[STORE].ping()
     except Exception:
         return web.json_response({"ok": False, "version": VERSION}, status=503)
-    return web.json_response({"ok": True, "version": VERSION, "rooms": len(ROOMS), "storage": request.app[STORE].backend, "testOpponent": "katago" if strong_bot.configured() else "tactical"})
+    return web.json_response({"ok": True, "version": VERSION, "rooms": len(ROOMS), "storage": request.app[STORE].backend, "testOpponent": "katago" if strong_bot.configured() else "tactical", "testOpponentMoves": strong_bot.completed_moves})
 
 
 async def lobby(request):
