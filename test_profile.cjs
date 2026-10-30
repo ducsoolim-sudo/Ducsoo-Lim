@@ -241,3 +241,22 @@ console.log('PASS restrained match/end cues, duplicate suppression, reconnect an
  assert(html.includes('passive:true,capture:true'));
  console.log('PASS silent gesture priming, interrupted stone recovery, closed-context replacement and game tabs hidden');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+// Quiet playing header keeps recovery and time warnings available.
+t=ready();assert(t.e("status").classes.has("quiet-turn"));assert(html.includes("#status.quiet-turn"));assert(html.includes(".game-view #moveCount"));console.log("PASS quiet turn header and move counter styling");
+
+// Phone dimensions come from the physical screen's short side, never landscape viewport width.
+{
+ const fn=code.slice(code.indexOf('  function preservePhoneWidth(){'),code.indexOf('  preservePhoneWidth();'));
+ const classes=new Set(),properties={};
+ const context={window:{screen:{width:390,height:844},matchMedia:()=>({matches:true})},document:{body:{classList:{toggle(n,on){on?classes.add(n):classes.delete(n)}}},documentElement:{style:{setProperty(n,value){properties[n]=value}}}}};
+ vm.runInNewContext(fn+';preservePhoneWidth();',context);
+ assert.equal(properties['--phone-width'],'390px');assert(classes.has('phone-portrait'));
+ context.window.screen={width:844,height:390};vm.runInNewContext('preservePhoneWidth();',context);
+ assert.equal(properties['--phone-width'],'390px');assert(classes.has('phone-portrait'));
+ context.window.screen={width:568,height:320};vm.runInNewContext('preservePhoneWidth();',context);assert.equal(properties['--phone-width'],'320px');
+ context.window.screen={width:1180,height:820};vm.runInNewContext('preservePhoneWidth();',context);assert(!classes.has('phone-portrait'));
+ context.window.screen={width:844,height:390};context.window.matchMedia=()=>({matches:false});vm.runInNewContext('preservePhoneWidth();',context);assert(!classes.has('phone-portrait'));
+ assert(html.includes('container:app / inline-size'));assert(html.includes('@container app (max-width:380px)'));assert(!html.includes('@media(max-width:700px)'));
+ console.log('PASS phone rotation preserves portrait width and container breakpoints; tablets and desktop excluded');
+}
