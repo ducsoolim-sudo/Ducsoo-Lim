@@ -2,6 +2,8 @@
 import asyncio
 import json
 import random
+import logging
+import strong_bot
 from aiohttp import ClientSession, WSMsgType
 
 
@@ -120,7 +122,15 @@ async def run_bot(port, code, ready, try_move, board_hash):
                         elif state['status']=='playing' and state['turn']=='white':
                             last_action=marker
                             await asyncio.sleep(.65)
-                            action=await asyncio.to_thread(choose_action,state,try_move,board_hash,previous_position)
+                            if strong_bot.configured():
+                                try:
+                                    action=await strong_bot.choose_action(state,try_move,board_hash,previous_position)
+                                except (ValueError, RuntimeError, OSError, TimeoutError):
+                                    # Explicit test helper only: preserve availability, never advertise a rank.
+                                    logging.warning('Strong test opponent unavailable; using unrated tactical fallback')
+                                    action=await asyncio.to_thread(choose_action,state,try_move,board_hash,previous_position)
+                            else:
+                                action=await asyncio.to_thread(choose_action,state,try_move,board_hash,previous_position)
                             await socket.send_json(action)
     except asyncio.CancelledError:
         raise

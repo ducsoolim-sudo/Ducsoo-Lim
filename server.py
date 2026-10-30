@@ -19,6 +19,7 @@ from scoring import automatic_dead, territory_score
 from adjudicator import KataGo, settled_adjudication
 import rules_policy as policy
 from preview_bot import run_bot
+import strong_bot
 
 N = 13
 KOMI = 6.5
@@ -623,7 +624,7 @@ async def health(request):
                 await request.app[STORE].ping()
     except Exception:
         return web.json_response({"ok": False, "version": VERSION}, status=503)
-    return web.json_response({"ok": True, "version": VERSION, "rooms": len(ROOMS), "storage": request.app[STORE].backend})
+    return web.json_response({"ok": True, "version": VERSION, "rooms": len(ROOMS), "storage": request.app[STORE].backend, "testOpponent": "katago" if strong_bot.configured() else "tactical"})
 
 
 async def lobby(request):
@@ -1016,6 +1017,7 @@ async def cleanup_context(app):
     for job in app[JOBS]:
         job.cancel()
     await asyncio.gather(task, *app[JOBS], return_exceptions=True)
+    await strong_bot.shutdown()
     await store.close()
 
 
