@@ -170,6 +170,7 @@
 .shell:not(.home-view) .nav button{min-width:0;padding:12px 6px}
 .shell:not(.home-view) .online{display:none}
 }
+.game-view .nav{display:none!important}
 </style>
 </head>
 <body>
@@ -245,10 +246,20 @@
   let game=null,myRole='spectator',room=params.get('room')?.toUpperCase()||'',watching=params.get('watch')==='1',socket=null,hover=-1,toastTimeout=null,reconnectTimeout=null,retry=0,page='home',posting=false,clockReceived=Date.now(),selectedMove=null,awaitingMove=null;
   const storage={get(key){try{return localStorage.getItem(key)}catch{return null}},set(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}};
   let audioContext=null,soundEnabled=true,brandSoundPending=!room&&!storage.get('13go:active-room'),lastCountdown=null,lastDeadlineKey=null;
-  let eventCueNodes=[];
+  let eventCueNodes=[],warmedAudioContext=null,audioResumePromise=null;
+  function resumeForSound(replay){
+    if(!audioContext||document.hidden)return;
+    const context=audioContext,requested=Date.now();
+    if(!audioResumePromise){try{audioResumePromise=Promise.resolve(context.resume()).catch(()=>{}).finally(()=>{audioResumePromise=null})}catch{return}}
+    audioResumePromise.then(()=>{if(audioContext===context&&context.state==='running'&&!document.hidden&&Date.now()-requested<250)replay()});
+  }
+  function primeAudio(context){
+    if(warmedAudioContext===context&&context.state==='running')return;
+    try{const source=context.createBufferSource();source.buffer=context.createBuffer(1,1,context.sampleRate||44100);source.connect(context.destination);source.start(0);warmedAudioContext=context}catch{}
+  }
   function stopEventCue(){for(const source of eventCueNodes){try{source.stop()}catch{}}eventCueNodes=[]}
   function tone(frequency,duration=.08,volume=.05,delay=0,type='sine',eventCue=false){
-    if(!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return false;
+    if(!soundEnabled||!audioContext||document.hidden)return false;if(audioContext.state!=='running'){resumeForSound(()=>renderClocks());return false;}
     try{if(!eventCue)stopEventCue();const start=audioContext.currentTime+delay,osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type=type;osc.frequency.setValueAtTime(frequency,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(volume,start+.004);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain);gain.connect(audioContext.destination);osc.start(start);osc.stop(start+duration+.01);if(eventCue)eventCueNodes.push(osc);return true}catch{return false}
   }
   let woodenTapBuffer=null,recordedTapBuffer=null;
@@ -258,7 +269,7 @@
 
   function woodenTap(volume=.7,delay=0){
     stopEventCue();
-    if(!soundEnabled||!audioContext||audioContext.state!=='running'||document.hidden)return;
+    if(!soundEnabled||!audioContext||document.hidden)return;if(audioContext.state!=='running'){resumeForSound(()=>woodenTap(volume,delay));return;}
     try{if(recordedTapBuffer){const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=recordedTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay);return}if(!woodenTapBuffer){const rate=audioContext.sampleRate||44100,length=Math.floor(rate*.145);woodenTapBuffer=audioContext.createBuffer(1,length,rate);const samples=woodenTapBuffer.getChannelData(0);let wood=0,seed=713;for(let i=0;i<length;i++){const t=i/rate;seed=(seed*16807)%2147483647;const noise=seed/1073741823.5-1;wood=.63*wood+.37*noise;const attack=Math.min(1,t/.0007);const impact=.44*noise*Math.exp(-t*1050)+.31*wood*Math.exp(-t*85);const body=.25*Math.sin(2*Math.PI*475*t)*Math.exp(-t*95)+.18*Math.sin(2*Math.PI*810*t+.4)*Math.exp(-t*140)+.1*Math.sin(2*Math.PI*1240*t)*Math.exp(-t*185);samples[i]=Math.max(-.9,Math.min(.9,(impact+body)*attack))}}const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=woodenTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay)}catch{}
   }
   let studioSoundBuffer=null,studioSoundDecode=null;
@@ -269,7 +280,21 @@
     if(studioSoundBuffer){try{const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=studioSoundBuffer;gain.gain.setValueAtTime(.85,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start();eventCueNodes.push(source);return true}catch{}}
     const played=tone(329.628,1.1,.045,.10,'sine',true);tone(493.883,1.2,.032,.43,'sine',true);tone(659.255,1.5,.025,.82,'sine',true);return played;
   }
-  async function unlockSound(){if(!soundEnabled)return;try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;if(!audioContext){try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}audioContext=new Audio();}loadRecordedTap();if(audioContext.state!=='running')await audioContext.resume();if(brandSoundPending){await loadStudioSound();if(brandSoundPending&&!$('brandIntro').classList.contains('hidden')&&brandSound())brandSoundPending=false}renderClocks()}catch{}}
+  async function unlockSound(){
+    if(!soundEnabled||document.hidden)return;
+    try{
+      const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;
+      try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}
+      if(!audioContext||audioContext.state==='closed'){audioContext=new Audio();warmedAudioContext=null;audioResumePromise=null;woodenTapBuffer=null;audioContext.onstatechange=()=>{if(audioContext?.state==='running'&&!document.hidden)renderClocks()}}
+      const context=audioContext;
+      // Start a silent frame synchronously inside the gesture; do not wait for fetch/decode.
+      primeAudio(context);
+      const resume=context.state!=='running'?context.resume():null;
+      loadRecordedTap();if(resume)await resume;
+      if(brandSoundPending){await loadStudioSound();if(brandSoundPending&&!$('brandIntro').classList.contains('hidden')&&brandSound())brandSoundPending=false}
+      renderClocks();
+    }catch{}
+  }
 
   const heardMatchCues=new Set();
   function matchSound(previous,next){
@@ -286,10 +311,10 @@
   function stoneSound(previous,next){if(previous&&previous.gameId===next.gameId&&next.moves===previous.moves+1&&next.lastMove!==null&&next.lastMove!==undefined)woodenTap()}
   function countdownSound(role,seconds,periods,main){
     if(!game||game.status!=='playing'||game.solo||game.clock?.recovering||role!==myRole||game.clock?.running!==role||main>0||seconds<1||seconds>10||document.hidden)return;
-    const key=[game.gameId,game.moves,role,periods,seconds].join(':');if(key===lastCountdown)return;lastCountdown=key;tone(seconds<=3?1040:740,.065,seconds<=3?.055:.035);
+    const key=[game.gameId,game.moves,role,periods,seconds].join(':');if(key===lastCountdown)return;if(tone(seconds<=3?1040:740,.065,seconds<=3?.055:.035))lastCountdown=key;
   }
-  document.addEventListener?.('pointerdown',unlockSound,{passive:true});document.addEventListener?.('touchend',unlockSound,{passive:true});document.addEventListener?.('click',unlockSound,{passive:true});document.addEventListener?.('keydown',unlockSound);
-  document.addEventListener?.('visibilitychange',()=>{if(!document.hidden&&audioContext?.state!=='running')unlockSound()});
+  document.addEventListener?.('pointerdown',unlockSound,{passive:true,capture:true});document.addEventListener?.('touchend',unlockSound,{passive:true,capture:true});document.addEventListener?.('click',unlockSound,{passive:true,capture:true});document.addEventListener?.('keydown',unlockSound,{capture:true});
+  document.addEventListener?.('visibilitychange',()=>{if(document.hidden)stopEventCue();else if(audioContext?.state!=='running')unlockSound()});
   let studioTimer=null,studioClosing=false;
   function finishStudio(){if(studioClosing||$('brandIntro').classList.contains('hidden'))return;stopEventCue();studioClosing=true;brandSoundPending=false;clearTimeout(studioTimer);$('brandIntro').classList.add('studio-out');setTimeout(()=>{$('brandIntro').classList.add('hidden');$('shell').inert=false;$('homePlay').focus?.()},650)}
   function intro(){if(room||storage.get('13go:active-room')){brandSoundPending=false;return}$('brandIntro').classList.remove('hidden');$('shell').inert=true;$('brandIntro').focus?.();studioTimer=setTimeout(finishStudio,4200);$('brandIntro').onclick=()=>finishStudio();unlockSound();}
