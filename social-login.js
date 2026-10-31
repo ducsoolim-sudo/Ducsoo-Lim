@@ -38,9 +38,11 @@ window.Go13Social = {
             method:'POST', headers:{'Content-Type':'application/json'},
             body:JSON.stringify({idToken, nonce:config.nonce})
           });
-          if (!response.ok) throw new Error('session');
+          if (!response.ok) throw Object.assign(new Error('session'),{code:'app/session-'+response.status});
           await complete();
         } catch (error) {
+          // Diagnostic code only; never log tokens, credentials or provider payloads.
+          if(typeof error.code==='string'&&/^(auth|app)\/[a-z0-9-]+$/.test(error.code))console.warn('13GO sign-in:',error.code);
           if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') return;
           notify(error.code === 'auth/account-exists-with-different-credential'
             ? 'Use your existing sign-in method. Accounts have not been merged.'

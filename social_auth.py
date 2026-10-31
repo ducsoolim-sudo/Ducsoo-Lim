@@ -3,6 +3,7 @@ import asyncio
 import os
 import secrets
 import time
+import logging
 from pathlib import Path
 
 from aiohttp import web
@@ -94,7 +95,13 @@ def setup(app, store_key):
                 raise ValueError('Invalid request')
             claims = await verify_token(token, config['config']['projectId'])
             user = verified_user(claims, config['config']['projectId'], config['providers'])
-        except (ValueError, TypeError, AttributeError, asyncio.TimeoutError):
+        except (ValueError, TypeError, AttributeError, asyncio.TimeoutError) as error:
+            safe_reasons = {'Invalid identity token', 'Invalid identity', 'Invalid token time',
+                            'Fresh sign-in required', 'Tenant sign-in is not configured',
+                            'Provider is not enabled', 'Missing provider identity',
+                            'Invalid provider identity', 'Unverified Google account'}
+            reason = str(error) if str(error) in safe_reasons else 'Invalid sign-in request'
+            logging.warning('Social sign-in rejected: %s', reason)
             raise web.HTTPUnauthorized(text='Sign-in failed. Please try again.')
         store = request.app[store_key]
         async with request.app[auth.AUTH_LOCK]:
