@@ -94,6 +94,20 @@ def setup(app, store_key):
                     or not secrets.compare_digest(data['nonce'], nonce)):
                 raise ValueError('Invalid request')
             claims = await verify_token(token, config['config']['projectId'])
+            # In provider-separated Firebase projects the broker may not attest
+            # email ownership. Keep the verified-email gate by independently
+            # verifying Google's original token, bound to the same Google ID.
+            firebase = claims.get('firebase') or {}
+            if firebase.get('sign_in_provider') == 'google.com' and claims.get('email_verified') is not True:
+                credential = data.get('googleCredential')
+                client_id = os.getenv('GOOGLE_CLIENT_ID', '')
+                if not client_id or not isinstance(credential,str) or not 0<len(credential)<=12000:
+                    raise ValueError('Unverified Google account')
+                google = await asyncio.wait_for(auth.verify_google(credential, client_id), timeout=12)
+                subjects = (firebase.get('identities') or {}).get('google.com')
+                if google.get('email_verified') is not True or subjects != [google.get('sub')]:
+                    raise ValueError('Unverified Google account')
+                claims = dict(claims, email_verified=True)
             user = verified_user(claims, config['config']['projectId'], config['providers'])
         except (ValueError, TypeError, AttributeError, asyncio.TimeoutError) as error:
             safe_reasons = {'Invalid identity token', 'Invalid identity', 'Invalid token time',

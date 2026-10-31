@@ -31,12 +31,13 @@ window.Go13Social = {
           // Called directly from the user gesture, before any network await.
           const result = await sdk.signInWithPopup(auth, factories[name]());
           const idToken = await result.user.getIdToken(true);
+          const googleCredential = name==='google' ? sdk.GoogleAuthProvider.credentialFromResult(result)?.idToken : undefined;
           const configResponse = await fetch('/api/auth/config', {cache:'no-store'});
           if (!configResponse.ok) throw new Error('config');
           const config = await configResponse.json();
           const response = await fetch('/api/auth/social', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({idToken, nonce:config.nonce})
+            body:JSON.stringify({idToken, nonce:config.nonce, googleCredential})
           });
           if (!response.ok) throw Object.assign(new Error('session'),{code:'app/session-'+response.status});
           await complete();

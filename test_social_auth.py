@@ -132,3 +132,17 @@ class SocialLogin(unittest.IsolatedAsyncioTestCase):
             parts[2] = ('A' if parts[2][0] != 'A' else 'B') + parts[2][1:]
             with self.assertRaises(ValueError):
                 await social.verify_token('.'.join(parts), 'go-test')
+
+    async def test_separate_google_account_requires_matching_verified_google_token(self):
+        claims=self.claims('google');claims['email_verified']=False
+        with patch.dict(os.environ,{'GOOGLE_CLIENT_ID':'firebase-google-client'}):
+            for google,expected in [({'sub':'123','email_verified':True},200),
+                                    ({'sub':'other','email_verified':True},401),
+                                    ({'sub':'123','email_verified':False},401)]:
+                nonce=(await (await self.client.get('/api/auth/config')).json())['nonce']
+                self.client.session.cookie_jar.update_cookies({auth.NONCE:nonce})
+                with patch('social_auth.verify_token',AsyncMock(return_value=claims)),patch('auth.verify_google',AsyncMock(return_value=google)) as verify:
+                    response=await self.client.post('/api/auth/social',json={'idToken':'firebase-signed',
+                        'googleCredential':'google-signed','nonce':nonce},headers={'Origin':'https://go.example'})
+                    self.assertEqual(response.status,expected)
+                    verify.assert_awaited_once_with('google-signed','firebase-google-client')
