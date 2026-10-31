@@ -10,7 +10,7 @@ window.Go13Social = {
     await sdk.setPersistence(auth, sdk.inMemoryPersistence);
     sdk.useDeviceLanguage(auth);
     const factories = {
-      google: () => new sdk.GoogleAuthProvider(),
+      google: () => {const provider=new sdk.GoogleAuthProvider();provider.addScope('email');return provider;},
       facebook: () => new sdk.FacebookAuthProvider(),
       twitter: () => new sdk.TwitterAuthProvider(),
       apple: () => new sdk.OAuthProvider('apple.com')
