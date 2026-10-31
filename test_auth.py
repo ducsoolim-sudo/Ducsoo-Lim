@@ -47,6 +47,16 @@ class GoogleLogin(unittest.IsolatedAsyncioTestCase):
         response = await self.client.post('/api/auth/google', json={'credential': 'x'}, headers={'Origin': 'https://evil.example'})
         self.assertEqual(response.status, 403)
 
+    async def test_google_nonce_cannot_be_reused(self):
+        config = await (await self.client.get('/api/auth/config')).json()
+        claims = {'sub':'account-a','name':'Tester','email_verified':True,'nonce':config['nonce']}
+        with patch('auth.verify_google', AsyncMock(return_value=claims)):
+            for expected in (200,401):
+                self.client.session.cookie_jar.update_cookies({auth.NONCE:config['nonce']})
+                response=await self.client.post('/api/auth/google',json={'credential':'signed-token'},
+                                                headers={'Origin':'https://go.example'})
+                self.assertEqual(response.status,expected)
+
     async def test_unconfigured_hidden_and_unavailable(self):
         with patch.dict(os.environ, {'GOOGLE_CLIENT_ID': ''}):
             config = await (await self.client.get('/api/auth/config')).json()

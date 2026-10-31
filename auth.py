@@ -33,8 +33,10 @@ async def identity(request, store):
 
 
 async def config(request):
+    from social_auth import public_config
     nonce = secrets.token_urlsafe(32)
-    response = web.json_response({'clientId': os.getenv('GOOGLE_CLIENT_ID', ''), 'nonce': nonce}, headers={'Cache-Control': 'no-store'})
+    response = web.json_response({'clientId': os.getenv('GOOGLE_CLIENT_ID', ''), 'nonce': nonce,
+                                 'social': public_config()}, headers={'Cache-Control': 'no-store'})
     response.set_cookie(NONCE, nonce, httponly=True, secure=secure_request(request), samesite='Strict', max_age=300, path='/')
     return response
 
@@ -66,7 +68,7 @@ def setup(app, store_key):
             raise web.HTTPUnauthorized(text='Sign-in failed. Please try again.')
         store = request.app[store_key]
         async with request.app[AUTH_LOCK]:
-            if await store.auth_get('nonce:' + digest(nonce)):
+            if await store.auth_get('nonce:' + digest(nonce)) is not None:
                 raise web.HTTPUnauthorized(text='Sign-in expired. Please try again.')
             await store.auth_put('nonce:' + digest(nonce), {}, time.time() + 300)
             user = {'id': claims['sub'], 'name': str(claims.get('name', 'Player'))[:64]}
@@ -96,6 +98,8 @@ def setup(app, store_key):
     app.router.add_post('/api/auth/google', login)
     app.router.add_get('/api/auth/me', me)
     app.router.add_post('/api/auth/logout', logout)
+    from social_auth import setup as setup_social
+    setup_social(app, store_key)
 
 
 AUTH_LOCK = web.AppKey('auth_lock', asyncio.Lock)
