@@ -225,12 +225,21 @@
 .studio-home-brand{text-align:center}.studio-home-brand .app-emblem{display:block;width:112px;height:112px;margin:0 auto 23px;filter:drop-shadow(0 8px 22px #0004)}.studio-home-name{font-size:18px;font-weight:450;letter-spacing:7px;padding-left:7px}.studio-home-app{font-size:11px;letter-spacing:4px;margin-top:16px;color:#a4afa5;padding-left:4px}
 .studio-home-menu{display:grid;gap:10px;width:min(100%,270px);margin-top:48px}.studio-home-menu .button{min-height:48px;border-radius:12px;font-size:16px;font-weight:450;letter-spacing:.3px}.studio-home-menu .primary{background:#e8e9df;color:#17221b;border-color:#e8e9df}.studio-home-menu .secondary{background:#ffffff05;color:#ecebe3;border-color:#ffffff26}.studio-home-menu .ghost{background:transparent;color:#c4cbc2;border-color:transparent}.studio-home .preview-mark{margin-top:27px;color:#889389;font-size:8px;letter-spacing:1.8px}
 @media(max-height:600px){.studio-home{padding-top:24px}.studio-home-brand .app-emblem{width:76px;height:76px;margin-bottom:12px}.studio-home-menu{margin-top:24px;gap:6px}.studio-home .preview-mark{margin-top:14px}}
+
+/* A single quiet signature: larger symbol, equal-sized app and studio names. */
+.brand .brand-left{min-width:0}.shell:not(.home-view) .brand .brand-lockup{display:flex;align-items:center;gap:12px;width:auto;min-width:0;margin:0;line-height:1;white-space:nowrap}
+.shell:not(.home-view) .brand .app-emblem{width:64px;height:64px;flex:none}
+.shell:not(.home-view) .brand .brand-type,.shell:not(.home-view) .brand .studio-credit{display:inline-flex;align-items:center;margin:0;font-size:11px;font-weight:450;line-height:1.2;letter-spacing:1.6px;color:#d7ddd6}
+.shell:not(.home-view) .brand .studio-credit:before{content:"";height:11px;width:1px;background:#69776c;margin-right:12px;opacity:.6}
+.shell:not(.home-view) .brand{align-items:center;margin-bottom:18px}.shell:not(.home-view) .brand .home-button{border-radius:50%;background:transparent;border-color:#ffffff20}
+.shell.game-view .brand .app-emblem{width:44px;height:44px}.shell.game-view .brand{margin-bottom:4px}
+@container app (max-width:380px){.shell:not(.home-view) .brand .brand-lockup{gap:8px}.shell:not(.home-view) .brand .app-emblem{width:56px;height:56px}.shell:not(.home-view) .brand .brand-type,.shell:not(.home-view) .brand .studio-credit{font-size:9px;letter-spacing:1.1px}.shell:not(.home-view) .brand .studio-credit:before{margin-right:8px}.shell.game-view .brand .app-emblem{width:40px;height:40px}}
 </style>
 </head>
 <body>
 <div class="app-frame"><div id="shell" class="shell home-view">
   <header class="brand">
-    <div class="brand-left brand-art"><h1 class="brand-lockup" aria-label="13GO"><svg class="app-emblem" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><span class="brand-type">13GO</span></h1><p class="studio-credit">SAI STUDIO</p></div>
+    <div class="brand-left brand-art"><h1 class="brand-lockup" aria-label="13GO"><svg class="app-emblem" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><span class="brand-type">13GO</span><span class="studio-credit">SAI STUDIO</span></h1></div>
     <span class="brand-edition">13 × 13 / ONLINE GO</span>
     <div class="brand-right"><span id="spectatorCount" class="spectator-count hidden" aria-label="Spectators"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span id="spectatorNumber">0</span></span><button id="homeButton" class="home-button" aria-label="Home" title="Home"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 16 5l11 10v12H5Z"/><path d="M12 27V17h8v10"/></svg></button><nav class="nav" role="tablist" aria-label="Main navigation"><button id="navPlay" role="tab" aria-controls="playPage" aria-selected="false">Play</button><button id="navWatch" role="tab" aria-controls="watchPage" aria-selected="false">Watch</button><button id="navProfile" role="tab" aria-controls="profilePage" aria-selected="false">My Page</button></nav><span class="online"><span id="light" class="light"></span><span id="connection">Ready to play</span></span></div>
   </header>
