@@ -216,12 +216,12 @@
 .brand .brand-lockup,.home-view .brand .brand-lockup{display:flex;align-items:center;gap:10px;width:auto;line-height:1;color:inherit}
 .app-emblem{width:38px;height:46px;flex-shrink:0;overflow:visible}.brand-type{font-size:27px;font-weight:350;letter-spacing:3px}.brand .studio-credit{display:block;margin:5px 0 0 48px;font-size:8px;line-height:1.3;letter-spacing:2.3px;color:var(--muted)}
 .home-view .brand .studio-credit{color:#687368;font-size:9px}
-.intro-app{display:flex;align-items:center;gap:22px;font-size:48px;font-weight:300;letter-spacing:8px}.intro-app .app-emblem{width:70px;height:86px}.studio-lockup .studio-name{margin-top:22px;font-size:10px;letter-spacing:4px;padding-left:4px}.studio-enter{margin-top:32px;font-size:10px;letter-spacing:1.3px}
+
 .game-view .app-emblem{width:25px;height:31px}.game-view .brand-type{font-size:20px;letter-spacing:2px}.game-view .brand .studio-credit{margin:3px 0 0 35px;font-size:6px;letter-spacing:1.7px}
 </style>
 </head>
 <body>
-<button id="brandIntro" class="brand-intro hidden" aria-label="SAI STUDIO · Open 13GO"><span class="studio-lockup"><span class="intro-app"><svg class="app-emblem" viewBox="0 0 64 78" aria-hidden="true"><circle cx="22" cy="23" r="16" fill="currentColor"/><circle cx="43" cy="43" r="15" fill="none" stroke="currentColor" stroke-width="3"/><path d="M23.5 63.5 27 62V73H29V74.2H22.5V73H24.7V64.1L23.5 64.8Z M33 63.1C35.3 61.3 40.3 61.7 40.3 65.2C40.3 66.7 39.2 67.7 37.6 68.1C39.5 68.3 40.6 69.5 40.6 71.2C40.6 75.1 34.9 75.6 32.4 73.4L33 71.9C35.3 74.2 38.7 73.5 38.7 71.2C38.7 69.3 37.2 68.9 35 68.9V67.5C37.4 67.5 38.5 66.7 38.5 65.2C38.5 62.9 35.7 62.8 33.6 64.5Z" fill="currentColor"/></svg><span>13GO</span></span><span class="studio-name">SAI STUDIO</span><span id="studioAudioHint" class="studio-enter hidden">Tap to enter</span></span></button>
+<button id="brandIntro" class="brand-intro hidden" aria-label="SAI STUDIO · Open 13GO"><span class="studio-lockup"><svg class="studio-symbol" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><span class="studio-name">SAI STUDIO</span><span class="studio-app">13GO</span></span></button>
 <div class="app-frame"><div id="shell" class="shell home-view">
   <header class="brand">
     <div class="brand-left brand-art"><h1 class="brand-lockup" aria-label="13GO"><svg class="app-emblem" viewBox="0 0 64 78" aria-hidden="true"><circle cx="22" cy="23" r="16" fill="currentColor"/><circle cx="43" cy="43" r="15" fill="none" stroke="currentColor" stroke-width="3"/><path d="M23.5 63.5 27 62V73H29V74.2H22.5V73H24.7V64.1L23.5 64.8Z M33 63.1C35.3 61.3 40.3 61.7 40.3 65.2C40.3 66.7 39.2 67.7 37.6 68.1C39.5 68.3 40.6 69.5 40.6 71.2C40.6 75.1 34.9 75.6 32.4 73.4L33 71.9C35.3 74.2 38.7 73.5 38.7 71.2C38.7 69.3 37.2 68.9 35 68.9V67.5C37.4 67.5 38.5 66.7 38.5 65.2C38.5 62.9 35.7 62.8 33.6 64.5Z" fill="currentColor"/></svg><span class="brand-type">13GO</span></h1><p class="studio-credit">SAI STUDIO</p></div>
@@ -349,7 +349,7 @@
       primeAudio(context);
       const resume=context.state!=='running'?context.resume():null;
       loadRecordedTap();if(resume)await resume;
-      if(brandSoundPending){await loadStudioSound();if(brandSoundPending&&!$('brandIntro').classList.contains('hidden')&&brandSound()){brandSoundPending=false;studioAudioStarted=true;$('studioAudioHint').classList.add('hidden');clearTimeout(studioTimer);studioTimer=setTimeout(finishStudio,3600)}}
+      if(brandSoundPending){await loadStudioSound();if(brandSoundPending&&!$('brandIntro').classList.contains('hidden')&&brandSound()){brandSoundPending=false;studioAudioStarted=true;clearTimeout(studioTimer);studioTimer=setTimeout(finishStudio,3600)}}
       renderClocks();
     }catch{}
   }
@@ -376,7 +376,7 @@
   let studioTimer=null,studioClosing=false;
   let studioAudioStarted=false;
   function finishStudio(){if(studioClosing||$('brandIntro').classList.contains('hidden'))return;stopEventCue();studioClosing=true;brandSoundPending=false;clearTimeout(studioTimer);$('brandIntro').classList.add('studio-out');setTimeout(()=>{$('brandIntro').classList.add('hidden');$('shell').inert=false;$('homePlay').focus?.()},650)}
-  function intro(){if(room||storage.get('13go:active-room')){brandSoundPending=false;return}$('brandIntro').classList.remove('hidden');$('shell').inert=true;$('brandIntro').focus?.();studioTimer=setTimeout(finishStudio,4200);$('brandIntro').onclick=async()=>{if(studioAudioStarted)return;clearTimeout(studioTimer);await unlockSound();if(!studioAudioStarted)finishStudio()};unlockSound();setTimeout(()=>{if(brandSoundPending&&!studioClosing)$('studioAudioHint').classList.remove('hidden')},600);}
+  function intro(){if(room||storage.get('13go:active-room')){brandSoundPending=false;return}$('brandIntro').classList.remove('hidden');$('shell').inert=true;$('brandIntro').focus?.();studioTimer=setTimeout(finishStudio,4200);$('brandIntro').onclick=async()=>{if(studioAudioStarted)return;clearTimeout(studioTimer);await unlockSound();if(!studioAudioStarted)finishStudio()};unlockSound();}
 
 
   $('confirmMoves').checked=true;canvas.setAttribute('aria-disabled',String(!canSelectMove()));
