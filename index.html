@@ -216,34 +216,25 @@
 .brand .brand-lockup,.home-view .brand .brand-lockup{display:flex;align-items:center;gap:10px;width:auto;line-height:1;color:inherit}
 .app-emblem{width:38px;height:46px;flex-shrink:0;overflow:visible}.brand-type{font-size:27px;font-weight:350;letter-spacing:3px}.brand .studio-credit{display:block;margin:5px 0 0 48px;font-size:8px;line-height:1.3;letter-spacing:2.3px;color:var(--muted)}
 .home-view .brand .studio-credit{color:#687368;font-size:9px}
-
+.intro-app{display:flex;align-items:center;gap:22px;font-size:48px;font-weight:300;letter-spacing:8px}.intro-app .app-emblem{width:70px;height:86px}.studio-lockup .studio-name{margin-top:22px;font-size:10px;letter-spacing:4px;padding-left:4px}.studio-enter{margin-top:32px;font-size:10px;letter-spacing:1.3px}
 .game-view .app-emblem{width:25px;height:31px}.game-view .brand-type{font-size:20px;letter-spacing:2px}.game-view .brand .studio-credit{margin:3px 0 0 35px;font-size:6px;letter-spacing:1.7px}
+
+/* One static first screen: studio identity and immediate navigation. */
+.shell.home-view{color:#ecebe3;background:radial-gradient(ellipse at 50% 43%,#252c28 0%,#101513 45%,#0c100e 100%);padding:0 24px;min-height:100dvh}
+.home-view>.brand{display:none}.studio-home{min-height:100dvh;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 0 max(28px,env(safe-area-inset-bottom))}
+.studio-home-brand{text-align:center}.studio-home-brand .app-emblem{display:block;width:112px;height:112px;margin:0 auto 23px;filter:drop-shadow(0 8px 22px #0004)}.studio-home-name{font-size:18px;font-weight:450;letter-spacing:7px;padding-left:7px}.studio-home-app{font-size:11px;letter-spacing:4px;margin-top:16px;color:#a4afa5;padding-left:4px}
+.studio-home-menu{display:grid;gap:10px;width:min(100%,270px);margin-top:48px}.studio-home-menu .button{min-height:48px;border-radius:12px;font-size:16px;font-weight:450;letter-spacing:.3px}.studio-home-menu .primary{background:#e8e9df;color:#17221b;border-color:#e8e9df}.studio-home-menu .secondary{background:#ffffff05;color:#ecebe3;border-color:#ffffff26}.studio-home-menu .ghost{background:transparent;color:#c4cbc2;border-color:transparent}.studio-home .preview-mark{margin-top:27px;color:#889389;font-size:8px;letter-spacing:1.8px}
+@media(max-height:600px){.studio-home{padding-top:24px}.studio-home-brand .app-emblem{width:76px;height:76px;margin-bottom:12px}.studio-home-menu{margin-top:24px;gap:6px}.studio-home .preview-mark{margin-top:14px}}
 </style>
 </head>
 <body>
-<button id="brandIntro" class="brand-intro hidden" aria-label="SAI STUDIO · Open 13GO"><span class="studio-lockup"><svg class="studio-symbol" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><span class="studio-name">SAI STUDIO</span><span class="studio-app">13GO</span></span></button>
 <div class="app-frame"><div id="shell" class="shell home-view">
   <header class="brand">
-    <div class="brand-left brand-art"><h1 class="brand-lockup" aria-label="13GO"><svg class="app-emblem" viewBox="0 0 64 78" aria-hidden="true"><circle cx="22" cy="23" r="16" fill="currentColor"/><circle cx="43" cy="43" r="15" fill="none" stroke="currentColor" stroke-width="3"/><path d="M23.5 63.5 27 62V73H29V74.2H22.5V73H24.7V64.1L23.5 64.8Z M33 63.1C35.3 61.3 40.3 61.7 40.3 65.2C40.3 66.7 39.2 67.7 37.6 68.1C39.5 68.3 40.6 69.5 40.6 71.2C40.6 75.1 34.9 75.6 32.4 73.4L33 71.9C35.3 74.2 38.7 73.5 38.7 71.2C38.7 69.3 37.2 68.9 35 68.9V67.5C37.4 67.5 38.5 66.7 38.5 65.2C38.5 62.9 35.7 62.8 33.6 64.5Z" fill="currentColor"/></svg><span class="brand-type">13GO</span></h1><p class="studio-credit">SAI STUDIO</p></div>
+    <div class="brand-left brand-art"><h1 class="brand-lockup" aria-label="13GO"><svg class="app-emblem" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><span class="brand-type">13GO</span></h1><p class="studio-credit">SAI STUDIO</p></div>
     <span class="brand-edition">13 × 13 / ONLINE GO</span>
     <div class="brand-right"><span id="spectatorCount" class="spectator-count hidden" aria-label="Spectators"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span id="spectatorNumber">0</span></span><button id="homeButton" class="home-button" aria-label="Home" title="Home"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 16 5l11 10v12H5Z"/><path d="M12 27V17h8v10"/></svg></button><nav class="nav" role="tablist" aria-label="Main navigation"><button id="navPlay" role="tab" aria-controls="playPage" aria-selected="false">Play</button><button id="navWatch" role="tab" aria-controls="watchPage" aria-selected="false">Watch</button><button id="navProfile" role="tab" aria-controls="profilePage" aria-selected="false">My Page</button></nav><span class="online"><span id="light" class="light"></span><span id="connection">Ready to play</span></span></div>
   </header>
-  <section id="homePage" aria-label="Home"><div class="home-stage"><div class="home-art"><svg class="stone-composition" viewBox="0 0 420 420" aria-hidden="true"><defs>
-<radialGradient id="blackStone" cx="32%" cy="18%" r="85%"><stop stop-color="#666867"/><stop offset=".28" stop-color="#373b3a"/><stop offset=".67" stop-color="#171b1a"/><stop offset="1" stop-color="#050908"/></radialGradient>
-<radialGradient id="whiteStone" cx="32%" cy="16%" r="90%"><stop stop-color="#ffffff"/><stop offset=".35" stop-color="#f8f6ef"/><stop offset=".72" stop-color="#ddd9cf"/><stop offset="1" stop-color="#aaa99f"/></radialGradient>
-<linearGradient id="blackRim" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#252a28"/><stop offset="1" stop-color="#060a08"/></linearGradient>
-<linearGradient id="whiteRim" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#dedbd1"/><stop offset="1" stop-color="#aaa99f"/></linearGradient>
-<radialGradient id="stoneGlint"><stop stop-color="#ffffff" stop-opacity=".19"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
-<radialGradient id="stoneGround"><stop stop-color="#403f36" stop-opacity=".21"/><stop offset="1" stop-color="#403f36" stop-opacity="0"/></radialGradient>
-<filter id="stoneCast" x="-60%" y="-60%" width="240%" height="260%"><feDropShadow dx="9" dy="19" stdDeviation="10" flood-color="#34372d" flood-opacity=".22"/></filter>
-</defs>
-<ellipse cx="210" cy="327" rx="167" ry="36" fill="url(#stoneGround)"/>
-<g id="homeBlackStone" class="orbit-stone" transform="translate(161 169)"><g filter="url(#stoneCast)"><ellipse cy="5" rx="98" ry="82" fill="url(#blackRim)"/><ellipse cy="-2" rx="98" ry="79" fill="url(#blackStone)"/><ellipse cx="-23" cy="-35" rx="60" ry="27" fill="url(#stoneGlint)"/></g></g>
-<g id="homeWhiteStone" class="orbit-stone" transform="translate(263 259)"><g filter="url(#stoneCast)"><ellipse cy="5" rx="98" ry="82" fill="url(#whiteRim)"/><ellipse cy="-2" rx="98" ry="79" fill="url(#whiteStone)"/><ellipse cx="-23" cy="-35" rx="60" ry="27" fill="url(#stoneGlint)"/></g></g>
-</svg><div class="home-art-caption"><span>BLACK / WHITE</span><span>13GO</span></div></div><div><div class="home-menu"><button id="homePlay" class="button primary"><span class="menu-label">Play</span></button>
-<button id="homeWatch" class="button secondary"><span class="menu-label">Watch</span></button>
-<button id="homeProfile" class="button ghost"><span class="menu-label">My Page</span></button>
-<button id="resumeGame" class="button ghost resume hidden">Return to game</button></div><div class="preview-mark">13GO / V1.1</div></div></div></section>
+  <section id="homePage" aria-label="Home"><div class="studio-home"><div class="studio-home-brand"><svg class="app-emblem" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><div class="studio-home-name">SAI STUDIO</div><div class="studio-home-app">13GO</div></div><nav class="studio-home-menu" aria-label="Home menu"><button id="homePlay" class="button primary">Play</button><button id="homeWatch" class="button secondary">Watch</button><button id="homeProfile" class="button ghost">My Page</button><button id="resumeGame" class="button ghost resume hidden">Return to game</button></nav><div class="preview-mark">TEST V1.1</div></div></section>
   <main id="playPage" role="tabpanel" aria-labelledby="navPlay" class="layout hidden">
     <section id="gameBoard" class="panel board-panel hidden" aria-label="13 by 13 Go board">
       <div class="board-head"><div><div class="kicker">THE BOARD / 13GO</div><div id="status" class="bigstatus">Your next game starts here</div></div><div id="deadlineCountdown" class="deadline-count hidden" role="status"><span id="deadlineLabel"></span><strong id="deadlineNumber"></strong></div><span class="board-meta"><span id="moveCount" class="rounds">13 × 13</span></span></div>
@@ -349,7 +340,7 @@
       primeAudio(context);
       const resume=context.state!=='running'?context.resume():null;
       loadRecordedTap();if(resume)await resume;
-      if(brandSoundPending){await loadStudioSound();if(brandSoundPending&&!$('brandIntro').classList.contains('hidden')&&brandSound()){brandSoundPending=false;studioAudioStarted=true;clearTimeout(studioTimer);studioTimer=setTimeout(finishStudio,3600)}}
+      if(brandSoundPending){await loadStudioSound();if(brandSoundPending&&page==='home'&&brandSound())brandSoundPending=false}
       renderClocks();
     }catch{}
   }
@@ -373,29 +364,12 @@
   }
   document.addEventListener?.('pointerdown',unlockSound,{passive:true,capture:true});document.addEventListener?.('touchend',unlockSound,{passive:true,capture:true});document.addEventListener?.('click',unlockSound,{passive:true,capture:true});document.addEventListener?.('keydown',unlockSound,{capture:true});
   document.addEventListener?.('visibilitychange',()=>{if(document.hidden)stopEventCue();else if(audioContext?.state!=='running')unlockSound()});
-  let studioTimer=null,studioClosing=false;
-  let studioAudioStarted=false;
-  function finishStudio(){if(studioClosing||$('brandIntro').classList.contains('hidden'))return;stopEventCue();studioClosing=true;brandSoundPending=false;clearTimeout(studioTimer);$('brandIntro').classList.add('studio-out');setTimeout(()=>{$('brandIntro').classList.add('hidden');$('shell').inert=false;$('homePlay').focus?.()},650)}
-  function intro(){if(room||storage.get('13go:active-room')){brandSoundPending=false;return}$('brandIntro').classList.remove('hidden');$('shell').inert=true;$('brandIntro').focus?.();studioTimer=setTimeout(finishStudio,4200);$('brandIntro').onclick=async()=>{if(studioAudioStarted)return;clearTimeout(studioTimer);await unlockSound();if(!studioAudioStarted)finishStudio()};unlockSound();}
-
-
+  function intro(){if(room||storage.get('13go:active-room')){brandSoundPending=false;return}unlockSound()}
   $('confirmMoves').checked=true;canvas.setAttribute('aria-disabled',String(!canSelectMove()));
   const savedName=storage.get('13go:nickname');
   $('nickname').value=savedName==='\ub300\uad6d\uc790'?'Player':savedName||'';
   if(savedName==='\ub300\uad6d\uc790')storage.set('13go:nickname','Player');
-  let orbitFrame=null,orbitStart=null;
-  function startHomeOrbit(){
-    if(orbitFrame!==null||!window.requestAnimationFrame||window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
-    const black=$('homeBlackStone'),white=$('homeWhiteStone');let lastFront=null;
-    function frame(now){orbitFrame=null;if(page!=='home'||document.hidden)return;if(orbitStart===null)orbitStart=now;
-      const angle=(now-orbitStart)/14000*Math.PI*2-Math.PI*.75;
-      for(const [stone,phase] of [[black,angle],[white,angle+Math.PI]]){const depth=Math.sin(phase);stone.setAttribute('transform','translate('+(210+Math.cos(phase)*76).toFixed(2)+' '+(210+depth*49).toFixed(2)+') scale('+(1+depth*.09).toFixed(3)+')');stone.setAttribute('opacity',String(.95+depth*.05))}
-      const front=Math.sin(angle)>0?black:white;if(front!==lastFront&&front.parentNode){front.parentNode.appendChild(front);lastFront=front}
-      orbitFrame=window.requestAnimationFrame(frame);
-    }
-    orbitFrame=window.requestAnimationFrame(frame);
-  }
-  document.addEventListener?.('visibilitychange',()=>{if(!document.hidden&&page==='home')startHomeOrbit()});
+
   let matchDialogTimer=null,matchDialogFocus=null,matchDialogKey=null;
   function closeMatchDialog(){clearTimeout(matchDialogTimer);$('matchDialog').classList.add('hidden');$('shell').inert=false;matchDialogKey=null;matchDialogFocus?.focus?.()}
   function openMatchDialog(kind){
@@ -477,7 +451,7 @@
   function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('show'),3300)}
   function connection(text,ready=false){$('connection').textContent=text;$('light').classList.toggle('ready',ready)}
   function storeToken(code,token){if(token)storage.set('13go:'+code,token)}
-  function showPage(next){page=next;if(next==='home')startHomeOrbit();$('shell').classList.toggle('game-view',next==='play'&&!!game&&(game.status!=='waiting'||myRole==='spectator'));for(const name of ['home','play','watch','profile']){$(name+'Page').classList.toggle('hidden',name!==next);if(name!=='home')$('nav'+name[0].toUpperCase()+name.slice(1)).setAttribute('aria-selected',String(name===next))}$('shell').classList.toggle('home-view',next==='home');$('resumeGame').classList.toggle('hidden',!room);if(next==='watch')loadLobby();if(next==='profile'){renderProfile();loadProfile()}}
+  function showPage(next){page=next;if(next!=='home')brandSoundPending=false;$('shell').classList.toggle('game-view',next==='play'&&!!game&&(game.status!=='waiting'||myRole==='spectator'));for(const name of ['home','play','watch','profile']){$(name+'Page').classList.toggle('hidden',name!==next);if(name!=='home')$('nav'+name[0].toUpperCase()+name.slice(1)).setAttribute('aria-selected',String(name===next))}$('shell').classList.toggle('home-view',next==='home');$('resumeGame').classList.toggle('hidden',!room);if(next==='watch')loadLobby();if(next==='profile'){renderProfile();loadProfile()}}
   let accountUser=null,accountGames=[],playerProfile=null,profileLoad=null;
   async function loadProfile(){
     if(profileLoad)return profileLoad;

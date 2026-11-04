@@ -94,7 +94,7 @@ countdownGame.clock.remaining.black=9;t.ws.message({type:'state',state:countdown
 countdownGame.clock.running='white';countdownGame.clock.remaining.white=8;t.ws.message({type:'state',state:countdownGame});assert.equal(t.soundEvents.length,2);
 console.log('PASS acknowledged stone sounds, removed sound button, and own-turn countdown deduplication');
 
-assert(html.includes('SAI STUDIO'));assert(html.includes('studio-in 1.1s'));assert(html.includes('studioTimer=setTimeout(finishStudio,4200)'));assert(html.includes('woodenTapBuffer'));console.log('PASS wooden impact buffer and longer brand introduction');
+assert(html.includes('SAI STUDIO'));assert(html.includes('studio-in 1.1s'));assert(!html.includes('studioTimer=setTimeout(finishStudio,4200)'));assert(html.includes('woodenTapBuffer'));console.log('PASS wooden impact buffer and longer brand introduction');
 
 assert(!html.includes('class="home-index"'));assert(!html.includes('<svg class="menu-arrow"'));
 assert(!html.includes('Options &amp; rules'));assert(html.indexOf('Settings &amp; rules')>html.indexOf('id="profilePage"'));
@@ -113,12 +113,7 @@ assert(!html.includes('id="share"'));assert(!html.includes('id="downloadSgf"'));
 assert(html.indexOf('id="finalResult"')<html.indexOf('id="finishActions"'));
 console.log('PASS pre-forfeit countdown visibility, sound deduplication, and compact result placement');
 
-assert(html.includes('id="homeBlackStone"'));assert(html.includes('id="homeWhiteStone"'));assert(html.includes('front.parentNode.appendChild(front)'));console.log('PASS paired stones alternate foreground with reduced-motion fallback');
-
-t=setup(undefined,{},'',false,true);const order=[];const parent={appendChild(node){order.push(node)}};t.e('homeBlackStone').parentNode=parent;t.e('homeWhiteStone').parentNode=parent;
-t.frames.shift()(0);const initialBlack=t.e('homeBlackStone').attrs.transform;assert.equal(order.at(-1),t.e('homeWhiteStone'));
-t.frames.shift()(7000);assert.equal(order.at(-1),t.e('homeBlackStone'));assert.notEqual(t.e('homeBlackStone').attrs.transform,initialBlack);
-t.e('homePlay').onclick();t.frames.shift()(7100);assert.equal(t.frames.length,0);console.log('PASS home stones change depth order and stop animating outside home');
+assert(!html.includes('id="brandIntro"'));assert(!html.includes('Tap to enter'));assert(html.includes('studio-home-menu'));console.log('PASS single studio home without splash overlay');
 
 // Start/results appear once per game, respect spectator role, and restore board controls.
 t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let pop=game('popup-game','white');pop.status='playing';pop.result=null;pop.moves=0;pop.turn='black';pop.spectators=3;pop.clock={running:'black',remaining:{black:300,white:300}};
@@ -136,7 +131,7 @@ const stoneWav=fs.readFileSync(require('path').join(__dirname,'stone-placement.w
 // Both participants hear opening expiry; spectators do not, and locked audio can retry.
 t=setup(undefined,{},'?room=ABCDEFG',true);t.ws.message({type:'welcome',role:'white',token:'owner'});warning=playing('opening-both');warning.moves=0;warning.clock={policy:'byoyomi-manners-v1',running:'black',turnElapsed:20,remaining:{black:280,white:300},mainRemaining:{black:280,white:300},periods:{black:3,white:3}};t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineNumber').textContent,'10');assert.equal(t.soundEvents.length,0);t.listeners.touchend();assert.equal(t.soundEvents.length,1);t.ws.message({type:'state',state:warning});assert.equal(t.soundEvents.length,1);t.ws.message({type:'welcome',role:'spectator',token:'viewer'});assert(t.e('deadlineCountdown').classes.has('hidden'));console.log('PASS both players opening countdown and retry after audio unlock');
 
-t=setup(undefined,{},'');assert(!t.e('brandIntro').classes.has('hidden'));assert.equal(t.e('shell').inert,true);t.timers.find(x=>x.delay===4200).callback();t.timers.find(x=>x.delay===650).callback();assert(t.e('brandIntro').classes.has('hidden'));assert.equal(t.e('shell').inert,false);assert(!html.includes('class="studio-enter"'));console.log('PASS automatic studio intro exits without a tap or audio permission');
+t=setup(undefined,{},'');assert(!t.e('homePage').classes.has('hidden'));assert.notEqual(t.e('shell').inert,true);assert(!html.includes('id="brandIntro"'));console.log('PASS home is interactive immediately without splash transition');
 
 t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let unsettled=playing('unsettled-score');unsettled.status='scoring';unsettled.score={black:0,white:6.5,winner:'white',margin:6.5,komi:6.5};unsettled.scoreUncertain=[84];t.ws.message({type:'state',state:unsettled});assert.equal(t.e('scoreResult').children.length,0);assert.equal(t.e('approve').disabled,true);console.log('PASS unsettled score never shows a winner or allows confirmation');
 
@@ -266,16 +261,16 @@ t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();let endPass
 
 assert(!html.includes('id="solo"'));assert(!html.includes('Practice · Both colors'));console.log('PASS Both colors practice removed from menu');
 
-// The first gesture must finish the studio cue before leaving the splash.
+// Brand audio never delays or hides the unified home navigation.
 (async()=>{
  const studio=setup(undefined,{},'',true);
- await studio.e('brandIntro').onclick();
+ await studio.listeners.pointerdown();
  assert(studio.soundEvents.filter(x=>x==='tone').length>=3);
- assert(!studio.e('brandIntro').classes.has('studio-out'));
- const hold=studio.timers.find(x=>x.active&&x.delay===3600);assert(hold);
- await studio.e('brandIntro').onclick();
- assert(!studio.e('brandIntro').classes.has('studio-out'));
- hold.callback();assert(studio.e('brandIntro').classes.has('studio-out'));
- assert(!html.includes('Manners —'));assert(html.includes('class="studio-credit">SAI STUDIO'));
- console.log('PASS studio cue survives first click, plays once and holds the splash; manner badges removed');
+ assert(!studio.e('homePage').classes.has('hidden'));
+ const count=studio.soundEvents.length;await studio.listeners.pointerdown();assert.equal(studio.soundEvents.length,count);
+ assert(!studio.timers.some(x=>x.active&&[3600,4200].includes(x.delay)));
+ studio.e('homePlay').onclick();assert(!studio.e('playPage').classes.has('hidden'));
+ studio.e('homeButton').onclick();studio.e('homeWatch').onclick();assert(!studio.e('watchPage').classes.has('hidden'));
+ studio.e('homeButton').onclick();studio.e('homeProfile').onclick();assert(!studio.e('profilePage').classes.has('hidden'));
+ console.log('PASS unified home audio once, immediate menus, no splash timers');
 })().catch(error=>{console.error(error);process.exitCode=1});
