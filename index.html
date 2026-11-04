@@ -209,6 +209,8 @@
 #profilePage .profile-layout{grid-template-columns:minmax(260px,300px) minmax(0,1fr);align-items:start;gap:24px}
 #profilePage .profile-card{padding:24px}.profile-identity{display:flex;align-items:center;gap:13px;min-width:0}.profile-identity .avatar{width:46px;height:46px;margin:0;flex:none;border-radius:14px;font-size:20px}.profile-identity-copy{min-width:0;flex:1}.profile-identity-copy .profile-title{font-size:20px;line-height:1.3}.profile-identity-copy .badge{font-size:11px;line-height:1.6}.profile-account-actions{border-top:1px solid var(--line);margin-top:20px;padding-top:18px;display:grid;gap:10px}#googleLogin{display:grid;gap:8px}#googleLogin:empty{display:none}#googleLogin .button{min-height:48px;border-radius:12px;font-size:14px;background:#eeeee8;color:#17221b;border-color:#eeeee8}#googleLogout{width:auto;justify-self:start;min-height:40px;padding:8px 14px;font-size:12px;color:var(--muted)}#accountNote{font-size:11px;margin:0;line-height:1.5}#profilePage .profile-form{border-top:1px solid var(--line);margin-top:20px;padding-top:18px}#profilePage .profile-form .nickname{min-height:46px;border-radius:10px;font-size:14px}#profilePage #saveProfile{min-height:46px;border-radius:10px;font-size:14px}
 @container app (max-width:700px){#profilePage .profile-layout{grid-template-columns:minmax(0,1fr);gap:20px}#profilePage .profile-card{padding:20px}}
+
+.review-navigation{display:flex;align-items:center;justify-content:center;gap:8px;margin:14px 0}.review-navigation button{width:44px;min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:22px}#reviewPosition{min-width:64px;text-align:center;font-size:13px;color:var(--muted)}#reviewRange{width:100%;accent-color:var(--accent);min-height:32px;margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -250,7 +252,7 @@
         </div>
         <div id="playActions" class="actions split"><button id="pass" class="button ghost" disabled>Pass</button><button id="resign" class="button ghost" disabled>Resign</button></div>
         <div id="scoreActions" class="actions hidden"><p id="scoringHint" class="notice">Review the score.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">Confirm</button></div>
-        <div id="finishActions" class="actions hidden"><button id="rematch" class="button primary">Request rematch</button><button id="newGame" class="button secondary">New game</button></div>
+        <div id="reviewControls" class="hidden" aria-label="Game review"><div class="review-navigation"><button id="reviewFirst" aria-label="First move">⏮</button><button id="reviewPrevious" aria-label="Previous move">‹</button><output id="reviewPosition" aria-live="polite">0 / 0</output><button id="reviewNext" aria-label="Next move">›</button><button id="reviewLast" aria-label="Last move">⏭</button></div><input id="reviewRange" type="range" min="0" max="0" value="0" aria-label="Review move"><button id="reviewHome" class="button secondary">Home</button></div><div id="finishActions" class="actions hidden"><button id="rematch" class="button primary">Request rematch</button><button id="newGame" class="button secondary">New game</button></div>
         <p id="clockNote" class="clock-note" role="status"></p>
         <p id="gameHint" class="control-hint">Black plays first. Two consecutive passes start scoring.</p>
       </div>
@@ -258,7 +260,7 @@
     <aside class="sidebar">
       <section class="panel pad">
         <h2 class="setup-title">Play</h2>
-        <div id="startActions" class="actions setup-actions"><button id="match" class="button primary">Find a match</button><button id="testMatch" class="button secondary hidden">Play test opponent</button><button id="solo" class="button secondary">Practice <small>· Both colors</small></button></div>
+        <div id="startActions" class="actions setup-actions"><button id="match" class="button primary">Find a match</button><button id="testMatch" class="button secondary hidden">Play test opponent</button></div>
         <div id="queueStatus" class="queue-status hidden" role="status"><p id="queueMessage">Finding an opponent…</p><button id="cancelMatch" class="button ghost">Cancel</button></div>
         <p class="clock-note">13×13 · 5 min + 30 sec × 3</p>
 
@@ -274,7 +276,7 @@
         </details><p id="practiceCount" class="profile-note">0 solo sessions completed</p></div></section><div><div class="profile-stats"><div class="profile-stat"><strong id="statGames">0</strong><span>Games played</span></div><div class="profile-stat"><strong id="statWins">0</strong><span>Wins</span></div><div class="profile-stat"><strong id="statLosses">0</strong><span>Losses</span></div><div class="profile-stat"><strong id="statRate">—</strong><span>Win rate</span></div></div><section class="panel pad history-panel"><div class="section-head"><h3>Recent games</h3><button id="exportHistory" class="button ghost">Export history</button></div><p id="historyEmpty" class="note" style="margin-top:20px">No games yet.</p><div class="table-wrap"><table id="historyTable" class="history hidden"><thead><tr><th>Result</th><th>Opponent</th><th>Color</th><th>Details</th><th>Date</th><th>Record</th></tr></thead><tbody id="historyRows"></tbody></table></div></section></div></div></section>
   <p class="foot">13GO v1.1 · 13×13 Go for everyone · Public games & live spectators<br>Games and move records are saved on the server. Your guest identity stays in this browser. Keep your game link to return.</p>
 </div></div><div id="toast" class="toast" role="status"></div>
-<div id="matchDialog" class="match-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="matchDialogTitle" aria-describedby="matchDialogDetail"><section class="match-card"><div id="matchDialogKicker" class="match-kicker"></div><h2 id="matchDialogTitle"></h2><div id="matchDialogPlayers" class="match-players"></div><p id="matchDialogDetail"></p><button id="matchDialogConfirm" class="button primary">OK</button></section></div>
+<div id="matchDialog" class="match-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="matchDialogTitle" aria-describedby="matchDialogDetail"><section class="match-card"><div id="matchDialogKicker" class="match-kicker"></div><h2 id="matchDialogTitle"></h2><div id="matchDialogPlayers" class="match-players"></div><p id="matchDialogDetail"></p><button id="matchDialogConfirm" class="button primary">Review</button><button id="matchDialogHome" class="button ghost hidden" style="margin-top:10px;color:#17221b">Home</button></section></div>
 <script src="/static/social-login.js"></script>
 <script>
 (() => {
@@ -395,7 +397,7 @@
     $('matchDialogTitle').textContent=kind==='start'?'Ready to play':game.solo||myRole==='spectator'?winner+' wins':game.result.winner===myRole?'You win':'You lose';
     $('matchDialogDetail').textContent=kind==='start'?roles[myRole]+' · 5 min + 30 sec × 3':game.result.reason==='score'?winner+' +'+game.result.margin:winner+' · '+detailReason(game.result.reason);
     const players=$('matchDialogPlayers');players.replaceChildren();for(const color of ['black','white']){const row=document.createElement('div');row.className='match-player';const stone=document.createElement('span');stone.className='stone '+color;const name=document.createElement('span');name.textContent=game.players[color]?.name||roles[color];row.append(stone,name);if(!game.solo){const tags=document.createElement('span');tags.className='identity-tags';const rank=document.createElement('span');rank.className='identity-tag';rank.textContent=rankLabel(game.players[color]?.rank);rank.title='Self-selected initial rank';const manner=document.createElement('span');manner.className='identity-tag';manner.textContent='Manners —';manner.title='Manner score is not yet measured';tags.append(rank,manner);row.append(tags)}players.append(row)}
-    $('matchDialogConfirm').textContent=kind==='start'?'Play':'OK';$('shell').inert=true;$('matchDialog').classList.remove('hidden');$('matchDialogConfirm').focus?.();
+    $('matchDialogConfirm').textContent=kind==='start'?'Play':'Review';$('matchDialogHome').classList.toggle('hidden',kind!=='end');$('shell').inert=true;$('matchDialog').classList.remove('hidden');$('matchDialogConfirm').focus?.();
     if(kind==='start')matchDialogTimer=setTimeout(closeMatchDialog,2200);
   }
   function updateMatchDialog(){
@@ -405,8 +407,64 @@
     else if(game.status==='finished'&&game.result&&storage.get('13go:end-dialog')!==game.gameId){storage.set('13go:end-dialog',game.gameId);openMatchDialog('end')}
     else if(game.status!=='playing'&&game.status!=='finished'&&matchDialogKey)closeMatchDialog();
   }
-  $('matchDialogConfirm').onclick=()=>{const completed=game?.status==='finished'&&matchDialogKey===game.gameId+':end';closeMatchDialog();if(completed){leaveRoom();showPage('home');$('homePlay').focus?.()}};
+  $('matchDialogConfirm').onclick=()=>{if(game?.status==='finished'&&matchDialogKey===game.gameId+':end')startReview();else closeMatchDialog()};
   $('matchDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeMatchDialog()}else if(event.key==='Tab'){event.preventDefault();$('matchDialogConfirm').focus?.()}});
+  function buildReviewFrames(sgf){
+    if(typeof sgf!=='string'||sgf.length>1000000)throw new Error('Move record unavailable.');
+    const nodes=[];let at=0,depth=0,node=null;
+    while(at<sgf.length){
+      const c=sgf[at++];
+      if(c==='('){if(++depth>1)throw new Error('Variations are not supported.');continue}if(c===')'){if(--depth<0)throw new Error('Invalid move record.');continue}
+      if(c===';'){node=depth===1?{}:null;if(node)nodes.push(node);continue}
+      if(!/[A-Z]/.test(c))continue;
+      let key=c;while(/[A-Z]/.test(sgf[at]||'!'))key+=sgf[at++];
+      while(/\s/.test(sgf[at]||'!'))at++;
+      while(sgf[at]==='['){
+        at++;let value='',closed=false;
+        while(at<sgf.length){const v=sgf[at++];if(v===']'){closed=true;break}if(v==='\\'){if(at<sgf.length)value+=sgf[at++]}else value+=v}
+        if(!closed)throw new Error('Incomplete move record.');
+        if(node)(node[key]??=[]).push(value);
+        while(/\s/.test(sgf[at]||'!'))at++;
+      }
+    }
+    if(!nodes.length||nodes[0].SZ?.[0]!=='13'||depth!==0)throw new Error('Unsupported move record.');
+    if(nodes.some(n=>n.AB||n.AW||n.AE))throw new Error('Setup positions are not supported.');
+    let board=Array(169).fill(0),captures={black:0,white:0};
+    const frames=[{board:board.slice(),lastMove:null,captures:{...captures},pass:false}];
+    const neighbors=i=>[i%13?i-1:-1,i%13<12?i+1:-1,i>=13?i-13:-1,i<156?i+13:-1].filter(n=>n>=0);
+    function group(start){const stones=new Set([start]),todo=[start];let alive=false;
+      while(todo.length){for(const n of neighbors(todo.pop())){if(!board[n])alive=true;else if(board[n]===board[start]&&!stones.has(n)){stones.add(n);todo.push(n)}}}return{stones,alive}}
+    for(const n of nodes){
+      if(!n.B&&!n.W)continue;
+      if(n.B&&n.W)throw new Error('Invalid move record.');
+      const color=n.B?1:-1,values=n.B||n.W,point=values[0];let index=null;
+      if(values.length!==1)throw new Error('Invalid move record.');
+      if(point!==''){
+        if(!/^[a-m]{2}$/.test(point))throw new Error('Invalid intersection.');
+        index=(point.charCodeAt(1)-97)*13+point.charCodeAt(0)-97;
+        if(board[index])throw new Error('Occupied intersection in move record.');
+        board=board.slice();board[index]=color;
+        for(const adjacent of neighbors(index)){if(board[adjacent]===-color){const enemy=group(adjacent);if(!enemy.alive){for(const stone of enemy.stones)board[stone]=0;captures[color===1?'black':'white']+=enemy.stones.size}}}
+        if(!group(index).alive)throw new Error('Illegal move record.');
+      }
+      frames.push({board:board.slice(),lastMove:index,captures:{...captures},pass:index===null});
+      if(frames.length>10000)throw new Error('Move record too long.');
+    }
+    return frames;
+  }
+  let reviewFrames=null,reviewCursor=0;
+  function reviewStep(position){if(!reviewFrames)return;reviewCursor=Math.max(0,Math.min(reviewFrames.length-1,position));$('reviewRange').value=String(reviewCursor);$('reviewPosition').textContent=reviewCursor+' / '+(reviewFrames.length-1)+(reviewFrames[reviewCursor].pass?' · Pass':'');$('reviewFirst').disabled=$('reviewPrevious').disabled=reviewCursor===0;$('reviewLast').disabled=$('reviewNext').disabled=reviewCursor===reviewFrames.length-1;draw()}
+  function startReview(){
+    if(game?.status!=='finished')return;
+    try{reviewFrames=buildReviewFrames(game.sgf)}catch(error){toast(error.message);return}
+    closeMatchDialog();selectedMove=null;awaitingMove=null;clearTimeout(reconnectTimeout);
+    if(socket){socket.onclose=null;socket.close();socket=null}
+    $('reviewRange').max=String(reviewFrames.length-1);showPage('play');update();reviewStep(reviewFrames.length-1);
+  }
+  function returnHome(){leaveRoom();showPage('home');$('homePlay').focus?.()}
+  $('reviewFirst').onclick=()=>reviewStep(0);$('reviewPrevious').onclick=()=>reviewStep(reviewCursor-1);$('reviewNext').onclick=()=>reviewStep(reviewCursor+1);$('reviewLast').onclick=()=>reviewStep(reviewFrames.length-1);$('reviewRange').oninput=event=>reviewStep(Number(event.target.value));$('reviewHome').onclick=returnHome;
+  $('matchDialogHome').onclick=returnHome;
+
   function myName(){const name=playerProfile?.name||$('nickname').value.trim().slice(0,16)||'Player';storage.set('13go:nickname',name);return name}
   function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('show'),3300)}
   function connection(text,ready=false){$('connection').textContent=text;$('light').classList.toggle('ready',ready)}
@@ -432,7 +490,7 @@
   function readPractice(){try{const data=JSON.parse(storage.get('13go:practice')||'[]');return Array.isArray(data)?data:[]}catch{return []}}
   const endReasons={resign:'By resignation',time:'Time expired',disconnect:'Opponent disconnected',review_timeout:'Opponent did not respond to scoring',first_move_timeout:'No opening move',move_delay:'Move delay',repeated_departure:'Repeated departure'};
   function detailReason(reason){return endReasons[reason]||reason}
-  function leaveRoom(message){closeMatchDialog();clearTimeout(reconnectTimeout);if(socket){socket.onclose=null;socket.close();socket=null}storage.set('13go:active-room','');room='';game=null;selectedMove=null;awaitingMove=null;myRole='spectator';watching=false;history.replaceState({},'',location.pathname);connection('Ready to play');showPage('play');update();draw();if(message)toast(message)}
+  function leaveRoom(message){reviewFrames=null;closeMatchDialog();clearTimeout(reconnectTimeout);if(socket){socket.onclose=null;socket.close();socket=null}storage.set('13go:active-room','');room='';game=null;selectedMove=null;awaitingMove=null;myRole='spectator';watching=false;history.replaceState({},'',location.pathname);connection('Ready to play');showPage('play');update();draw();if(message)toast(message)}
   function recordResult(){
     if(game?.status==='finished'&&!watching&&myRole!=='spectator'&&storage.get('13go:active-room')===room)storage.set('13go:active-room','');
     if(!game?.gameId||game.status!=='finished'||!game.result||game.testBot||watching||myRole==='spectator')return;
@@ -472,10 +530,10 @@
     ws.onmessage=e=>{if(socket!==ws)return;let data;try{data=JSON.parse(e.data)}catch{return}if(data.type==='welcome'){myRole=data.role;storeToken(room,data.token);update()}else if(data.type==='state'){matchSound(game,data.state);stoneSound(game,data.state);if(!game||game.gameId!==data.state.gameId||game.moves!==data.state.moves)lastCountdown=null;game=data.state;clockReceived=Date.now();if(awaitingMove&&(game.clock?.recovering||game.gameId!==awaitingMove.gameId||game.moves!==awaitingMove.moves||game.status!=='playing'))awaitingMove=null;if(game.status==='cancelled'){leaveRoom('Game cancelled. You can find a new opponent.');return}if(!watching&&myRole!=='spectator')storage.set('13go:active-room',room);recordResult();update();draw()}else if(data.type==='error'){awaitingMove=null;selectedMove=null;renderPlacement();draw();toast(data.message);if(data.message.includes('Game not found')){leaveRoom('Previous game is no longer available.')}}};
     ws.onclose=event=>{if(socket!==ws)return;if(event?.code===4001){clearTimeout(reconnectTimeout);leaveRoom('Game opened in another tab.');return}connection('Reconnecting');awaitingMove=null;selectedMove=null;renderPlacement();draw();if(room){clearTimeout(reconnectTimeout);reconnectTimeout=setTimeout(connect,Math.min(1000*Math.pow(1.7,retry++),8000))}};ws.onerror=()=>connection('Connection issue');
   }
-  function enterRoom(code,token=null,watch=false){closeMatchDialog();room=code;watching=watch;if(token)storeToken(room,token);history.replaceState({},'','?room='+encodeURIComponent(room)+(watch?'&watch=1':''));myRole='spectator';game=null;selectedMove=null;awaitingMove=null;retry=0;clearTimeout(reconnectTimeout);showPage('play');connect();update();draw()}
+  function enterRoom(code,token=null,watch=false){reviewFrames=null;closeMatchDialog();room=code;watching=watch;if(token)storeToken(room,token);history.replaceState({},'','?room='+encodeURIComponent(room)+(watch?'&watch=1':''));myRole='spectator';game=null;selectedMove=null;awaitingMove=null;retry=0;clearTimeout(reconnectTimeout);showPage('play');connect();update();draw()}
   function canLeave(){if(game?.status==='waiting'&&myRole!=='spectator'){toast('Cancel your current search first.');return false}return !game||myRole==='spectator'||game.solo||!['playing','scoring'].includes(game.status)||confirm('Leave your current game? It will stay open for your opponent.')}
   async function postRoom(url,data,button){
-    if(posting||!canLeave())return;posting=true;$('match').disabled=true;$('solo').disabled=true;$('testMatch').disabled=true;button.textContent='Connecting…';
+    if(posting||!canLeave())return;posting=true;$('match').disabled=true;$('testMatch').disabled=true;button.textContent='Connecting…';
     try{if(!await loadProfile())throw new Error('Unable to load your profile. Please retry.');if(url==='/api/match'&&!playerProfile.rank){showPage('profile');throw new Error('Choose your initial rank in My Page.')}const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:myName(),...data})});if(!response.ok)throw new Error(await response.text());const created=await response.json();enterRoom(created.room,created.token);toast(created.testBot?'Test opponent connected · Unrated':data.solo?'Solo practice: play both colors.':created.matched?'Opponent found. Good luck!':'Looking for an opponent. Your game is public.');loadLobby()}catch(error){toast(error.message?.slice(0,100)||'Unable to start a game.')}finally{posting=false;update()}
   }
   function openLobbyRoom(code,watch){if(!canLeave())return;enterRoom(code,null,watch);toast(watch?'You are watching live.':'You joined this game.');window.scrollTo({top:0,behavior:'smooth'})}
@@ -499,12 +557,12 @@
     const boardVisible=!!game&&(game.status!=='waiting'||spectator);
     $('shell').classList.toggle('game-view',page==='play'&&boardVisible);$('gameBoard').classList.toggle('hidden',!boardVisible);$('playPage').classList.toggle('game-only',boardVisible);$('playPage').classList.toggle('setup-only',!boardVisible);
     $('watchBanner').classList.toggle('hidden',!game||!spectator);$('watchBanner').textContent='Watching';$('codeBox').classList.toggle('hidden',!room||game?.solo);$('finalResult').classList.toggle('hidden',!finished);$('code').textContent=room;
-    $('playActions').classList.toggle('hidden',!active||spectator);$('scoreActions').classList.toggle('hidden',!scoring);$('finishActions').classList.toggle('hidden',!finished);
+    $('playActions').classList.toggle('hidden',!active||spectator);$('scoreActions').classList.toggle('hidden',!scoring);$('finishActions').classList.toggle('hidden',!finished||!!reviewFrames);$('reviewControls').classList.toggle('hidden',!reviewFrames);$('finalResult').classList.toggle('hidden',!finished||!!reviewFrames);
     const searching=!!game&&game.status==='waiting'&&!spectator;
     $('startActions').classList.toggle('hidden',searching);
     $('queueStatus').classList.toggle('hidden',!searching);$('cancelMatch').disabled=socket?.readyState!==WebSocket.OPEN;
-    $('match').disabled=posting||searching;$('solo').disabled=posting||searching;$('testMatch').disabled=posting||searching;$('testMatch').textContent='Play test opponent';
-    $('match').textContent=posting?'Connecting…':searching?'Finding an opponent…':'Find a match';$('solo').textContent='Practice · Both colors';
+    $('match').disabled=posting||searching;$('testMatch').disabled=posting||searching;$('testMatch').textContent='Play test opponent';
+    $('match').textContent=posting?'Connecting…':searching?'Finding an opponent…':'Find a match';
     renderClocks();
 
     $('status').classList.toggle('quiet-turn',active&&!recovering);
@@ -605,7 +663,7 @@
     for(const x of [3,9])for(const y of [3,9])star(x,y);
     star(6,6);
     function star(x,y){ctx.beginPath();ctx.arc(pad+x*step,pad+y*step,4.4,0,Math.PI*2);ctx.fillStyle='#65502f';ctx.fill()}
-    const board=game?.board||EMPTY;
+    const frame=reviewFrames?.[reviewCursor];const board=frame?.board||game?.board||EMPTY;const lastMove=frame?frame.lastMove:game?.lastMove;
     if(validSelection()){
       const i=selectedMove.index,x=pad+(i%N)*step,y=pad+Math.floor(i/N)*step,r=step*.32,gap=step*.09;
       ctx.save();ctx.strokeStyle='#fffbea';ctx.lineWidth=3;ctx.lineCap='square';ctx.shadowColor='#57401f';ctx.shadowBlur=3;
@@ -613,11 +671,11 @@
       ctx.beginPath();ctx.arc(x,y,2.2,0,Math.PI*2);ctx.fillStyle='#fffbea';ctx.fill();ctx.restore();
     }
     for(let i=0;i<board.length;i++)if(board[i]!==0)drawStone(i,board[i],1);
-    if(game?.lastMove!=null&&board[game.lastMove]){
-      const x=pad+(game.lastMove%N)*step,y=pad+Math.floor(game.lastMove/N)*step;
-      ctx.beginPath();ctx.arc(x,y,6.6,0,Math.PI*2);ctx.strokeStyle=board[game.lastMove]===1?'#f8ead5':'#654e32';ctx.lineWidth=3;ctx.stroke();
+    if(lastMove!=null&&board[lastMove]){
+      const x=pad+(lastMove%N)*step,y=pad+Math.floor(lastMove/N)*step;
+      ctx.beginPath();ctx.arc(x,y,6.6,0,Math.PI*2);ctx.strokeStyle=board[lastMove]===1?'#f8ead5':'#654e32';ctx.lineWidth=3;ctx.stroke();
     }
-    if(game?.adjudication?.status==='ready'&&game?.dead?.length){for(const i of game.dead){const x=pad+(i%N)*step,y=pad+Math.floor(i/N)*step;ctx.beginPath();ctx.moveTo(x-10,y-10);ctx.lineTo(x+10,y+10);ctx.moveTo(x+10,y-10);ctx.lineTo(x-10,y+10);ctx.lineWidth=4;ctx.strokeStyle='#da4b3a';ctx.stroke()}}
+    if(!reviewFrames&&game?.adjudication?.status==='ready'&&game?.dead?.length){for(const i of game.dead){const x=pad+(i%N)*step,y=pad+Math.floor(i/N)*step;ctx.beginPath();ctx.moveTo(x-10,y-10);ctx.lineTo(x+10,y+10);ctx.moveTo(x+10,y-10);ctx.lineTo(x-10,y+10);ctx.lineWidth=4;ctx.strokeStyle='#da4b3a';ctx.stroke()}}
     function drawStone(i,color,alpha){
       const x=pad+(i%N)*step,y=pad+Math.floor(i/N)*step,r=step*.473;
       ctx.save();ctx.globalAlpha=alpha;ctx.shadowColor='#23180c';ctx.shadowBlur=5;ctx.shadowOffsetY=2;
@@ -651,7 +709,7 @@
   $('homePlay').onclick=()=>showPage('play');$('homeWatch').onclick=()=>showPage('watch');$('homeProfile').onclick=()=>showPage('profile');$('homeButton').onclick=()=>showPage('home');$('resumeGame').onclick=()=>showPage('play');
   $('navPlay').onclick=()=>showPage('play');$('navWatch').onclick=()=>showPage('watch');$('navProfile').onclick=()=>showPage('profile');$('browseWatch').onclick=()=>showPage('watch');
   $('testMatch').onclick=()=>postRoom('/api/test-match',{},$('testMatch'));
-  $('solo').onclick=()=>postRoom('/api/rooms',{solo:true},$('solo'));$('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
+$('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
   $('cancelMatch').onclick=()=>{if(game?.status==='waiting'){send('cancel');$('cancelMatch').disabled=true}};
   $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('rematch').onclick=()=>send('rematch');$('newGame').onclick=()=>{if(game?.status==='finished')leaveRoom()};
   $('saveProfile').onclick=async()=>{

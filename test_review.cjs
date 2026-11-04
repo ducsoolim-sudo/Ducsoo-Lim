@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const html=fs.readFileSync('index.html','utf8');
+const source=html.slice(html.indexOf('  function buildReviewFrames('),html.indexOf('  let reviewFrames='));
+const replay=vm.runInNewContext(source+';buildReviewFrames');
+let f=replay('(;SZ[13];B[ba];W[aa];B[ab];W[])');
+assert.equal(f.length,5);assert.equal(f[2].board[0],-1);assert.equal(f[3].board[0],0);assert.equal(f[3].captures.black,1);assert.equal(f[4].pass,true);assert.equal(f[0].board.filter(Boolean).length,0);
+assert.equal(replay('(;SZ[13]C[ignore ;B\\[aa\\]];B[bb])').length,2);
+assert.equal(replay('(;SZ[13])').length,1);
+for(const bad of ['(;SZ[19])','(;SZ[13];B[nn])','(;SZ[13];B[aa];W[aa])','(;SZ[13]AB[aa])','(;SZ[13];B[aa](;W[bb]))','(;SZ[13];B[aa]','(;SZ[13];B[ab];B[ba];W[aa])'])assert.throws(()=>replay(bad));
+console.log('PASS SGF replay captures, passes, immutable frames, escaped comments and invalid records');

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="940" viewBox="0 0 1380 940" role="img" aria-labelledby="title desc">
+<title id="title">13GO — two stones, three ways to carry thirteen</title>
+<desc id="desc">Three refinements of the selected two-stone mark. A has a serif one in the dark stone and a three in the outlined stone; B places a compact thirteen at their meeting; C keeps the stones clean with thirteen below. Light, reversed, twenty-four and forty-eight pixel studies. Concepts, not an installed app logo.</desc>
+<defs>
+ <path id="one" d="M18 15.5 23.3 13.2V30H27V31.7H16.8V30H20.5V16.1L18 17Z"/>
+ <path id="three" d="M38 34.4C41.1 31.8 48.6 32.1 48.6 37.4C48.6 39.7 47 41.2 44.6 41.7C47.6 42 49.1 43.8 49.1 46.4C49.1 52.1 41 53.1 37.2 49.8L38 47.6C41.4 51.1 46.2 50 46.2 46.1C46.2 43.5 44.3 42.6 40.9 42.6V40.8C44.5 40.8 45.9 39.6 45.9 37.4C45.9 34 41.7 33.7 38.8 36.2Z"/>
+ <mask id="stone-one"><rect width="64" height="64" fill="white"/><use href="#one" fill="black"/></mask>
+ <symbol id="split" viewBox="0 0 64 64">
+  <circle cx="22" cy="23" r="16" fill="currentColor" mask="url(#stone-one)"/>
+  <circle cx="43" cy="43" r="15" fill="none" stroke="currentColor" stroke-width="3"/>
+  <use href="#three" fill="currentColor"/>
+ </symbol>
+ <mask id="seam-cut"><rect width="64" height="64" fill="white"/><rect x="22" y="24" width="25" height="20" rx="3" fill="black"/></mask>
+ <symbol id="seam" viewBox="0 0 64 64">
+  <g mask="url(#seam-cut)"><circle cx="22" cy="23" r="16" fill="currentColor"/><circle cx="43" cy="43" r="15" fill="none" stroke="currentColor" stroke-width="3"/></g>
+  <path d="M25.3 27.8 29 25.9V39.7H31V41H24.5V39.7H26.7V28.4L25.3 29.2Z M34.5 27.1C37.1 25 43.3 25.5 43.3 29.8C43.3 31.6 42 32.8 40 33.3C42.4 33.6 43.8 35 43.8 37.2C43.8 42.2 36.7 42.4 33.8 40L34.5 38.2C37.1 40.7 41.3 40.5 41.3 37C41.3 34.7 39.4 34.2 36.7 34.2V32.6C39.6 32.6 41 31.6 41 29.8C41 27 37.4 27.1 35.2 28.8Z" fill="currentColor"/>
+ </symbol>
+ <symbol id="signature" viewBox="0 0 64 78">
+  <circle cx="22" cy="23" r="16" fill="currentColor"/><circle cx="43" cy="43" r="15" fill="none" stroke="currentColor" stroke-width="3"/>
+  <path d="M23.5 63.5 27 62V73H29V74.2H22.5V73H24.7V64.1L23.5 64.8Z M33 63.1C35.3 61.3 40.3 61.7 40.3 65.2C40.3 66.7 39.2 67.7 37.6 68.1C39.5 68.3 40.6 69.5 40.6 71.2C40.6 75.1 34.9 75.6 32.4 73.4L33 71.9C35.3 74.2 38.7 73.5 38.7 71.2C38.7 69.3 37.2 68.9 35 68.9V67.5C37.4 67.5 38.5 66.7 38.5 65.2C38.5 62.9 35.7 62.8 33.6 64.5Z" fill="currentColor"/>
+ </symbol>
+</defs>
+<rect width="1380" height="940" fill="#f3f1e8"/>
+<g font-family="Arial, Helvetica, sans-serif" fill="#1c2922">
+ <text x="64" y="62" font-size="12" letter-spacing="3">13GO / DESIGN DEVELOPMENT / 2026.11.04</text>
+ <text x="64" y="126" font-size="44" letter-spacing="-1.8">Two stones. One signature.</text>
+ <text x="64" y="162" font-size="16" fill="#6a726a">The selected black-and-white symbol, refined with a quiet thirteen.</text>
+</g>
+<g fill="none" stroke="#d7dbcf"><rect x="48" y="204" width="412" height="620" rx="22"/><rect x="484" y="204" width="412" height="620" rx="22"/><rect x="920" y="204" width="412" height="620" rx="22"/></g>
+<g font-family="Arial, Helvetica, sans-serif" fill="#1c2922">
+ <text x="76" y="245" font-size="12" letter-spacing="2.5">A / SPLIT NUMERALS</text><text x="76" y="278" font-size="15">One on black. Three on white.</text>
+ <text x="512" y="245" font-size="12" letter-spacing="2.5">B / ENGRAVED MEETING</text><text x="512" y="278" font-size="15">A thirteen cut into the meeting.</text>
+ <text x="948" y="245" font-size="12" letter-spacing="2.5">C / QUIET SIGNATURE</text><text x="948" y="278" font-size="15">Pure stones, a fine signature below.</text>
+</g>
+<g color="#1c2922"><use href="#split" x="150" y="326" width="208" height="208"/><use href="#seam" x="586" y="326" width="208" height="208"/><use href="#signature" x="1037" y="313" width="178" height="234"/></g>
+<g fill="#1c2922"><rect x="76" y="572" width="356" height="134" rx="14"/><rect x="512" y="572" width="356" height="134" rx="14"/><rect x="948" y="572" width="356" height="134" rx="14"/></g>
+<g color="#f3f1e8"><use href="#split" x="210" y="595" width="88" height="88"/><use href="#seam" x="646" y="595" width="88" height="88"/><use href="#signature" x="1090" y="587" width="72" height="102"/></g>
+<g color="#1c2922"><use href="#split" x="86" y="752" width="24" height="24"/><use href="#split" x="220" y="739" width="48" height="48"/><use href="#seam" x="522" y="752" width="24" height="24"/><use href="#seam" x="656" y="739" width="48" height="48"/><use href="#signature" x="958" y="748" width="24" height="29"/><use href="#signature" x="1092" y="733" width="48" height="59"/></g>
+<g font-family="Arial, Helvetica, sans-serif" font-size="11" fill="#6a726a"><text x="122" y="769">24 px</text><text x="280" y="769">48 px</text><text x="558" y="769">24 px</text><text x="716" y="769">48 px</text><text x="994" y="769">24 px</text><text x="1152" y="769">48 px</text></g>
+<g font-family="Arial, Helvetica, sans-serif" fill="#1c2922"><text x="64" y="876" font-size="16">Recommended: A — keep the two-stone silhouette, let the number live inside it.</text><text x="64" y="907" font-size="12" fill="#6a726a">Concept study. Small-size optical correction and trademark similarity review remain outstanding.</text></g>
+</svg>
