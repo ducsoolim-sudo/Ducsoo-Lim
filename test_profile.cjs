@@ -187,9 +187,9 @@ console.log('PASS recovery clears an unacknowledged pre-restart move before resu
  console.log('PASS profile updates use server policy, cooldown and rank lock');
 })().catch(error=>{console.error(error);process.exitCode=1});
 
-t=ready();let tagged=playing('tagged');tagged.players.black.rank='5k';tagged.players.white.rank='2d';t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackRank').textContent,'5k');assert.equal(t.e('whiteRank').textContent,'2d');assert.equal(t.e('blackManner').textContent,'Manners —');tagged=playing('legacy');t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackRank').textContent,'—');tagged.solo=true;t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackIdentity').classList.contains('hidden'),true);console.log('PASS name-adjacent declared ranks and unmeasured manners without invented scores');
+t=ready();let tagged=playing('tagged');tagged.players.black.rank='5k';tagged.players.white.rank='2d';t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackRank').textContent,'5k');assert.equal(t.e('whiteRank').textContent,'2d');assert(!html.includes('id="blackManner"'));tagged=playing('legacy');t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackRank').textContent,'—');tagged.solo=true;t.ws.message({type:'state',state:tagged});assert.equal(t.e('blackIdentity').classList.contains('hidden'),true);console.log('PASS name-adjacent declared ranks without manner scores');
 
-t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let badgePopup=playing('popup-identity');badgePopup.clock={running:'black',remaining:{black:300,white:300}};badgePopup.players.black.rank='5k';badgePopup.players.white.rank='2d';t.ws.message({type:'state',state:badgePopup});assert.equal(t.e('matchDialogPlayers').children[0].children[2].children[0].textContent,'5k');assert.equal(t.e('matchDialogPlayers').children[1].children[2].children[0].textContent,'2d');assert.equal(t.e('matchDialogPlayers').children[0].children[2].children[1].textContent,'Manners —');console.log('PASS match popup shows both declared ranks and unmeasured manners');
+t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let badgePopup=playing('popup-identity');badgePopup.clock={running:'black',remaining:{black:300,white:300}};badgePopup.players.black.rank='5k';badgePopup.players.white.rank='2d';t.ws.message({type:'state',state:badgePopup});assert.equal(t.e('matchDialogPlayers').children[0].children[2].children[0].textContent,'5k');assert.equal(t.e('matchDialogPlayers').children[1].children[2].children[0].textContent,'2d');assert.equal(t.e('matchDialogPlayers').children[0].children[2].children.length,1);console.log('PASS match popup shows both declared ranks without manner scores');
 
 // Event audio follows actual transitions, never reconnect snapshots or duplicates.
 t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.ws.message({type:'welcome',role:'black',token:'owner'});
@@ -265,3 +265,17 @@ t=ready();assert(t.e("status").classes.has("quiet-turn"));assert(html.includes("
 t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();let endPass=playing('end-pass');endPass.moves=10;endPass.lastMove=84;t.ws.message({type:'state',state:endPass});t.soundEvents.length=0;t.ws.message({type:'state',state:{...endPass,moves:11,passes:1}});assert.equal(t.soundEvents.length,0);t.ws.message({type:'state',state:{...endPass,moves:12,passes:2,status:'finished',result:{winner:'white',reason:'score',margin:6.5}}});assert.equal(t.soundEvents.length,0);t.e('matchDialogHome').onclick();assert(!t.e('homePage').classes.has('hidden'));assert.equal(t.values.get('13go:active-room'),'');console.log('PASS passes/end stay silent and result Home option works');
 
 assert(!html.includes('id="solo"'));assert(!html.includes('Practice · Both colors'));console.log('PASS Both colors practice removed from menu');
+
+// The first gesture must finish the studio cue before leaving the splash.
+(async()=>{
+ const studio=setup(undefined,{},'',true);
+ await studio.e('brandIntro').onclick();
+ assert(studio.soundEvents.filter(x=>x==='tone').length>=3);
+ assert(!studio.e('brandIntro').classes.has('studio-out'));
+ const hold=studio.timers.find(x=>x.active&&x.delay===3600);assert(hold);
+ await studio.e('brandIntro').onclick();
+ assert(!studio.e('brandIntro').classes.has('studio-out'));
+ hold.callback();assert(studio.e('brandIntro').classes.has('studio-out'));
+ assert(!html.includes('Manners —'));assert(html.includes('class="studio-credit">SAI STUDIO'));
+ console.log('PASS studio cue survives first click, plays once and holds the splash; manner badges removed');
+})().catch(error=>{console.error(error);process.exitCode=1});
