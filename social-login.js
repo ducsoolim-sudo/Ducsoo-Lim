@@ -22,11 +22,12 @@ window.Go13Social = {
       if (!factories[name]) continue;
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'button secondary';
+      button.className = 'button secondary social-signin-button';
       button.textContent = 'Continue with ' + labels[name];
-      button.style.marginTop = '8px';
+
       button.onclick = async () => {
         buttons.forEach(item => item.disabled = true);
+        button.textContent='Signing in…';
         try {
           // Called directly from the user gesture, before any network await.
           const result = await sdk.signInWithPopup(auth, factories[name]());
@@ -52,6 +53,7 @@ window.Go13Social = {
               : 'Sign-in failed. Please try again.');
         } finally {
           await sdk.signOut(auth).catch(() => {});
+          button.textContent='Continue with '+labels[name];
           buttons.forEach(item => item.disabled = false);
         }
       };

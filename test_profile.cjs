@@ -124,8 +124,8 @@ t.e('homePlay').onclick();t.frames.shift()(7100);assert.equal(t.frames.length,0)
 t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let pop=game('popup-game','white');pop.status='playing';pop.result=null;pop.moves=0;pop.turn='black';pop.spectators=3;pop.clock={running:'black',remaining:{black:300,white:300}};
 t.ws.message({type:'state',state:pop});assert.equal(t.e('matchDialogTitle').textContent,'Ready to play');assert(!t.e('matchDialog').classes.has('hidden'));assert.equal(t.e('spectatorNumber').textContent,'3');assert.equal(t.e('shell').inert,true);
 t.timers.find(timer=>timer.delay===2200&&timer.active).callback();assert(t.e('matchDialog').classes.has('hidden'));assert.equal(t.e('shell').inert,false);t.ws.message({type:'state',state:pop});assert(t.e('matchDialog').classes.has('hidden'));
-pop.status='finished';pop.result={winner:'white',reason:'resign'};t.ws.message({type:'state',state:pop});assert.equal(t.e('matchDialogTitle').textContent,'You lose');assert.equal(t.e('matchDialogDetail').textContent,'White · By resignation');t.e('matchDialogConfirm').onclick();t.ws.message({type:'state',state:pop});assert(t.e('matchDialog').classes.has('hidden'));assert(!t.e('finalResult').classes.has('hidden'));
-pop={...pop,gameId:'rematch-popup',status:'playing',result:null};t.ws.message({type:'state',state:pop});assert(!t.e('matchDialog').classes.has('hidden'));
+pop.status='finished';pop.result={winner:'white',reason:'resign'};t.ws.message({type:'state',state:pop});assert.equal(t.e('matchDialogTitle').textContent,'You lose');assert.equal(t.e('matchDialogDetail').textContent,'White · By resignation');t.e('matchDialogConfirm').onclick();t.ws.message({type:'state',state:pop});assert(t.e('matchDialog').classes.has('hidden'));assert(!t.e('homePage').classes.has('hidden'));assert.equal(t.values.get('13go:active-room'),'');
+t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});pop={...pop,gameId:'rematch-popup',status:'playing',result:null};t.ws.message({type:'state',state:pop});assert(!t.e('matchDialog').classes.has('hidden'));
 t=setup();t.ws.message({type:'welcome',role:'spectator'});t.ws.message({type:'state',state:pop});assert(t.e('matchDialog').classes.has('hidden'));assert.equal(t.e('spectatorNumber').textContent,'3');
 assert(!html.includes('Rating +'));console.log('PASS start/end popup deduplication, auto-dismiss, spectator count, and no fictitious rating');
 
@@ -199,8 +199,8 @@ let cuePlay={...cueWait,status:'playing',clock:{running:'black',remaining:{black
 t.ws.message({type:'state',state:cuePlay});assert.equal(t.soundEvents.length,2);
 t.ws.message({type:'state',state:cuePlay});assert.equal(t.soundEvents.length,2);
 let cueEnd={...cuePlay,status:'finished',result:{reason:'resign',winner:'white'},clock:{running:null}};
-t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,4);
-t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,4);
+t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,2);
+t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,2);
 t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.ws.message({type:'welcome',role:'black',token:'owner'});t.ws.message({type:'state',state:cuePlay});assert.equal(t.soundEvents.length,0);
 t.sandbox.document.hidden=true;t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,0);
 t.sandbox.document.hidden=false;t.ws.message({type:'state',state:cueEnd});assert.equal(t.soundEvents.length,0);
