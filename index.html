@@ -252,7 +252,7 @@
         </div>
         <div id="playActions" class="actions split"><button id="pass" class="button ghost" disabled>Pass</button><button id="resign" class="button ghost" disabled>Resign</button></div>
         <div id="scoreActions" class="actions hidden"><p id="scoringHint" class="notice">Review the score.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">Confirm</button></div>
-        <div id="reviewControls" class="hidden" aria-label="Game review"><div class="review-navigation"><button id="reviewFirst" aria-label="First move">⏮</button><button id="reviewPrevious" aria-label="Previous move">‹</button><output id="reviewPosition" aria-live="polite">0 / 0</output><button id="reviewNext" aria-label="Next move">›</button><button id="reviewLast" aria-label="Last move">⏭</button></div><input id="reviewRange" type="range" min="0" max="0" value="0" aria-label="Review move"><button id="reviewHome" class="button secondary">Home</button></div><div id="finishActions" class="actions hidden"><button id="rematch" class="button primary">Request rematch</button><button id="newGame" class="button secondary">New game</button></div>
+        <div id="reviewControls" class="hidden" aria-label="Game review"><div class="review-navigation"><button id="reviewFirst" aria-label="First move">⏮</button><button id="reviewPrevious" aria-label="Previous move">‹</button><output id="reviewPosition" aria-live="polite">0 / 0</output><button id="reviewNext" aria-label="Next move">›</button><button id="reviewLast" aria-label="Last move">⏭</button></div><input id="reviewRange" type="range" min="0" max="0" value="0" aria-label="Review move"><button id="reviewHome" class="button secondary">Home</button></div><div id="finishActions" class="actions hidden"><button id="reviewGame" class="button secondary">Review</button><button id="rematch" class="button primary">Request rematch</button><button id="newGame" class="button secondary">New game</button></div>
         <p id="clockNote" class="clock-note" role="status"></p>
         <p id="gameHint" class="control-hint">Black plays first. Two consecutive passes start scoring.</p>
       </div>
@@ -408,7 +408,7 @@
     else if(game.status!=='playing'&&game.status!=='finished'&&matchDialogKey)closeMatchDialog();
   }
   $('matchDialogConfirm').onclick=()=>{if(game?.status==='finished'&&matchDialogKey===game.gameId+':end')startReview();else closeMatchDialog()};
-  $('matchDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeMatchDialog()}else if(event.key==='Tab'){event.preventDefault();$('matchDialogConfirm').focus?.()}});
+  $('matchDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeMatchDialog()}else if(event.key==='Tab'){event.preventDefault();const home=$('matchDialogHome');(home.classList.contains('hidden')||document.activeElement===home?$('matchDialogConfirm'):home).focus?.()}});
   function buildReviewFrames(sgf){
     if(typeof sgf!=='string'||sgf.length>1000000)throw new Error('Move record unavailable.');
     const nodes=[];let at=0,depth=0,node=null;
@@ -463,7 +463,7 @@
   }
   function returnHome(){leaveRoom();showPage('home');$('homePlay').focus?.()}
   $('reviewFirst').onclick=()=>reviewStep(0);$('reviewPrevious').onclick=()=>reviewStep(reviewCursor-1);$('reviewNext').onclick=()=>reviewStep(reviewCursor+1);$('reviewLast').onclick=()=>reviewStep(reviewFrames.length-1);$('reviewRange').oninput=event=>reviewStep(Number(event.target.value));$('reviewHome').onclick=returnHome;
-  $('matchDialogHome').onclick=returnHome;
+  $('matchDialogHome').onclick=returnHome;$('reviewGame').onclick=startReview;
 
   function myName(){const name=playerProfile?.name||$('nickname').value.trim().slice(0,16)||'Player';storage.set('13go:nickname',name);return name}
   function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('show'),3300)}
