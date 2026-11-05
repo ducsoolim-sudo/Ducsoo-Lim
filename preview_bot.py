@@ -8,11 +8,17 @@ from aiohttp import ClientSession, WSMsgType
 
 
 def choose_action(state, try_move, board_hash, ko_position=None):
+    if state.get('botRole') == 'black':
+        normalized = dict(state, board=[-c for c in state['board']], botRole='white')
+        def play(board, index, color, forbidden):
+            position, captured = try_move([-c for c in board], index, -color, forbidden)
+            return [-c for c in position], captured
+        return choose_action(normalized, play, lambda b: board_hash([-c for c in b]), ko_position)
     """Bounded two-ply tactical opponent; no rank/strength certification."""
     from scoring import adjacent, group
     from adjudicator import settled_adjudication
     board = state['board']
-    if state['passes'] and settled_adjudication(board, state.get('captures', {'black': 0, 'white': 0})):
+    if settled_adjudication(board, state.get('captures', {'black': 0, 'white': 0})):
         return {'type': 'pass'}
     forbidden = {ko_position} if ko_position else set()
 
@@ -29,6 +35,14 @@ def choose_action(state, try_move, board_hash, ko_position=None):
     own = groups(board, -1)
     enemy = groups(board, 1)
     urgent = {next(iter(libs)) for stones, libs in own if len(libs) == 1}
+    def own_territory(index):
+        region={index};todo=[index];border=set()
+        while todo:
+            for n in adjacent(todo.pop()):
+                if board[n]:border.add(board[n])
+                elif n not in region:region.add(n);todo.append(n)
+        return border == {-1} and len(region)<=25 and 1 in board
+
     choices = []
     for index, stone in enumerate(board):
         if stone:
@@ -36,6 +50,8 @@ def choose_action(state, try_move, board_hash, ko_position=None):
         try:
             position, captured = try_move(board, index, -1, forbidden)
         except ValueError:
+            continue
+        if not captured and own_territory(index) and not any(index in libs and len(libs)<=2 for _,libs in own):
             continue
         stones, liberties = group(position, index)
         x, y = index % 13, index // 13
@@ -81,12 +97,12 @@ def choose_action(state, try_move, board_hash, ko_position=None):
     return {'type': 'move', 'index': max(ranked)[1]}
 
 
-async def run_bot(port, code, ready, try_move, board_hash):
+async def run_bot(port, code, ready, try_move, board_hash, bot_role='white', bot_token=None):
     try:
         async with asyncio.timeout(1200):
             async with ClientSession() as session:
                 async with session.ws_connect(f'http://127.0.0.1:{port}/ws') as socket:
-                    await socket.send_json({'type':'join','room':code,'name':'Test Bot'})
+                    await socket.send_json({'type':'join','room':code,'name':'Test Bot','token':bot_token})
                     last_action=None
                     completed=False
                     last_board=None
@@ -105,7 +121,7 @@ async def run_bot(port, code, ready, try_move, board_hash):
                         if event.type!=WSMsgType.TEXT:break
                         message=json.loads(event.data)
                         if message['type']=='welcome':
-                            if message['role']!='white':raise RuntimeError('Bot seat unavailable')
+                            if message['role']!=bot_role:raise RuntimeError('Bot seat unavailable')
                             if not ready.done():ready.set_result(True)
                         if message['type']=='error':
                             # A failed durable save rolled the action back. Retry that
@@ -120,7 +136,7 @@ async def run_bot(port, code, ready, try_move, board_hash):
                                 await socket.send_json({'type':'pass'})
                             continue
                         if message['type']!='state':continue
-                        state=message['state']
+                        state=message['state'];state['botRole']=bot_role
                         if last_board is not None and last_board != state['board']:
                             previous_position=board_hash(last_board)
                         last_board=state['board'].copy()
@@ -136,14 +152,14 @@ async def run_bot(port, code, ready, try_move, board_hash):
                         if marker==last_action:continue
                         pending_action=None
                         if state['status']=='cancelled':break
-                        if state['status']=='finished' and 'black' in state['rematch'] and 'white' not in state['rematch']:
+                        if state['status']=='finished' and ('white' if bot_role=='black' else 'black') in state['rematch'] and bot_role not in state['rematch']:
                             last_action=marker;await send_action({'type':'rematch'})
                         elif state['status']=='scoring' and state.get('adjudication',{}):
-                            if state['adjudication'].get('status')=='ready' and 'white' not in state['approvals']:
+                            if state['adjudication'].get('status')=='ready' and bot_role not in state['approvals']:
                                 last_action=marker;await send_action({'type':'approve'})
-                        elif state['status']=='scoring' and not state.get('scoreUncertain') and 'white' not in state['approvals']:
+                        elif state['status']=='scoring' and not state.get('scoreUncertain') and bot_role not in state['approvals']:
                             last_action=marker;await send_action({'type':'approve'})
-                        elif state['status']=='playing' and state['turn']=='white':
+                        elif state['status']=='playing' and state['turn']==bot_role:
                             last_action=marker
                             await asyncio.sleep(.65)
                             if strong_bot.configured():

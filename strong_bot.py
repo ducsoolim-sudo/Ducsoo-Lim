@@ -4,7 +4,7 @@ import json
 import os
 import re
 from pathlib import Path
-from adjudicator import coordinate, settled_adjudication
+from adjudicator import coordinate
 
 class ResidentEngine:
     """One serialized process; discard it on cancellation or protocol failure."""
@@ -104,15 +104,13 @@ def select_action(result, state, try_move, board_hash, ko_position=None):
         if not isinstance(move, str):
             continue
         if move.lower() == 'pass':
-            if settled_adjudication(state['board'], state['captures']):
-                return {'type': 'pass'}
-            continue
+            return {'type': 'pass'}
         match = re.fullmatch(r'([A-HJ-N])(1[0-3]|[1-9])', move)
         if not match:
             continue
         index = (13-int(match[2]))*13+'ABCDEFGHJKLMN'.index(match[1])
         try:
-            try_move(state['board'], index, -1, forbidden)
+            try_move(state['board'], index, 1 if state.get('botRole') == 'black' else -1, forbidden)
         except ValueError:
             continue
         return {'type': 'move', 'index': index}

@@ -234,7 +234,9 @@
 .shell:not(.home-view) .brand{align-items:center;margin-bottom:18px}.shell:not(.home-view) .brand .home-button{border-radius:50%;background:transparent;border-color:#ffffff20}
 .shell.game-view .brand .app-emblem{width:44px;height:44px}.shell.game-view .brand{margin-bottom:4px}
 @container app (max-width:380px){.shell:not(.home-view) .brand .brand-lockup{gap:8px}.shell:not(.home-view) .brand .app-emblem{width:56px;height:56px}.shell:not(.home-view) .brand .brand-type,.shell:not(.home-view) .brand .studio-credit{font-size:9px;letter-spacing:1.1px}.shell:not(.home-view) .brand .studio-credit:before{margin-right:8px}.shell.game-view .brand .app-emblem{width:40px;height:40px}}
-</style>
+.practice-color{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;align-items:center;margin-top:12px;color:var(--muted);font-size:12px}.practice-color select{min-width:0;min-height:44px;font-size:13px}
+.shell:not(.home-view) .brand .app-emblem{width:64px;height:64px}.shell:not(.home-view) .brand .brand-type,.shell:not(.home-view) .brand .studio-credit{font-size:12px;letter-spacing:1.2px;font-weight:400}.shell:not(.home-view) .brand .brand-lockup{gap:14px}.shell:not(.home-view) .brand .studio-credit:before{height:10px;background:#526056;margin-right:14px}.shell.game-view .brand .app-emblem{width:44px;height:44px}
+@container app (max-width:380px){.shell:not(.home-view) .brand .brand-lockup{gap:8px}.shell:not(.home-view) .brand .app-emblem{width:52px;height:52px}.shell:not(.home-view) .brand .brand-type,.shell:not(.home-view) .brand .studio-credit{font-size:10px;letter-spacing:.8px}.shell:not(.home-view) .brand .studio-credit:before{margin-right:8px}.shell.game-view .brand .app-emblem{width:40px;height:40px}}</style>
 </head>
 <body>
 <div class="app-frame"><div id="shell" class="shell home-view">
@@ -267,7 +269,7 @@
     <aside class="sidebar">
       <section class="panel pad">
         <h2 class="setup-title">Play</h2>
-        <div id="startActions" class="actions setup-actions"><button id="match" class="button primary">Find a match</button><button id="testMatch" class="button secondary hidden">Play test opponent</button></div>
+        <div id="startActions" class="actions setup-actions"><button id="match" class="button primary">Find a match</button><label class="practice-color" for="testColor"><span>Practice color</span><select id="testColor" class="nickname"><option value="black">Black · First</option><option value="white">White · Second</option></select></label><button id="testMatch" class="button secondary hidden">Play test opponent</button></div>
         <div id="queueStatus" class="queue-status hidden" role="status"><p id="queueMessage">Finding an opponent…</p><button id="cancelMatch" class="button ghost">Cancel</button></div>
         <p class="clock-note">13×13 · 5 min + 30 sec × 3</p>
 
@@ -699,7 +701,7 @@
   canvas.addEventListener('keydown',event=>{if(!canSelectMove()||!$('confirmMoves').checked)return;const dirs={ArrowLeft:-1,ArrowRight:1,ArrowUp:-N,ArrowDown:N};if(event.key in dirs){event.preventDefault();const current=selectedMove?.index??84,col=current%N,row=Math.floor(current/N);if(event.key==='ArrowLeft'&&col===0||event.key==='ArrowRight'&&col===N-1||event.key==='ArrowUp'&&row===0||event.key==='ArrowDown'&&row===N-1)return;selectMove(current+dirs[event.key])}else if(event.key==='Enter'){event.preventDefault();$('placeMove').onclick()}else if(event.key==='Escape'){$('clearMove').onclick()}});
   $('homePlay').onclick=()=>showPage('play');$('homeWatch').onclick=()=>showPage('watch');$('homeProfile').onclick=()=>showPage('profile');$('homeButton').onclick=()=>showPage('home');$('resumeGame').onclick=()=>showPage('play');
   $('navPlay').onclick=()=>showPage('play');$('navWatch').onclick=()=>showPage('watch');$('navProfile').onclick=()=>showPage('profile');$('browseWatch').onclick=()=>showPage('watch');
-  $('testMatch').onclick=()=>postRoom('/api/test-match',{},$('testMatch'));
+  $('testMatch').onclick=()=>postRoom('/api/test-match',{color:$('testColor').value||'black'},$('testMatch'));
 $('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
   $('cancelMatch').onclick=()=>{if(game?.status==='waiting'){send('cancel');$('cancelMatch').disabled=true}};
   $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('rematch').onclick=()=>send('rematch');$('newGame').onclick=()=>{if(game?.status==='finished')leaveRoom()};

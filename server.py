@@ -718,10 +718,17 @@ async def test_match(request):
     if len(request.app[BOT_JOBS]) >= 8:
         raise web.HTTPServiceUnavailable(text='Test opponents are busy. Please retry shortly.')
     data = await input_json(request)
+    color=data.get('color','black')
+    if color not in ('black','white'):
+        raise web.HTTPBadRequest(text='Choose black or white.')
+    bot_role='white' if color=='black' else 'black'
+    bot_token=None
     async with request.app[LOCK]:
         key, profile, cookie, user = await auth.profile_for(request, request.app[STORE], request_name(data))
         room = new_room(public=False, solo=False)
         room.test_bot = True
+        if color=='white':
+            _,bot_token=room.claim(None,'Test Bot')
         role, token = room.claim(None, profile["name"])
         bind_profile(room, role, key, profile, user)
         try:
@@ -731,7 +738,7 @@ async def test_match(request):
             raise web.HTTPServiceUnavailable(text='Unable to start test game.')
     port = request.transport.get_extra_info('sockname')[1]
     ready = asyncio.get_running_loop().create_future()
-    task = asyncio.create_task(run_bot(port,room.code,ready,try_move,board_hash))
+    task = asyncio.create_task(run_bot(port,room.code,ready,try_move,board_hash,bot_role,bot_token))
     request.app[BOT_JOBS][room.code] = task
     task.add_done_callback(lambda _: request.app[BOT_JOBS].pop(room.code,None))
     try:
