@@ -274,3 +274,21 @@ assert(!html.includes('id="solo"'));assert(!html.includes('Practice · Both colo
  studio.e('homeButton').onclick();studio.e('homeProfile').onclick();assert(!studio.e('profilePage').classes.has('hidden'));
  console.log('PASS unified home audio once, immediate menus, no splash timers');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+// AI color choices are disclosed by one action, without the old setup field.
+{
+ const ai=setup(undefined,{},'');ai.e('homePlay').onclick();
+ ai.e('aiDialog').classes.add('hidden');ai.e('testMatch').onclick();
+ assert(!ai.e('aiDialog').classes.has('hidden'));assert.equal(ai.e('shell').inert,true);
+ ai.e('aiClose').onclick();assert(ai.e('aiDialog').classes.has('hidden'));assert.equal(ai.e('shell').inert,false);
+ assert(!html.includes('id="testColor"'));assert(!html.includes('Practice color'));assert(!html.includes('Black · First'));assert(!html.includes('White · Second'));
+ assert(html.includes('Play with AI'));console.log('PASS AI colors appear only in a compact choice dialog');
+}
+// Every second of the 10-second overtime emits one cue, duplicate packets stay silent.
+{
+ const clockTest=setup(undefined,{},'?room=ABCDEFG',true);clockTest.listeners.pointerdown();clockTest.ws.message({type:'welcome',role:'black',token:'owner'});
+ const g=playing('ten-sound');g.moves=8;g.clock={policy:'byoyomi-manners-v1',byoyomiSeconds:10,running:'black',remaining:{black:10,white:300},mainRemaining:{black:0,white:300},periods:{black:3,white:3}};
+ clockTest.soundEvents.length=0;
+ for(let second=10;second>=1;second--){g.clock.remaining.black=second;clockTest.ws.message({type:'state',state:g});clockTest.ws.message({type:'state',state:g})}
+ assert.equal(clockTest.soundEvents.filter(x=>x==='tone').length,10);console.log('PASS all ten overtime seconds have deduplicated audible cues');
+}

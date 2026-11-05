@@ -10,7 +10,7 @@ class Socket:
 
 class MannersTests(unittest.TestCase):
     def room(self):
-        r=s.Room('MANNERS');r.claim(None,'A');r.claim(None,'B')
+        r=s.Room('MANNERS');r.byoyomi_seconds=30;r.claim(None,'A');r.claim(None,'B')
         r.turn_started=1000;r.game_started_at=1000
         self.black,self.white=Socket(),Socket();r.clients={self.black:'black',self.white:'white'}
         return r

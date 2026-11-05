@@ -1,6 +1,6 @@
 """Versioned product rules. IDs correspond to 13GO 운영·개발 매뉴얼."""
 MAIN_SECONDS = 300.0
-BYOYOMI_SECONDS = 30.0
+BYOYOMI_SECONDS = 10.0
 BYOYOMI_PERIODS = 3
 FIRST_ACTION_SECONDS = 30.0
 IDLE_WARNING_SECONDS = 60.0
@@ -13,13 +13,13 @@ DISCONNECT_LIMIT = 3
 POLICY = 'byoyomi-manners-v1'
 
 
-def project_clock(main, periods, elapsed):
+def project_clock(main, periods, elapsed, byoyomi_seconds=BYOYOMI_SECONDS):
     """Return main left, periods left, visible seconds. No mutation on reads."""
     elapsed = max(0.0, elapsed)
     if elapsed < main:
         return main-elapsed, periods, main-elapsed
     overtime = elapsed-main
-    spent = int(overtime // BYOYOMI_SECONDS)
+    spent = int(overtime // byoyomi_seconds)
     left = max(0, periods-spent)
-    display = max(0.0, BYOYOMI_SECONDS - overtime % BYOYOMI_SECONDS) if left else 0.0
+    display = max(0.0, byoyomi_seconds - overtime % byoyomi_seconds) if left else 0.0
     return 0.0, left, display

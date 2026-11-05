@@ -137,6 +137,7 @@ def area_score(board: list[int], dead: set[int]) -> dict:
 class Room:
     def __init__(self, code: str, public: bool = False, solo: bool = False):
         self.time_policy = policy.POLICY
+        self.byoyomi_seconds = policy.BYOYOMI_SECONDS
         self.periods = {"black": policy.BYOYOMI_PERIODS, "white": policy.BYOYOMI_PERIODS}
         self.game_started_at = None
         self.departures = {"black": 0, "white": 0}
@@ -193,6 +194,8 @@ class Room:
     def from_snapshot(cls, data):
         room = cls(data["code"])
         room.restore(data)
+        if "byoyomi_seconds" not in data:
+            room.byoyomi_seconds = 30.0
         if "time_policy" not in data:
             room.time_policy = "fischer-v1"
         if "rules" not in data:
@@ -216,20 +219,20 @@ class Room:
         role = "black" if self.turn == 1 else "white"
         if self.status == "playing" and self.turn_started is not None:
             if self.time_policy == policy.POLICY:
-                main_remaining[role], periods[role], remaining[role] = policy.project_clock(self.remaining[role], self.periods[role], now-self.turn_started)
+                main_remaining[role], periods[role], remaining[role] = policy.project_clock(self.remaining[role], self.periods[role], now-self.turn_started, self.byoyomi_seconds)
             else:
                 remaining[role] = max(0.0, remaining[role] - max(0.0, now - self.turn_started))
         if self.time_policy == policy.POLICY:
             for side in ('black', 'white'):
                 if side != role or self.status != 'playing' or self.turn_started is None:
-                    remaining[side] = self.remaining[side] if self.remaining[side]>0 else policy.BYOYOMI_SECONDS if self.periods[side]>0 else 0
+                    remaining[side] = self.remaining[side] if self.remaining[side]>0 else self.byoyomi_seconds if self.periods[side]>0 else 0
         elapsed = max(0, now-self.turn_started) if self.turn_started is not None else 0
         warning = self.time_policy == policy.POLICY and self.status == 'playing' and main_remaining[role]>0 and elapsed>=policy.IDLE_WARNING_SECONDS
         return {"remaining": remaining, "running": role if self.status == "playing" and self.turn_started is not None and self.recovery_anchor is None else None,
                 "increment": INCREMENT if self.time_policy != policy.POLICY else 0, "serverTime": wall_now, "reviewDeadline": self.review_deadline if self.recovery_anchor is None else None,
                 "recovering": self.recovery_anchor is not None,
                 "policy": self.time_policy, "mainRemaining": main_remaining, "periods": periods,
-                "byoyomiSeconds": policy.BYOYOMI_SECONDS, "idleWarning": role if warning else None,
+                "byoyomiSeconds": self.byoyomi_seconds, "idleWarning": role if warning else None,
                 "turnElapsed": elapsed}
 
     def tick(self, now=None):
@@ -390,7 +393,7 @@ class Room:
             return str(value).replace("\\", "\\\\").replace("]", "\\]").replace("\r", " ").replace("\n", " ")
         headers = "(;GM[1]FF[4]CA[UTF-8]AP[13GO]SZ[13]KM[6.5]RU[" + self.rules + "]"
         if self.time_policy == policy.POLICY:
-            headers += "TM[300]OT[3x30 byo-yomi]"
+            headers += f"TM[300]OT[3x{int(self.byoyomi_seconds)} byo-yomi]"
         for role, prop in (("black", "PB"), ("white", "PW")):
             headers += prop + "[" + escape((self.players[role] or {}).get("name", role)) + "]"
         if self.result:
@@ -456,7 +459,7 @@ class Room:
                 self.last_move = None
             if not self.solo:
                 if self.time_policy == policy.POLICY:
-                    self.remaining[role], self.periods[role], _ = policy.project_clock(self.remaining[role], self.periods[role], now-self.turn_started if self.turn_started is not None else 0)
+                    self.remaining[role], self.periods[role], _ = policy.project_clock(self.remaining[role], self.periods[role], now-self.turn_started if self.turn_started is not None else 0, self.byoyomi_seconds)
                 else:
                     self.remaining[role] = self.clock(now)["remaining"][role] + INCREMENT
                 self.turn_started = now

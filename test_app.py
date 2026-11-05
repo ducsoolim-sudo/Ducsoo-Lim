@@ -73,7 +73,7 @@ class API(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):await self.client.close()
     async def test_health_and_home(self):
         self.assertTrue((await (await self.client.get('/health')).json())['ok'])
-        html=await (await self.client.get('/')).text();self.assertIn('13GO',html);self.assertIn('id="solo"',html);self.assertNotIn('十三',html)
+        html=await (await self.client.get('/')).text();self.assertIn('13GO',html);self.assertIn('id="testMatch"',html);self.assertNotIn('id="solo"',html);self.assertNotIn('十三',html)
         import re
         self.assertIsNone(re.search('[가-힣]',html))
         self.assertNotIn('id="create"',html)

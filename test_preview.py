@@ -24,6 +24,6 @@ class PreviewTests(unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ, {'GO13_PREVIEW': 'true'}):
             response = await server.index(None)
             self.assertIn('Test v1.1', response.text)
-            self.assertIn('Temporary games', response.text)
+            self.assertIn('TEST V1.1', response.text)
             self.assertEqual(response.headers['X-Robots-Tag'], 'noindex, nofollow')
             self.assertEqual(response.headers['Cache-Control'], 'no-store')
