@@ -329,8 +329,9 @@
     if(warmedAudioContext===context&&context.state==='running')return;
     try{const source=context.createBufferSource();source.buffer=context.createBuffer(1,1,context.sampleRate||44100);source.connect(context.destination);source.start(0);warmedAudioContext=context}catch{}
   }
-  function stopEventCue(){for(const source of eventCueNodes){try{source.stop()}catch{}}eventCueNodes=[]}
+  function stopEventCue(){window.Go13Native?.stop();for(const source of eventCueNodes){try{source.stop()}catch{}}eventCueNodes=[]}
   function tone(frequency,duration=.08,volume=.05,delay=0,type='sine',eventCue=false){
+    if(window.Go13Native?.isNative){if(!soundEnabled||document.hidden)return false;if(!eventCue)stopEventCue();return window.Go13Native.play(frequency>=1000?'urgent':'cue',frequency>=1000?.7:.5,delay)}
     if(!soundEnabled||!audioContext||document.hidden)return false;if(audioContext.state!=='running'){resumeForSound(()=>renderClocks());return false;}
     try{if(!eventCue)stopEventCue();const start=audioContext.currentTime+delay,osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type=type;osc.frequency.setValueAtTime(frequency,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(volume,start+.004);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain);gain.connect(audioContext.destination);osc.start(start);osc.stop(start+duration+.01);if(eventCue)eventCueNodes.push(osc);return true}catch{return false}
   }
@@ -341,6 +342,7 @@
 
   function woodenTap(volume=.7,delay=0){
     stopEventCue();
+    if(window.Go13Native?.isNative){if(soundEnabled&&!document.hidden)window.Go13Native.play('stone',volume,delay);return}
     if(!soundEnabled||!audioContext||document.hidden)return;if(audioContext.state!=='running'){resumeForSound(()=>woodenTap(volume,delay));return;}
     try{if(recordedTapBuffer){const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=recordedTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay);return}if(!woodenTapBuffer){const rate=audioContext.sampleRate||44100,length=Math.floor(rate*.145);woodenTapBuffer=audioContext.createBuffer(1,length,rate);const samples=woodenTapBuffer.getChannelData(0);let wood=0,seed=713;for(let i=0;i<length;i++){const t=i/rate;seed=(seed*16807)%2147483647;const noise=seed/1073741823.5-1;wood=.63*wood+.37*noise;const attack=Math.min(1,t/.0007);const impact=.44*noise*Math.exp(-t*1050)+.31*wood*Math.exp(-t*85);const body=.25*Math.sin(2*Math.PI*475*t)*Math.exp(-t*95)+.18*Math.sin(2*Math.PI*810*t+.4)*Math.exp(-t*140)+.1*Math.sin(2*Math.PI*1240*t)*Math.exp(-t*185);samples[i]=Math.max(-.9,Math.min(.9,(impact+body)*attack))}}const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=woodenTapBuffer;gain.gain.setValueAtTime(volume,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start(audioContext.currentTime+delay)}catch{}
   }
@@ -348,12 +350,14 @@
   const studioSoundBytes=fetch('/static/brand-intro.wav?v=3').then(r=>r.ok?r.arrayBuffer():null).catch(()=>null);
   function loadStudioSound(){if(!studioSoundDecode&&audioContext)studioSoundDecode=studioSoundBytes.then(bytes=>bytes&&audioContext.decodeAudioData?audioContext.decodeAudioData(bytes):null).then(buffer=>{if(!buffer)return;let peak=0;for(const sample of buffer.getChannelData(0))peak=Math.max(peak,Math.abs(sample));if(peak>.001)studioSoundBuffer=buffer}).catch(()=>{});return studioSoundDecode}
   function brandSound(){
+    if(window.Go13Native?.isNative)return !document.hidden&&soundEnabled&&window.Go13Native.play('intro',.85);
     if(!audioContext||audioContext.state!=='running'||document.hidden)return false;
     if(studioSoundBuffer){try{const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=studioSoundBuffer;gain.gain.setValueAtTime(.85,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start();eventCueNodes.push(source);return true}catch{}}
     const played=tone(329.628,1.1,.045,.10,'sine',true);tone(493.883,1.2,.032,.43,'sine',true);tone(659.255,1.5,.025,.82,'sine',true);return played;
   }
   async function unlockSound(){
     if(!soundEnabled||document.hidden)return;
+    if(window.Go13Native?.isNative){if(window.Go13Native.canPlay()&&brandSoundPending&&page==='home'&&brandSound())brandSoundPending=false;renderClocks();return}
     try{
       const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;
       try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}
@@ -387,6 +391,7 @@
   }
   document.addEventListener?.('pointerdown',unlockSound,{passive:true,capture:true});document.addEventListener?.('touchend',unlockSound,{passive:true,capture:true});document.addEventListener?.('click',unlockSound,{passive:true,capture:true});document.addEventListener?.('keydown',unlockSound,{capture:true});
   document.addEventListener?.('visibilitychange',()=>{if(document.hidden)stopEventCue();else if(audioContext?.state!=='running')unlockSound()});
+  window.addEventListener?.('go13native:ready',unlockSound);
   function intro(){if(room||storage.get('13go:active-room')){brandSoundPending=false;return}unlockSound()}
   $('confirmMoves').checked=true;canvas.setAttribute('aria-disabled',String(!canSelectMove()));
   const savedName=storage.get('13go:nickname');
@@ -520,6 +525,7 @@
     try{const response=await fetch('/api/auth/me');if(!response.ok)return;const data=await response.json();accountUser=data.user;accountGames=data.games||[];$('accountBadge').textContent=accountUser?(({google:'Google',facebook:'Facebook',twitter:'X',apple:'Apple'})[accountUser.provider]||'Google')+' account':'Guest player · Unranked';$('accountNote').textContent=accountUser?'Games saved to your account':'Guest · Saved on this device';$('googleLogout').classList.toggle('hidden',!accountUser);$('googleLogin').classList.toggle('hidden',!!accountUser);await loadProfile();if(page==='profile')renderProfile()}catch{}
   }
   async function setupGoogle(){
+    if(window.Go13Native?.isNative){$('googleLogin').textContent='Guest play · Sign-in unavailable in this preview';return}
     await loadAccount();
     try{const response=await fetch('/api/auth/config');if(!response.ok)return;const config=await response.json();if(config.social){try{await window.Go13Social.mount($('googleLogin'),config.social,async()=>{await loadAccount();if(socket){socket.onclose=null;socket.close();connect()}},toast)}catch{toast('Sign-in is temporarily unavailable.')}return}if(!config.clientId)return;const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.onload=()=>{google.accounts.id.initialize({client_id:config.clientId,nonce:config.nonce,callback:async result=>{try{const response=await fetch('/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:result.credential})});if(!response.ok)throw new Error();await loadAccount();if(socket){socket.onclose=null;socket.close();connect()}}catch{toast('Sign-in failed. Please try again.')}}});google.accounts.id.renderButton($('googleLogin'),{theme:'outline',size:'large',text:'continue_with',shape:'rectangular'})};document.head.append(script)}catch{}
   }

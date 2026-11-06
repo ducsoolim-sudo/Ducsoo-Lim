@@ -9,6 +9,7 @@ COPY server.py storage.py auth.py scoring.py adjudicator.py katago.cfg rules_pol
 COPY social_auth.py ./
 COPY social-login.js ./static/social-login.js
 COPY index.html ./static/index.html
+COPY mobile-bridge.js ./mobile-bridge.js
 COPY stone-placement.wav brand-intro.wav ./static/
 ENV PORT=8080
 EXPOSE 8080

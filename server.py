@@ -620,6 +620,14 @@ async def index(request):
     return web.FileResponse(path)
 
 
+async def mobile_preview(request):
+    if os.getenv("GO13_PREVIEW") != "true":
+        raise web.HTTPNotFound()
+    response = await index(request)
+    response.text = response.text.replace('<script>', '<script src="/static/mobile-bridge.js"></script>\n<script>', 1)
+    return response
+
+
 async def health(request):
     try:
         async with asyncio.timeout(2):
@@ -1048,12 +1056,19 @@ def make_app(store=None):
     app.router.add_get("/api/profile", get_profile)
     app.router.add_post("/api/profile", edit_profile)
     app.router.add_get("/", index)
+    app.router.add_get("/mobile-preview", mobile_preview)
     app.router.add_post("/api/rooms", create_room)
     app.router.add_post("/api/match", match_room)
     app.router.add_post("/api/test-match", test_match)
     app.router.add_get("/api/lobby", lobby)
     app.router.add_get("/health", health)
     app.router.add_get("/ws", websocket_handler)
+    if (ROOT / "mobile-bridge.js").exists():
+        async def mobile_bridge(request):
+            if os.getenv("GO13_PREVIEW") != "true":
+                raise web.HTTPNotFound()
+            return web.FileResponse(ROOT / "mobile-bridge.js")
+        app.router.add_get("/static/mobile-bridge.js", mobile_bridge)
     if (ROOT / "static").exists():
         app.router.add_static("/static/", ROOT / "static", show_index=False)
     app.cleanup_ctx.append(cleanup_context)
