@@ -133,10 +133,11 @@ def territory_score(board, dead, captures, komi=6.5):
     ownership = list(regions(clean))
     # Japanese rules exclude eyes belonging to groups with shared dame (seki).
     seki_groups = set()
+    independently_alive = pass_alive(clean)
     for _, border in ownership:
         if {clean[p] for p in border} == {1, -1}:
             for p in border:
-                if p not in seki_groups:
+                if p not in independently_alive and p not in seki_groups:
                     seki_groups.update(group(clean, p)[0])
     territory = {1: 0, -1: 0}; neutral = 0
     for points, border in ownership:

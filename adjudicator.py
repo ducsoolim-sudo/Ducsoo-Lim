@@ -94,9 +94,9 @@ def adjudicate(board, captures, first, second):
 
 
 def settled_adjudication(board, captures):
-    """Prove an ordinary, dame-free finish without relying on neural estimates.
+    """Prove an ordinary finish, allowing neutral dame without relying on neural estimates.
 
-    Every original group needs Benson pass-alive proof. Shared liberties,
+    Every original group needs Benson pass-alive proof. Unsettled shared liberties,
     ko-dependent pockets, seki and any unsettled group deliberately fall through to the specialist engine.
     """
     if len(board) != 169 or any(type(c) is not int or c not in (-1, 0, 1) for c in board):
@@ -110,9 +110,6 @@ def settled_adjudication(board, captures):
     safe = pass_alive(clean)
     if any(c and i not in safe for i, c in enumerate(clean)):
         return None
-    for _, border in regions(clean):
-        if len({clean[p] for p in border}) != 1:
-            return None
     return dict(dead=sorted(dead), uncertain=[], seki=[],
                 score=territory_score(board, dead, captures), status='ready',
                 source='Benson pass-alive proof', reasons=[])

@@ -86,9 +86,13 @@ class SettledProofTests(unittest.TestCase):
         board = self.finished_board(); board[42] = -1; board[43] = 0
         self.assertIsNone(settled_adjudication(board, {'black': 0, 'white': 0}))
 
-    def test_unfilled_dame_still_needs_play_or_specialist_review(self):
+    def test_proven_living_sides_can_finish_with_neutral_dame(self):
         board = self.finished_board(); board[6*13+5] = 0
-        self.assertIsNone(settled_adjudication(board, {'black': 0, 'white': 0}))
+        verdict=settled_adjudication(board, {'black':0,'white':0})
+        self.assertEqual(verdict['status'],'ready')
+        self.assertEqual(verdict['score']['neutral'],1)
+        self.assertEqual(verdict['score']['blackTerritory'],2)
+        self.assertEqual(verdict['score']['whiteTerritory'],2)
 
     def test_seki_unfinished_and_empty_positions_do_not_use_fast_path(self):
         for board in ([0]*169, [1]+[0]*167+[-1]):

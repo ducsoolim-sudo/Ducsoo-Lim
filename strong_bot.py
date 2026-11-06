@@ -4,7 +4,7 @@ import json
 import os
 import re
 from pathlib import Path
-from adjudicator import coordinate
+from adjudicator import coordinate, settled_adjudication
 
 class ResidentEngine:
     """One serialized process; discard it on cancellation or protocol failure."""
@@ -118,6 +118,9 @@ def select_action(result, state, try_move, board_hash, ko_position=None):
 
 
 async def choose_action(state, try_move, board_hash, ko_position=None):
+    # Safe completed positions must not be turned into needless dame/eye filling.
+    if settled_adjudication(state['board'], state['captures']):
+        return {'type': 'pass'}
     # Distinct variables keep move generation independent of scoring configuration.
     binary, model = settings()
     if not binary or not model:
