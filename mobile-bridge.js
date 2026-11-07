@@ -558,10 +558,105 @@
     };
   }
 
+  // src/guest-transport.js
+  var origin = "https://thirteen-go-test.onrender.com";
+  var paths = /* @__PURE__ */ new Set(["/api/profile", "/api/lobby", "/api/rooms", "/api/match", "/api/test-match"]);
+  function createGuestTransport({ request, sessionStore, now = () => Date.now() / 1e3 }) {
+    if (typeof request !== "function" || typeof sessionStore?.get !== "function" || typeof sessionStore?.set !== "function" || typeof sessionStore?.remove !== "function") throw Error("Native HTTP and secure session store are required");
+    let pending = null;
+    const expired = () => Object.assign(Error("Native session expired. Restore or explicitly reset your guest identity."), { code: "SESSION_EXPIRED" });
+    const send = async (path, { method = "GET", data, token } = {}) => {
+      const response = await request({ url: origin + path, method, headers: { "Content-Type": "application/json", ...token ? { Authorization: "Bearer " + token } : {} }, ...data !== void 0 ? { data } : {} });
+      if (response.status === 401) throw expired();
+      if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599) throw Error("Native server response unavailable");
+      if (response.status < 200 || response.status >= 300) throw Object.assign(Error("Native server request failed"), { code: "SERVER_RESPONSE", status: response.status, body: typeof response.data === "string" ? response.data : JSON.stringify(response.data) });
+      const body = typeof response.data === "string" ? JSON.parse(response.data) : response.data;
+      return body;
+    };
+    const session = () => {
+      if (pending) return pending;
+      pending = (async () => {
+        const stored = await sessionStore.get();
+        if (stored !== null && stored !== void 0) {
+          if (!valid(stored)) throw expired();
+          return stored;
+        }
+        const created = await send("/api/native/session", { method: "POST" });
+        if (!valid(created)) throw Error("Invalid native session response");
+        await sessionStore.set(created);
+        return created;
+      })().finally(() => {
+        pending = null;
+      });
+      return pending;
+    };
+    function valid(value) {
+      return /^[A-Za-z0-9_-]{43}$/.test(value?.token || "") && Number.isFinite(value?.expiresAt) && value.expiresAt > now();
+    }
+    return {
+      async api(path, { method = "GET", data } = {}) {
+        if (!paths.has(path) || !["GET", "POST"].includes(method)) throw Error("Unsupported native API");
+        const { token } = await session();
+        return send(path, { method, data, token });
+      },
+      async socketUrl() {
+        const { token } = await session();
+        const result = await send("/api/native/socket-ticket", { method: "POST", token });
+        if (!/^[A-Za-z0-9_-]{43}$/.test(result?.ticket || "")) throw Error("Invalid socket ticket");
+        return origin.replace("https:", "wss:") + "/ws/native?ticket=" + encodeURIComponent(result.ticket);
+      },
+      async revoke() {
+        const { token } = await session();
+        await send("/api/native/revoke", { method: "POST", token });
+        await sessionStore.remove();
+      }
+    };
+  }
+
+  // src/app-adapter.js
+  function createAppAdapter({ request, plugin, assetFetch, ResponseType = Response }) {
+    const sessionStore = {
+      async get() {
+        const { value } = await plugin.get();
+        if (value === null) return null;
+        if (typeof value !== "string") throw Error("Secure session unavailable");
+        return JSON.parse(value);
+      },
+      async set(value) {
+        await plugin.set({ value: JSON.stringify(value) });
+      },
+      async remove() {
+        await plugin.remove();
+      }
+    };
+    const transport = createGuestTransport({ request, sessionStore });
+    return {
+      socketUrl: () => transport.socketUrl(),
+      // Called only after an explicit UI confirmation; never on request failure.
+      resetGuest: () => sessionStore.remove(),
+      async fetch(path, options = {}) {
+        if (typeof path !== "string") throw Error("Unsupported app request");
+        if (path.startsWith("/static/")) return assetFetch(path, options);
+        if (path === "/api/auth/me") return new ResponseType(JSON.stringify({ user: null, games: [] }), { status: 200 });
+        let data;
+        if (options.body !== void 0) data = JSON.parse(options.body);
+        try {
+          return new ResponseType(JSON.stringify(await transport.api(path, { method: options.method || "GET", data })), { status: 200 });
+        } catch (error) {
+          if (error.code === "SERVER_RESPONSE") return new ResponseType(error.body, { status: error.status });
+          throw error;
+        }
+      }
+    };
+  }
+
   // src/native-bridge.js
   var native = Capacitor.isNativePlatform();
   window.Go13Native = createAudioController({ native, plugin: registerPlugin("Go13Audio"), isHidden: () => document.hidden, onReady: () => window.dispatchEvent(new Event("go13native:ready")) });
   if (native) {
+    if (location.hostname === "localhost" && ["capacitor:", "https:"].includes(location.protocol)) {
+      window.Go13App = createAppAdapter({ request: (options) => CapacitorHttp.request({ ...options, responseType: "text", disableRedirects: true, connectTimeout: 15e3, readTimeout: 15e3 }), plugin: registerPlugin("Go13Session"), assetFetch: window.fetch.bind(window) });
+    }
     document.documentElement.classList.add("native-app");
     StatusBar.setStyle({ style: Style.Dark }).catch(() => {
     });

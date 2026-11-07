@@ -19,6 +19,8 @@ def secure_request(request):
 
 
 def same_origin(request):
+    if hasattr(request, 'get') and request.get('go13.native.session'):
+        return  # Validated bearer, never a caller-provided Origin exemption.
     origin = request.headers.get('Origin', '')
     expected = os.getenv('PUBLIC_ORIGIN', '').rstrip('/')
     if not expected:
@@ -120,9 +122,12 @@ def clean_name(value):
 
 
 async def profile_for(request, store, initial_name=None):
-    user = await identity(request, store)
+    native_key = request.get('go13.native.profile')
+    user = None if native_key else await identity(request, store)
     token = None
-    if user:
+    if native_key:
+        key = native_key
+    elif user:
         key = 'account:' + user['id']
     else:
         token = request.cookies.get(PROFILE_COOKIE, '')

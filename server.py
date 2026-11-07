@@ -15,6 +15,7 @@ from storage import RoomStore, StaleRoom
 import copy
 import logging
 import auth
+import native_sessions
 from scoring import automatic_dead, territory_score
 from adjudicator import KataGo, settled_adjudication
 import rules_policy as policy
@@ -791,6 +792,8 @@ async def match_room(request):
 
 
 async def websocket_handler(request):
+    if request.path == '/ws/native':
+        await native_sessions.consume_ticket(request, STORE)
     socket = web.WebSocketResponse(heartbeat=25, max_msg_size=2048)
     client_count = sum(len(r.clients) for r in ROOMS.values())
     if client_count >= MAX_CLIENTS:
@@ -804,6 +807,12 @@ async def websocket_handler(request):
     last_messages = deque()
     try:
         async for event in socket:
+            if request.get(native_sessions.SESSION):
+                try:
+                    await native_sessions.session_for(request.app[STORE], request[native_sessions.SESSION])
+                except web.HTTPUnauthorized:
+                    await socket.close(code=4003, message=b'Session expired')
+                    break
             if event.type != WSMsgType.TEXT:
                 continue
             now = time.time()
@@ -1046,13 +1055,14 @@ async def shutdown_preview_bots(app):
 
 
 def make_app(store=None):
-    app = web.Application(client_max_size=16384)
+    app = web.Application(client_max_size=16384, middlewares=[native_sessions.middleware(STORE)])
     app[STORE] = store or RoomStore()
     app[LOCK] = asyncio.Lock()
     app[ENGINE] = KataGo()
     app[JOBS] = set()
     app[BOT_JOBS] = {}
     auth.setup(app, STORE)
+    native_sessions.setup(app, STORE, check_rate)
     app.router.add_get("/api/profile", get_profile)
     app.router.add_post("/api/profile", edit_profile)
     app.router.add_get("/", index)
@@ -1063,6 +1073,7 @@ def make_app(store=None):
     app.router.add_get("/api/lobby", lobby)
     app.router.add_get("/health", health)
     app.router.add_get("/ws", websocket_handler)
+    app.router.add_get("/ws/native", websocket_handler)
     if (ROOT / "mobile-bridge.js").exists():
         async def mobile_bridge(request):
             if os.getenv("GO13_PREVIEW") != "true":
