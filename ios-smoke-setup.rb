@@ -14,6 +14,7 @@ tests.build_configurations.each do |config|
   config.build_settings.merge!({
     'PRODUCT_BUNDLE_IDENTIFIER' => 'com.saistudio.go13.preview.smoketests',
     'GENERATE_INFOPLIST_FILE' => 'YES', 'TEST_TARGET_NAME' => 'App',
+    'PRODUCT_NAME' => '$(TARGET_NAME)', 'PRODUCT_MODULE_NAME' => 'Go13Smoke',
     'SWIFT_VERSION' => '5.0', 'TARGETED_DEVICE_FAMILY' => '1',
     'SUPPORTED_PLATFORMS' => 'iphonesimulator',
     'CODE_SIGN_IDENTITY' => '-', 'CODE_SIGN_STYLE' => 'Automatic'
