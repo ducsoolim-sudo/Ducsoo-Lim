@@ -24,8 +24,8 @@ jobs:
         run: |
           python3 - <<'PY'
           import hashlib, pathlib, zipfile
-          source=pathlib.Path('native-preview-source-v2.zip')
-          assert hashlib.sha256(source.read_bytes()).hexdigest() == 'c12facb250d1e8fa4f7b8b529ac18463cec4cb1f55962537395f68e11eeb5ce6'
+          source=pathlib.Path('native-preview-source-v3.zip')
+          assert hashlib.sha256(source.read_bytes()).hexdigest() == 'dbf7d6a0ed3ce80a7ee51167d3e63937ce43a668dc561a4d6d5390f74906fc50'
           with zipfile.ZipFile(source) as archive:
               archive.extractall('native-source')
           PY
