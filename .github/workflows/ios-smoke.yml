@@ -1,0 +1,72 @@
+name: iOS simulator runtime check
+on:
+  push:
+    branches: [test-menu-v11]
+    paths: [.github/workflows/ios-smoke.yml, ios-smoke-setup.rb, ios-smoke-test.swift]
+permissions:
+  contents: read
+concurrency:
+  group: ios-smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  runtime:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Prepare pinned source and UI test target
+        run: |
+          python3 - <<'PY'
+          import hashlib, pathlib, zipfile
+          source=pathlib.Path('native-preview-source.zip')
+          assert hashlib.sha256(source.read_bytes()).hexdigest() == '799789451ea96a980d7cb39e092d9c16e7dda23a58d8f0c255cb99989c577135'
+          with zipfile.ZipFile(source) as archive:
+              archive.extractall('native-source')
+          PY
+          gem install --user-install xcodeproj --no-document
+          ruby ios-smoke-setup.rb
+          cd native-source/mobile
+          npm ci
+          npm run sync:bundled
+      - name: Select available iPhone simulator
+        run: |
+          xcrun simctl list devices available --json > devices.json
+          python3 - <<'PY'
+          import json,os
+          devices=json.load(open('devices.json'))['devices']
+          choices=[d for runtime in sorted(devices,reverse=True) if '.iOS-' in runtime for d in devices[runtime] if d.get('isAvailable') and d['name'].startswith('iPhone')]
+          assert choices, 'No preinstalled iPhone simulator'
+          with open(os.environ['GITHUB_ENV'],'a') as output: output.write('SMOKE_DEVICE='+choices[0]['udid']+'\n')
+          print('Selected simulator:',choices[0]['name'])
+          PY
+      - name: Run native UI and secure guest relaunch check
+        run: |
+          xcrun simctl boot "$SMOKE_DEVICE"
+          xcrun simctl bootstatus "$SMOKE_DEVICE" -b
+          xcodebuild test -project native-source/mobile/ios/App/App.xcodeproj -scheme Go13Smoke -destination "platform=iOS Simulator,id=$SMOKE_DEVICE" -derivedDataPath native-source/mobile/build/ios-smoke -resultBundlePath smoke-results.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
+      - name: Collect simulator evidence
+        if: always()
+        run: |
+          if [ -d smoke-results.xcresult ]; then
+            xcrun xcresulttool export attachments --path smoke-results.xcresult --output-path smoke-attachments
+          fi
+          if [ -n "$SMOKE_DEVICE" ]; then
+            xcrun simctl io "$SMOKE_DEVICE" screenshot smoke-final.png || true
+            xcrun simctl shutdown "$SMOKE_DEVICE" || true
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: 13GO-iOS-runtime-evidence
+          path: |
+            smoke-results.xcresult
+            smoke-attachments
+            smoke-final.png
+          if-no-files-found: error
+          retention-days: 7
