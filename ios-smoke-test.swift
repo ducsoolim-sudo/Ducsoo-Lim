@@ -2,6 +2,7 @@ import XCTest
 
 final class SmokeTests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
+    override func tearDown() { if let testRun = testRun, !testRun.hasSucceeded { let app = XCUIApplication(); picture(app, "failure-screen"); print(app.debugDescription) } }
     private func picture(_ app: XCUIApplication, _ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
@@ -27,6 +28,8 @@ final class SmokeTests: XCTestCase {
         let page = web.buttons["My Page"].firstMatch
         ready(page); page.tap()
         let field = web.textFields["Display name"].firstMatch
+        let retry = web.buttons["Retry connection"].firstMatch
+        if retry.waitForExistence(timeout: 5) { retry.tap() }
         ready(field); field.tap()
         field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 40))
         field.typeText("Smoke" + String(UUID().uuidString.prefix(4)))
