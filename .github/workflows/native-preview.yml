@@ -2,7 +2,7 @@ name: Native preview compile
 on:
   push:
     branches: [test-menu-v11]
-    paths: [native-preview-source.zip, .github/workflows/native-preview.yml]
+    paths: [native-preview-source-v2.zip, .github/workflows/native-preview.yml]
 permissions:
   contents: read
 concurrency:
@@ -38,8 +38,8 @@ jobs:
         run: |
           python3 - <<'PY'
           import hashlib, pathlib, zipfile
-          source=pathlib.Path('native-preview-source.zip')
-          assert hashlib.sha256(source.read_bytes()).hexdigest() == '799789451ea96a980d7cb39e092d9c16e7dda23a58d8f0c255cb99989c577135'
+          source=pathlib.Path('native-preview-source-v2.zip')
+          assert hashlib.sha256(source.read_bytes()).hexdigest() == 'c12facb250d1e8fa4f7b8b529ac18463cec4cb1f55962537395f68e11eeb5ce6'
           with zipfile.ZipFile(source) as archive:
               archive.extractall('native-source')
           PY
@@ -73,3 +73,4 @@ jobs:
           path: 13GO-ios-simulator.tar.gz
           if-no-files-found: error
           retention-days: 7
+
