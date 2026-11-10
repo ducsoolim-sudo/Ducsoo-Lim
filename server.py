@@ -228,7 +228,7 @@ class Room:
                 if side != role or self.status != 'playing' or self.turn_started is None:
                     remaining[side] = self.remaining[side] if self.remaining[side]>0 else self.byoyomi_seconds if self.periods[side]>0 else 0
         elapsed = max(0, now-self.turn_started) if self.turn_started is not None else 0
-        warning = self.time_policy == policy.POLICY and self.status == 'playing' and main_remaining[role]>0 and elapsed>=policy.IDLE_WARNING_SECONDS
+        warning = False
         return {"remaining": remaining, "running": role if self.status == "playing" and self.turn_started is not None and self.recovery_anchor is None else None,
                 "increment": INCREMENT if self.time_policy != policy.POLICY else 0, "serverTime": wall_now, "reviewDeadline": self.review_deadline if self.recovery_anchor is None else None,
                 "recovering": self.recovery_anchor is not None,
@@ -243,20 +243,13 @@ class Room:
         if self.status == "playing" and self.turn_started is not None:
             role = "black" if self.turn == 1 else "white"
             clock = self.clock(now)
-            reason = None
-            if self.time_policy == policy.POLICY:
-                elapsed = now-self.turn_started
-                if self.moves == 0 and elapsed >= policy.FIRST_ACTION_SECONDS:
-                    reason = 'first_move_timeout'
-                elif clock['mainRemaining'][role]>0 and elapsed>=policy.IDLE_LOSS_SECONDS:
-                    reason = 'move_delay'
-            if reason or clock["remaining"][role] <= 0:
+            if clock["remaining"][role] <= 0:
                 if self.time_policy == policy.POLICY:
                     self.remaining[role] = clock['mainRemaining'][role]
                     self.periods[role] = clock['periods'][role]
                 else:
                     self.remaining[role] = 0
-                self.result = {"reason": reason or "time", "winner": "white" if role == "black" else "black"}
+                self.result = {"reason": "time", "winner": "white" if role == "black" else "black"}
                 self.status = "finished"
                 self.turn_started = None
                 return True
@@ -733,6 +726,9 @@ async def test_match(request):
     color=data.get('color','black')
     if color not in ('black','white'):
         raise web.HTTPBadRequest(text='Choose black or white.')
+    level=data.get('level','high')
+    if level not in ('high','medium','low'):
+        raise web.HTTPBadRequest(text='Choose high, medium or low AI level.')
     bot_role='white' if color=='black' else 'black'
     bot_token=None
     async with request.app[LOCK]:
@@ -750,7 +746,7 @@ async def test_match(request):
             raise web.HTTPServiceUnavailable(text='Unable to start test game.')
     port = request.transport.get_extra_info('sockname')[1]
     ready = asyncio.get_running_loop().create_future()
-    task = asyncio.create_task(run_bot(port,room.code,ready,try_move,board_hash,bot_role,bot_token))
+    task = asyncio.create_task(run_bot(port,room.code,ready,try_move,board_hash,bot_role,bot_token,level))
     request.app[BOT_JOBS][room.code] = task
     task.add_done_callback(lambda _: request.app[BOT_JOBS].pop(room.code,None))
     try:
