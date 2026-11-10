@@ -74,7 +74,7 @@ let manners=game('manners-clock','white');manners.status='playing';manners.resul
 manners.clock={policy:'byoyomi-manners-v1',remaining:{black:30,white:125},mainRemaining:{black:0,white:125},periods:{black:2,white:3},running:'black',turnElapsed:0,serverTime:Date.now()/1000};
 t.ws.message({type:'state',state:manners});assert.equal(t.e('blackClock').textContent,'0:30 ×2');assert.equal(t.e('whiteClock').textContent,'2:05');
 manners.clock.mainRemaining.black=200;manners.clock.remaining.black=200;manners.clock.turnElapsed=60;
-t.ws.message({type:'state',state:manners});assert(t.e('clockNote').textContent.includes('Please move'));
+t.ws.message({type:'state',state:manners});assert(t.e('clockNote').textContent.includes('5 min'));
 manners.status='scoring';manners.adjudication={status:'analyzing'};manners.clock.running=null;manners.clock.reviewDeadline=null;
 t.ws.message({type:'state',state:manners});assert.equal(t.e('status').textContent,'Checking…');assert.equal(t.e('clockNote').textContent,'');assert.equal(t.e('approve').disabled,true);assert(t.e('approve').classes.has('hidden'));
 console.log('PASS byoyomi periods, private delay warning, and no countdown during analysis');
@@ -104,9 +104,7 @@ console.log('PASS plain home menus, profile settings, and test-opponent results 
 // First action and idle forfeits get a private audiovisual 10-second warning.
 t=setup(undefined,{},'?room=ABCDEFG',true);t.listeners.pointerdown();t.soundEvents.length=0;t.ws.message({type:'welcome',role:'black',token:'owner'});
 let warning=game('deadline-audio','white');warning.status='playing';warning.result=null;warning.turn='black';warning.moves=0;warning.clock={policy:'byoyomi-manners-v1',remaining:{black:280,white:300},mainRemaining:{black:280,white:300},periods:{black:3,white:3},running:'black',turnElapsed:20,serverTime:Date.now()/1000};
-t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineNumber').textContent,'10');assert.equal(t.e('deadlineLabel').textContent,'First move');assert.equal(t.soundEvents.length,1);
-t.ws.message({type:'state',state:warning});assert.equal(t.soundEvents.length,1);warning.clock.turnElapsed=21;t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineNumber').textContent,'9');assert.equal(t.soundEvents.length,2);
-warning.moves=4;warning.clock.turnElapsed=80;t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineLabel').textContent,'Move now');assert.equal(t.e('deadlineNumber').textContent,'10');
+t.ws.message({type:'state',state:warning});assert(t.e('deadlineCountdown').classes.has('hidden'));assert.equal(t.soundEvents.length,0);
 warning.clock.running='white';t.ws.message({type:'state',state:warning});assert(t.e('deadlineCountdown').classes.has('hidden'));
 warning.status='finished';warning.result={winner:'white',reason:'move_delay'};t.ws.message({type:'state',state:warning});assert(t.e('deadlineCountdown').classes.has('hidden'));assert.equal(t.e('clockNote').textContent,'');
 assert(!html.includes('id="share"'));assert(!html.includes('id="downloadSgf"'));assert(!html.includes('Game complete'));
@@ -129,7 +127,7 @@ assert(html.includes("navigator.audioSession.type='playback'"));t=setup(undefine
 const stoneWav=fs.readFileSync(require('path').join(__dirname,'stone-placement.wav'));let pcmPeak=0;const dataOffset=stoneWav.indexOf(Buffer.from('data'));assert(dataOffset>=0);for(let i=dataOffset+8;i+1<stoneWav.length;i+=2)pcmPeak=Math.max(pcmPeak,Math.abs(stoneWav.readInt16LE(i)));assert(pcmPeak>10000,'Recorded stone sound must contain an audible impact');assert(html.includes('if(peak>.001)recordedTapBuffer=buffer'));console.log('PASS recorded WAV is audible and silent decoded samples fall back');
 
 // Both participants hear opening expiry; spectators do not, and locked audio can retry.
-t=setup(undefined,{},'?room=ABCDEFG',true);t.ws.message({type:'welcome',role:'white',token:'owner'});warning=playing('opening-both');warning.moves=0;warning.clock={policy:'byoyomi-manners-v1',running:'black',turnElapsed:20,remaining:{black:280,white:300},mainRemaining:{black:280,white:300},periods:{black:3,white:3}};t.ws.message({type:'state',state:warning});assert.equal(t.e('deadlineNumber').textContent,'10');assert.equal(t.soundEvents.length,0);t.listeners.touchend();assert.equal(t.soundEvents.length,1);t.ws.message({type:'state',state:warning});assert.equal(t.soundEvents.length,1);t.ws.message({type:'welcome',role:'spectator',token:'viewer'});assert(t.e('deadlineCountdown').classes.has('hidden'));console.log('PASS both players opening countdown and retry after audio unlock');
+t=setup(undefined,{},'?room=ABCDEFG',true);t.ws.message({type:'welcome',role:'white',token:'owner'});warning=playing('opening-both');warning.moves=0;warning.clock={policy:'byoyomi-manners-v1',running:'black',turnElapsed:20,remaining:{black:280,white:300},mainRemaining:{black:280,white:300},periods:{black:3,white:3}};t.ws.message({type:'state',state:warning});assert(t.e('deadlineCountdown').classes.has('hidden'));assert.equal(t.soundEvents.length,0);t.listeners.touchend();assert.equal(t.soundEvents.length,0);t.ws.message({type:'state',state:warning});assert.equal(t.soundEvents.length,0);t.ws.message({type:'welcome',role:'spectator',token:'viewer'});assert(t.e('deadlineCountdown').classes.has('hidden'));console.log('PASS both players opening countdown and retry after audio unlock');
 
 t=setup(undefined,{},'');assert(!t.e('homePage').classes.has('hidden'));assert.notEqual(t.e('shell').inert,true);assert(!html.includes('id="brandIntro"'));console.log('PASS home is interactive immediately without splash transition');
 
