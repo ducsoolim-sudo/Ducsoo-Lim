@@ -38,3 +38,41 @@ jobs:
           npm ci
           npm run sync:bundled
           npm run check
+      - name: Select available iPhone simulator
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+          xcrun simctl list devices available --json > devices.json
+          python3 - <<'PY'
+          import json,os
+          devices=json.load(open('devices.json'))['devices']
+          choices=[d for runtime in sorted(devices,reverse=True) if runtime == 'com.apple.CoreSimulator.SimRuntime.iOS-26-5' for d in devices[runtime] if d.get('isAvailable') and d['name'].startswith('iPhone')]
+          assert choices, 'No preinstalled iOS 26.5 iPhone simulator'
+          with open(os.environ['GITHUB_ENV'],'a') as output: output.write('SMOKE_DEVICE='+choices[0]['udid']+'\n')
+          print('Selected simulator: iOS 26.5',choices[0]['name'],choices[0]['udid'])
+          PY
+      - name: Run native UI and secure guest relaunch check
+        run: |
+          xcrun simctl boot "$SMOKE_DEVICE"
+          xcrun simctl bootstatus "$SMOKE_DEVICE" -b
+          xcodebuild test -project native-source/mobile/ios/App/App.xcodeproj -scheme Go13Smoke -destination "platform=iOS Simulator,id=$SMOKE_DEVICE" -derivedDataPath native-source/mobile/build/ios-smoke -resultBundlePath smoke-results.xcresult CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-
+      - name: Collect simulator evidence
+        if: always()
+        run: |
+          if [ -d smoke-results.xcresult ]; then
+            xcrun xcresulttool export attachments --path smoke-results.xcresult --output-path smoke-attachments
+          fi
+          if [ -n "$SMOKE_DEVICE" ]; then
+            xcrun simctl io "$SMOKE_DEVICE" screenshot smoke-final.png || true
+            xcrun simctl shutdown "$SMOKE_DEVICE" || true
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: 13GO-iOS-runtime-evidence
+          path: |
+            smoke-results.xcresult
+            smoke-attachments
+            smoke-final.png
+          if-no-files-found: error
+          retention-days: 14
