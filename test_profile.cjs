@@ -292,3 +292,13 @@ assert(!html.includes('id="solo"'));assert(!html.includes('Practice · Both colo
  for(let second=10;second>=1;second--){g.clock.remaining.black=second;clockTest.ws.message({type:'state',state:g});clockTest.ws.message({type:'state',state:g})}
  assert.equal(clockTest.soundEvents.filter(x=>x==='tone').length,10);console.log('PASS all ten overtime seconds have deduplicated audible cues');
 }
+
+// AI color choice goes straight to the board; only the result uses a popup.
+t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});
+let directAI=game('direct-ai','white');directAI.testBot=true;directAI.status='playing';directAI.result=null;directAI.moves=0;directAI.clock={running:'black',remaining:{black:300,white:300}};
+t.ws.message({type:'state',state:directAI});
+assert(t.e('matchDialog').classes.has('hidden'));assert(!t.e('shell').inert);
+assert(!t.timers.some(timer=>timer.delay===2200&&timer.active));
+directAI.status='finished';directAI.result={winner:'white',reason:'resign'};t.ws.message({type:'state',state:directAI});
+assert(!t.e('matchDialog').classes.has('hidden'));assert.equal(t.e('matchDialogTitle').textContent,'You lose');
+console.log('PASS AI color selection skips start popup while keeping the game result');
