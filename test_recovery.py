@@ -18,7 +18,7 @@ class Recovery(unittest.TestCase):
         r.clients={Connected():'black',Connected():'white'}
         with patch('server.time.time',return_value=now):r.connection_changed()
 
-    def test_first_move_budget_frozen_until_both_return(self):
+    def test_main_and_byoyomi_frozen_until_both_return(self):
         r=self.room()
         self.assertFalse(r.tick(10000))
         self.assertIsNone(r.clock(10000)['running'])
@@ -28,9 +28,9 @@ class Recovery(unittest.TestCase):
         self.assertIsNotNone(r.recovery_anchor)
         with self.assertRaises(ValueError):r.act('black',{'type':'pass'})
         self.reconnect(r,10000)
-        self.assertFalse(r.tick(10019))
-        self.assertTrue(r.tick(10020))
-        self.assertEqual(r.result['reason'],'first_move_timeout')
+        self.assertFalse(r.tick(10319.99))
+        self.assertTrue(r.tick(10320))
+        self.assertEqual(r.result['reason'],'time')
         self.assertEqual(r.departures,{'black':0,'white':0})
 
     def test_scoring_deadline_preserves_pre_restart_elapsed(self):
