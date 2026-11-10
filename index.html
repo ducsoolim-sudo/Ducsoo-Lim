@@ -292,7 +292,7 @@
         <h2 class="setup-title">Play</h2>
         <div id="startActions" class="actions setup-actions"><button id="match" class="button primary">Find a match</button><button id="testMatch" class="button secondary hidden">Play with AI</button></div>
         <div id="queueStatus" class="queue-status hidden" role="status"><p id="queueMessage">Finding an opponent…</p><button id="cancelMatch" class="button ghost">Cancel</button></div>
-        <p class="clock-note">13×13 · 5 min + 10 sec × 3</p>
+        <p class="clock-note">13×13 · 5 min, then 10 sec × 3</p>
 
         <p id="myRole" class="hidden"></p><p id="inviteHint" class="hidden"></p><div id="codeBox" class="hidden"><span id="code"></span></div>
       </section>
@@ -306,7 +306,7 @@
         </details><p id="practiceCount" class="profile-note">0 solo sessions completed</p></div></section><div><div class="profile-stats"><div class="profile-stat"><strong id="statGames">0</strong><span>Games played</span></div><div class="profile-stat"><strong id="statWins">0</strong><span>Wins</span></div><div class="profile-stat"><strong id="statLosses">0</strong><span>Losses</span></div><div class="profile-stat"><strong id="statRate">—</strong><span>Win rate</span></div></div><section class="panel pad history-panel"><div class="section-head"><h3>Recent games</h3><button id="exportHistory" class="button ghost">Export history</button></div><p id="historyEmpty" class="note" style="margin-top:20px">No games yet.</p><div class="table-wrap"><table id="historyTable" class="history hidden"><thead><tr><th>Result</th><th>Opponent</th><th>Color</th><th>Details</th><th>Date</th><th>Record</th></tr></thead><tbody id="historyRows"></tbody></table></div></section></div></div></section>
   <p class="foot">13GO v1.1 · 13×13 Go for everyone · Public games & live spectators<br>Games and move records are saved on the server. Your guest identity stays in this browser. Keep your game link to return.</p>
 </div></div><div id="toast" class="toast" role="status"></div>
-<div id="aiDialog" class="match-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="aiDialogTitle"><section class="ai-card"><button id="aiClose" class="ai-close" aria-label="Close">×</button><h2 id="aiDialogTitle">Play with AI</h2><div class="ai-colors"><button id="aiBlack" class="ai-color"><span class="stone black" aria-hidden="true"></span>Black</button><button id="aiWhite" class="ai-color"><span class="stone white" aria-hidden="true"></span>White</button></div></section></div>
+<div id="aiDialog" class="match-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="aiDialogTitle"><section class="ai-card"><button id="aiClose" class="ai-close" aria-label="Close">×</button><h2 id="aiDialogTitle">Play with AI</h2><label for="aiLevel">AI level</label><select id="aiLevel" style="width:100%;min-height:44px;margin:10px 0 18px;background:#18201b;color:inherit;border:1px solid #58645b;border-radius:10px;padding:8px"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select><div class="ai-colors"><button id="aiBlack" class="ai-color"><span class="stone black" aria-hidden="true"></span>Black</button><button id="aiWhite" class="ai-color"><span class="stone white" aria-hidden="true"></span>White</button></div></section></div>
 <div id="matchDialog" class="match-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="matchDialogTitle" aria-describedby="matchDialogDetail"><section class="match-card"><div id="matchDialogKicker" class="match-kicker"></div><h2 id="matchDialogTitle"></h2><div id="matchDialogPlayers" class="match-players"></div><p id="matchDialogDetail"></p><button id="matchDialogConfirm" class="button primary">Review</button><button id="matchDialogHome" class="button ghost hidden" style="margin-top:10px;color:#17221b">Home</button></section></div>
 <script src="/static/social-login.js"></script>
 <script>
@@ -415,7 +415,7 @@
     $('matchDialogKicker').textContent=game.testBot?'TEST MATCH · UNRATED':game.solo?'PRACTICE':'13GO / 13 × 13';
     const winner=roles[game.result?.winner]||'';
     $('matchDialogTitle').textContent=kind==='start'?'Ready to play':game.solo||myRole==='spectator'?winner+' wins':game.result.winner===myRole?'You win':'You lose';
-    $('matchDialogDetail').textContent=kind==='start'?roles[myRole]+' · 5 min + '+(game.clock?.byoyomiSeconds||30)+' sec × 3':game.result.reason==='score'?winner+' +'+game.result.margin:winner+' · '+detailReason(game.result.reason);
+    $('matchDialogDetail').textContent=kind==='start'?roles[myRole]+' · 5 min, then '+(game.clock?.byoyomiSeconds||30)+' sec × 3':game.result.reason==='score'?winner+' +'+game.result.margin:winner+' · '+detailReason(game.result.reason);
     const players=$('matchDialogPlayers');players.replaceChildren();for(const color of ['black','white']){const row=document.createElement('div');row.className='match-player';const stone=document.createElement('span');stone.className='stone '+color;const name=document.createElement('span');name.textContent=game.players[color]?.name||roles[color];row.append(stone,name);if(!game.solo){const tags=document.createElement('span');tags.className='identity-tags';const rank=document.createElement('span');rank.className='identity-tag';rank.textContent=rankLabel(game.players[color]?.rank);rank.title='Self-selected initial rank';tags.append(rank);row.append(tags)}players.append(row)}
     $('matchDialogConfirm').textContent=kind==='start'?'Play':'Review';$('matchDialogHome').classList.toggle('hidden',kind!=='end');$('shell').inert=true;$('matchDialog').classList.remove('hidden');$('matchDialogConfirm').focus?.();
     if(kind==='start')matchDialogTimer=setTimeout(closeMatchDialog,2200);
@@ -631,32 +631,20 @@
   $('placeMove').onclick=()=>{if(validSelection()){const index=selectedMove.index;send('move',{index});draw()}};
   $('clearMove').onclick=()=>{selectedMove=null;renderPlacement();draw()};
 
-  function deadlineWarning(clock,elapsed){
-    let remaining=null,kind='';
-    if(game?.status==='playing'&&!game.solo&&!clock?.recovering&&clock?.policy==='byoyomi-manners-v1'&&(myRole==='black'||myRole==='white')&&clock.running&&(game.moves===0||clock.running===myRole)){
-      const spent=(clock.turnElapsed||0)+elapsed;
-      if(game.moves===0){remaining=30-spent;kind='First move'}
-      else if((clock.mainRemaining?.[myRole]||0)>elapsed){remaining=90-spent;kind='Move now'}
-    }
-    const visible=remaining!==null&&remaining<=10&&remaining>=0;
-    $('deadlineCountdown').classList.toggle('hidden',!visible);$('moveCount').classList.toggle('hidden',visible);
-    if(!visible)return;
-    const seconds=Math.max(0,Math.ceil(remaining));$('deadlineLabel').textContent=kind;$('deadlineNumber').textContent=String(seconds);
-    const key=[game.gameId,game.moves,kind,seconds].join(':');
-    if(seconds>0&&key!==lastDeadlineKey&&tone(seconds<=3?1120:820,.16,seconds<=3?.12:.085))lastDeadlineKey=key
+  function deadlineWarning(){
+    $('deadlineCountdown').classList.add('hidden');$('moveCount').classList.remove('hidden');
   }
   function renderClocks(){
     const clock=game?.clock,elapsed=Math.max(0,(Date.now()-clockReceived)/1000);deadlineWarning(clock,elapsed);$('clockNote').classList.toggle('hidden',game?.status==='finished');
     for(const role of ['black','white']){const el=$(role+'Clock');if(game?.solo){el.textContent='∞';el.classList.remove('urgent');continue}let seconds=clock?.remaining?.[role]??300,periods=clock?.periods?.[role]??3,main=clock?.mainRemaining?.[role]??300;const modern=clock?.policy==='byoyomi-manners-v1',period=clock?.byoyomiSeconds||30;if(!clock?.recovering&&clock?.running===role){if(modern){if(main>0){const overtime=elapsed-main;if(overtime>=0){periods=Math.max(0,periods-Math.floor(overtime/period));seconds=periods?period-overtime%period:0}else seconds=main-elapsed;main=Math.max(0,main-elapsed)}else{const left=seconds-elapsed;if(left<=0){periods=Math.max(0,periods-(1+Math.floor(-left/period)));seconds=periods?period-(-left)%period:0}else seconds=left}}else seconds-=elapsed}seconds=Math.max(0,Math.ceil(seconds));if(modern)countdownSound(role,seconds,periods,main);el.textContent=Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')+(modern&&main<=0?' ×'+periods:'');el.classList.toggle('urgent',modern?main<=0:seconds<=30)}
     if(game?.status==='waiting'){const seconds=Math.max(0,Math.floor((Date.now()/1000)-(game.queueSince||Date.now()/1000)));$('queueMessage').textContent='Finding an opponent · '+seconds+'s'}
-    if(!game||game.solo){$('clockNote').textContent=game?.solo?'Practice':'5 min + 10 sec × 3';return}
+    if(!game||game.solo){$('clockNote').textContent=game?.solo?'Practice':'5 min, then 10 sec × 3';return}
     const now=(clock?.serverTime||Date.now()/1000)+elapsed;
     if(clock?.recovering){$('clockNote').textContent='Waiting for both players to reconnect.';return}
     if(game.status==='scoring'&&!clock?.reviewDeadline){$('clockNote').textContent='';return}
     if(game.status==='scoring'){$('clockNote').textContent='Review time: '+Math.max(0,Math.ceil((clock?.reviewDeadline||now)-now))+'s. Confirm before time expires.';return}
     const other=myRole==='black'?'white':'black',absent=game.absentSince?.[other];
-    if(game.status==='playing'&&clock?.policy==='byoyomi-manners-v1'&&clock.running===myRole){const spent=(clock.turnElapsed||0)+elapsed;if(game.moves===0){$('clockNote').textContent='Opening move · '+Math.max(0,Math.ceil(30-spent))+'s';return}if((clock.mainRemaining?.[myRole]||0)>elapsed&&spent>=60){$('clockNote').textContent='Please move · '+Math.max(0,Math.ceil(90-spent))+'s';return}}
-    $('clockNote').textContent=game.status==='finished'?'':absent&&myRole!=='spectator'?'Opponent offline · '+Math.max(0,Math.ceil(game.disconnectGrace-(game.offlineUsed?.[other]||0)-(now-absent)))+'s to reconnect. The game clock continues.':clock?.running?'5 min + '+(clock.byoyomiSeconds||30)+' sec × 3':'The clock starts when both players connect.';
+    $('clockNote').textContent=game.status==='finished'?'':absent&&myRole!=='spectator'?'Opponent offline · '+Math.max(0,Math.ceil(game.disconnectGrace-(game.offlineUsed?.[other]||0)-(now-absent)))+'s to reconnect. The game clock continues.':clock?.running?'5 min, then '+(clock.byoyomiSeconds||30)+' sec × 3':'The clock starts when both players connect.';
   }
   function scoreNumbers(target,score){const row=document.createElement('div');row.className='score-numbers';for(const color of ['black','white']){const cell=document.createElement('div'),label=document.createElement('span'),value=document.createElement('strong');label.textContent=roles[color];value.textContent=String(score[color]);cell.append(label,value);row.append(cell)}target.append(row)}
   function renderScore(){$('scoreResult').replaceChildren();if(game.scoreUncertain?.length||['pending','analyzing','review','unavailable'].includes(game.adjudication?.status))return;const s=game.score;if(!s)return;scoreNumbers($('scoreResult'),s);const p=document.createElement('p');p.textContent=roles[s.winner]+' +'+s.margin;$('scoreResult').append(p)}
@@ -732,8 +720,8 @@
   function closeAiDialog(){ $('aiDialog').classList.add('hidden');$('shell').inert=false;$('testMatch').focus?.() }
   $('testMatch').onclick=()=>{if(posting||!canLeave())return;$('aiDialog').classList.remove('hidden');$('shell').inert=true;$('aiBlack').focus?.()};
   $('aiClose').onclick=closeAiDialog;
-  for(const [id,color] of [['aiBlack','black'],['aiWhite','white']])$(id).onclick=()=>{closeAiDialog();postRoom('/api/test-match',{color},$('testMatch'))};
-  $('aiDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeAiDialog()}else if(event.key==='Tab'){event.preventDefault();const buttons=[$('aiClose'),$('aiBlack'),$('aiWhite')],at=buttons.indexOf(document.activeElement);buttons[(at+(event.shiftKey?2:1))%3].focus?.()}});
+  for(const [id,color] of [['aiBlack','black'],['aiWhite','white']])$(id).onclick=()=>{closeAiDialog();postRoom('/api/test-match',{color,level:$('aiLevel').value||'high'},$('testMatch'))};
+  $('aiDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeAiDialog()}else if(event.key==='Tab'){event.preventDefault();const buttons=[$('aiClose'),$('aiLevel'),$('aiBlack'),$('aiWhite')],at=buttons.indexOf(document.activeElement);buttons[(at+(event.shiftKey?3:1))%4].focus?.()}});
 $('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
   $('cancelMatch').onclick=()=>{if(game?.status==='waiting'){send('cancel');$('cancelMatch').disabled=true}};
   $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('rematch').onclick=()=>send('rematch');$('newGame').onclick=()=>{if(game?.status==='finished')leaveRoom()};
