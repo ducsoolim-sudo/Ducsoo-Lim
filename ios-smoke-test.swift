@@ -12,7 +12,16 @@ final class SmokeTests: XCTestCase {
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 30), .completed)
     }
-    func testHomeMenuAndSecureGuestRelaunch() {
+    private func profileReady(_ field: XCUIElement, _ app: XCUIApplication) {
+        let secureError = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "SECURE_READ_FAILED")).firstMatch
+        let state = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            secureError.exists || (field.exists && field.isEnabled)
+        }, object: app)
+        XCTAssertEqual(XCTWaiter.wait(for: [state], timeout: 30), .completed, "Profile did not become ready")
+        XCTAssertFalse(secureError.exists, "SECURE_READ_FAILED: verify native plugin registration and Keychain diagnostics")
+        XCTAssertTrue(field.exists && field.isEnabled, "Profile input is disabled")
+    }
+    func testHomeAndAIMenu() {
         let app = XCUIApplication(); app.launch()
         let web = app.webViews.firstMatch
         let play = web.buttons["Play"].firstMatch
@@ -23,14 +32,16 @@ final class SmokeTests: XCTestCase {
         XCTAssertTrue(web.buttons["Black"].waitForExistence(timeout: 10))
         XCTAssertTrue(web.buttons["White"].exists)
         picture(app, "02-ai-choice")
-        web.buttons["Close"].firstMatch.tap()
-        web.buttons["Home"].firstMatch.tap()
+    }
+    func testSecureGuestRelaunch() {
+        let app = XCUIApplication(); app.launch()
+        let web = app.webViews.firstMatch
         let page = web.buttons["My Page"].firstMatch
         ready(page); page.tap()
         let field = web.textFields["Display name"].firstMatch
         let retry = web.buttons["Retry connection"].firstMatch
         if retry.waitForExistence(timeout: 5) { retry.tap() }
-        ready(field); field.tap()
+        profileReady(field, app); field.tap()
         field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 40))
         field.typeText("Smoke" + String(UUID().uuidString.prefix(4)))
         let expected = field.value as? String
@@ -43,7 +54,7 @@ final class SmokeTests: XCTestCase {
         ready(reopened.buttons["My Page"].firstMatch)
         reopened.buttons["My Page"].firstMatch.tap()
         let restored = reopened.textFields["Display name"].firstMatch
-        XCTAssertTrue(restored.waitForExistence(timeout: 30))
+        profileReady(restored, app)
         let restoredValue = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", expected!), object: restored)
         XCTAssertEqual(XCTWaiter.wait(for: [restoredValue], timeout: 30), .completed)
         XCTAssertEqual(restored.value as? String, expected)
