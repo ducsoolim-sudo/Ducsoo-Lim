@@ -32,6 +32,9 @@ jobs:
               archive.extractall('native-source')
           PY
           python3 apply-native-runtime-fix.py
+          python3 -m venv native-source/.venv
+          native-source/.venv/bin/python -m pip install -r native-source/requirements.txt
+          export PATH="$GITHUB_WORKSPACE/native-source/.venv/bin:$PATH"
           gem install --user-install xcodeproj --no-document
           ruby ios-smoke-setup.rb
           cd native-source/mobile
