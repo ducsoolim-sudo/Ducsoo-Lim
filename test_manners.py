@@ -18,22 +18,22 @@ class MannersTests(unittest.TestCase):
     def act(self,r,role,action,now):
         with patch('server.time.time',return_value=now):r.act(role,action)
 
-    def test_first_action_30_second_boundary(self):
-        r=self.room();self.assertFalse(r.tick(1029.99));self.assertTrue(r.tick(1030))
-        self.assertEqual(r.result,{'reason':'first_move_timeout','winner':'white'})
-        self.assertEqual(r.clock(1040)['remaining']['black'],270)
-        self.assertEqual(r.periods['black'],3)
-        r=self.room();self.act(r,'black',{'type':'move','index':0},1029.9)
-        self.assertEqual(r.moves,1);self.assertAlmostEqual(r.remaining['black'],270.1)
+    def test_full_main_time_before_three_ten_second_periods(self):
+        r=self.room();r.byoyomi_seconds=10
+        for elapsed in (30,90,299.99,300,309.99,310,320,329.99):
+            self.assertFalse(r.tick(1000+elapsed))
+        self.assertEqual(r.clock(1300)['remaining']['black'],10)
+        self.assertEqual(r.clock(1310)['periods']['black'],2)
+        self.assertEqual(r.clock(1320)['periods']['black'],1)
+        self.assertTrue(r.tick(1330))
+        self.assertEqual(r.result,{'reason':'time','winner':'white'})
 
-    def test_idle_warning_and_loss(self):
+    def test_main_time_has_no_idle_warning_or_loss(self):
         r=self.room();r.moves=2
-        self.assertIsNone(r.clock(1059.9)['idleWarning'])
-        self.assertEqual(r.clock(1060)['idleWarning'],'black')
-        self.assertFalse(r.tick(1089.9));self.assertTrue(r.tick(1090))
-        self.assertEqual(r.result['reason'],'move_delay')
-        with self.assertRaises(ValueError):self.act(r,'black',{'type':'move','index':0},1091)
-        self.assertEqual(r.board[0],0)
+        self.assertIsNone(r.clock(1060)['idleWarning'])
+        self.assertFalse(r.tick(1090))
+        self.act(r,'black',{'type':'move','index':0},1091)
+        self.assertEqual(r.remaining['black'],209)
 
     def test_main_to_byoyomi_periods_and_reset(self):
         r=self.room();r.moves=2;r.remaining['black']=5
