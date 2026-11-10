@@ -54,7 +54,7 @@ final class SmokeTests: XCTestCase {
         ready(reopened.buttons["My Page"].firstMatch)
         reopened.buttons["My Page"].firstMatch.tap()
         let restored = reopened.textFields["Display name"].firstMatch
-        profileReady(restored, app)
+        XCTAssertTrue(restored.waitForExistence(timeout: 30))
         let restoredValue = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", expected!), object: restored)
         XCTAssertEqual(XCTWaiter.wait(for: [restoredValue], timeout: 30), .completed)
         XCTAssertEqual(restored.value as? String, expected)
