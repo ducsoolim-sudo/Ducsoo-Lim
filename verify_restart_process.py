@@ -1,10 +1,11 @@
 import asyncio,json,os,sys,tempfile
 from pathlib import Path
 import aiohttp
-ROOT=Path('/workspace/scratch/333f3e35d031/Ducsoo-Lim')
+ROOT=Path(__file__).resolve().parent
 async def state(ws):
  while True:
   d=await ws.receive_json(timeout=10)
+  if d.get('type')=='error':raise RuntimeError(d.get('message','WebSocket rejected'))
   if d.get('type')=='state':return d.get('state',d)
 async def start(db):
  env=dict(os.environ,PORT='18085',ROOM_DB_PATH=db,DATABASE_URL='',RENDER='false')
@@ -21,12 +22,16 @@ async def main():
  with tempfile.TemporaryDirectory() as folder:
   p=await start(str(Path(folder)/'rooms.db'))
   try:
-   async with aiohttp.ClientSession() as c:
+   async with aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True)) as c, aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True)) as other:
     base='http://127.0.0.1:18085'
-    await c.post(base+'/api/profile',json={'rank':'18k'},headers={'Origin':base})
-    seat=await (await c.post(base+'/api/rooms',json={'name':'Recovery B'})).json()
+    for client in (c,other):
+     response=await client.post(base+'/api/profile',json={'rank':'18k'},headers={'Origin':base})
+     assert response.status==200,await response.text()
+    response=await c.post(base+'/api/rooms',json={})
+    assert response.status==200,await response.text()
+    seat=await response.json()
     a=await c.ws_connect(base+'/ws');await a.send_json({'type':'join',**seat});await a.receive_json();await state(a)
-    b=await c.ws_connect(base+'/ws');await b.send_json({'type':'join','room':seat['room'],'name':'Recovery W'});welcome=await b.receive_json();bt=welcome['token'];await state(b)
+    b=await other.ws_connect(base+'/ws');await b.send_json({'type':'join','room':seat['room'],'name':'Recovery W'});welcome=await b.receive_json();bt=welcome['token'];await state(b)
     await a.send_json({'type':'move','index':84});d=await state(b)
     while d['moves']!=1:d=await state(b)
     p.kill();await p.wait();await a.close();await b.close()
@@ -39,7 +44,7 @@ async def main():
     # A watch join requests a fresh server state without changing seats.
     watch=await c.ws_connect(base+'/ws');await watch.send_json({'type':'join','room':seat['room'],'mode':'watch'});await watch.receive_json();d=await state(watch)
     assert d['status']=='playing' and d['clock']['remaining']==frozen,d
-    b=await c.ws_connect(base+'/ws');await b.send_json({'type':'join','room':seat['room'],'token':bt});await b.receive_json();d=await state(b)
+    b=await other.ws_connect(base+'/ws');await b.send_json({'type':'join','room':seat['room'],'token':bt});await b.receive_json();d=await state(b)
     assert not d['clock']['recovering'] and d['status']=='playing',d
     await b.send_json({'type':'move','index':85});d=await state(b)
     while d['moves']!=2:d=await state(b)
