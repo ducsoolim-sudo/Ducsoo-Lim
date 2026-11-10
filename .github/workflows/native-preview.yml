@@ -2,7 +2,7 @@ name: Native preview compile
 on:
   push:
     branches: [test-menu-v11]
-    paths: [native-preview-source-v2.zip, .github/workflows/native-preview.yml]
+    paths: [native-preview-source-v3.zip, apply-native-runtime-fix.py, .github/workflows/native-preview.yml]
 permissions:
   contents: read
 concurrency:
@@ -34,43 +34,3 @@ jobs:
           distribution: temurin
           java-version: '21'
       - name: Verify and unpack source
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import hashlib, pathlib, zipfile
-          source=pathlib.Path('native-preview-source-v2.zip')
-          assert hashlib.sha256(source.read_bytes()).hexdigest() == 'c12facb250d1e8fa4f7b8b529ac18463cec4cb1f55962537395f68e11eeb5ce6'
-          with zipfile.ZipFile(source) as archive:
-              archive.extractall('native-source')
-          PY
-          chmod +x native-source/mobile/android/gradlew
-          python3 -m venv native-source/.venv
-          native-source/.venv/bin/python -m pip install -r native-source/requirements.txt
-          echo "$GITHUB_WORKSPACE/native-source/.venv/bin" >> "$GITHUB_PATH"
-      - name: Install and check modules
-        working-directory: native-source/mobile
-        run: |
-          npm ci
-          npm run sync:bundled
-          npm run check
-      - name: Compile native preview
-        working-directory: native-source/mobile
-        run: npm run build:${{ matrix.target }} -- --bundled
-      - name: Pack unsigned iOS simulator app
-        if: matrix.target == 'ios'
-        run: tar -czf 13GO-ios-simulator.tar.gz -C native-source/mobile/build/ios-simulator/Build/Products/Debug-iphonesimulator App.app
-      - uses: actions/upload-artifact@v7
-        if: matrix.target == 'android'
-        with:
-          name: 13GO-Android-debug
-          path: native-source/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
-      - uses: actions/upload-artifact@v7
-        if: matrix.target == 'ios'
-        with:
-          name: 13GO-iOS-simulator
-          path: 13GO-ios-simulator.tar.gz
-          if-no-files-found: error
-          retention-days: 7
-
