@@ -3,6 +3,8 @@ import asyncio
 import json
 import os
 import re
+import math
+import logging
 from pathlib import Path
 from adjudicator import coordinate, settled_adjudication
 
@@ -97,7 +99,7 @@ def select_action(result, state, try_move, board_hash, ko_position=None):
         raise ValueError('No engine moves')
     forbidden = {ko_position} if ko_position else set()
     # Validate on the same server rules; never trust an engine coordinate alone.
-    for candidate in candidates:
+    for candidate in sorted(candidates, key=lambda c: c.get('order', 10**9) if isinstance(c, dict) else 10**9):
         if not isinstance(candidate, dict):
             continue
         move = candidate.get('move', '')
@@ -117,6 +119,20 @@ def select_action(result, state, try_move, board_hash, ko_position=None):
     raise ValueError('No legal non-pass engine move in unfinished position')
 
 
+def pass_is_equivalent(best, passed, state):
+    roots = [r.get('rootInfo', {}) for r in (best, passed)]
+    scores = [r.get('scoreLead') for r in roots]
+    if any(type(v) not in (int, float) or not math.isfinite(v) for v in scores):
+        return False
+    for root in roots:
+        for key in ('noResultProb', 'rawNoResultProb'):
+            value = root.get(key, 0)
+            if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= .01:
+                return False
+    sign = 1 if state.get('botRole') == 'black' else -1
+    return sign * (scores[0] - scores[1]) <= .5
+
+
 async def choose_action(state, try_move, board_hash, ko_position=None):
     # Safe completed positions must not be turned into needless dame/eye filling.
     if settled_adjudication(state['board'], state['captures']):
@@ -126,10 +142,25 @@ async def choose_action(state, try_move, board_hash, ko_position=None):
     if not binary or not model:
         raise RuntimeError('Strong preview opponent is not configured')
     visits = max(16, min(256, int(os.getenv('GO13_BOT_VISITS', '16'))))
+    if state.get('passes') == 1:
+        visits = max(visits, 64)
     query = dict(id='preview-move', moves=move_history(state), rules='japanese', komi=6.5,
-                 boardXSize=13, boardYSize=13, maxVisits=visits, analysisPVLen=1)
+                 boardXSize=13, boardYSize=13, maxVisits=visits, analysisPVLen=1,
+                 overrideSettings={'reportAnalysisWinratesAs': 'BLACK'})
     result = await _ENGINE.query(binary, model, query)
     action = select_action(result, state, try_move, board_hash, ko_position)
+    if state.get('passes') == 1 and action['type'] != 'pass':
+        # Move choice and final score verification are separate. Compare the
+        # actual value of passing, including dead stones, instead of playing
+        # pointless moves merely because they retain a tiny win-rate advantage.
+        player = 'B' if state.get('botRole') == 'black' else 'W'
+        pass_query = dict(query, allowMoves=[{'player': player, 'moves': ['pass'], 'untilDepth': 1}])
+        try:
+            passed = await _ENGINE.query(binary, model, pass_query)
+            if select_action(passed, state, try_move, board_hash, ko_position)['type'] == 'pass' and pass_is_equivalent(result, passed, state):
+                action = {'type': 'pass'}
+        except (ValueError, RuntimeError, OSError, TimeoutError):
+            logging.warning('Pass comparison unavailable; retaining the verified engine move')
     global completed_moves
     completed_moves += 1
     return action
