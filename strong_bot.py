@@ -27,9 +27,9 @@ class ResidentEngine:
                     pass
             await process.wait()
 
-    async def query(self, binary, model, query):
+    async def query(self, binary, model, query, timeout=15):
         # Waiting callers must not kill the process owned by another search.
-        async with asyncio.timeout(15):
+        async with asyncio.timeout(timeout):
             async with self.gate:
                 try:
                     config = (binary, model)
