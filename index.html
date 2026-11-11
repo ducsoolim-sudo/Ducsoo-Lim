@@ -257,6 +257,39 @@
 @container app (max-width:700px){.shell:not(.home-view) .setup-only{margin-top:28px}}
 @media(min-width:701px){.game-view .game-only{max-width:min(1100px,calc(100svh - 190px))}}
 @media(max-height:600px){.studio-home-menu{margin-top:32px}}
+
+/* Compact visual hierarchy and room for every game action. */
+.studio-home-brand{display:flex;flex-direction:column;align-items:center}
+.studio-home-brand .app-emblem{order:0;width:96px;height:96px;margin-bottom:22px}
+.studio-home-app{order:1;margin:0;padding:0;font-size:34px;font-weight:550;letter-spacing:3px;line-height:1.2;color:#f6f6ed}
+.studio-home-name{order:2;margin-top:12px;padding:0;font-size:12px;font-weight:450;letter-spacing:3px;color:#b7c3b7}
+.studio-home-menu{margin-top:36px}
+.shell:not(.home-view):not(.game-view) .brand{margin-bottom:24px}
+.shell:not(.home-view) .setup-only{margin-top:32px}
+.page-head{margin:32px 0 20px}
+.profile-stats{gap:8px;margin-bottom:16px}
+.profile-stat{padding:14px 8px}
+.profile-stat strong{font-size:26px}
+.history-panel{padding:20px}
+#historyEmpty{margin:16px 0 0!important}
+#watchPage .watch-empty{padding:28px 12px}
+#watchPage .watch-empty .button{margin:14px auto 0;min-height:44px}
+.game-view .game-only{max-width:min(1100px,max(260px,calc(100svh - 280px)))}
+.game-view .board-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding-top:10px}
+.game-view #playActions{grid-column:1;grid-row:1;padding-top:0;border-top:0}
+.game-view #placementControls{grid-column:2;grid-row:1;margin:0;align-self:start}
+.game-view #placementControls:has(#placementActions.hidden):has(#selectionHint.hidden){display:none}
+.game-view #placementActions{display:block;margin:0}
+.game-view #clearMove{min-height:52px;padding:14px 16px}
+.game-view #scoreActions,.game-view #finishActions,.game-view #reviewControls,.game-view #clockNote,.game-view #gameHint{grid-column:1/-1}
+.game-view #clockNote{margin:2px 0 0}
+@container app (max-width:700px){
+.shell:not(.home-view) .setup-only{margin-top:28px}
+.page-head{margin-top:28px}
+.history-panel{padding:18px}
+.profile-stat{padding:12px 6px}
+}
+@media(max-height:600px){.studio-home-brand .app-emblem{width:72px;height:72px;margin-bottom:16px}.studio-home-app{font-size:28px}.studio-home-menu{margin-top:28px}}
 </style>
 </head>
 <body>
