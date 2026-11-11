@@ -119,6 +119,9 @@ class KataGo:
     def __init__(self):
         self.binary=os.getenv('KATAGO_BINARY','')
         self.model=os.getenv('KATAGO_MODEL','')
+        if not self.binary and not self.model and os.getenv('GO13_PREVIEW') == 'true':
+            from strong_bot import settings
+            self.binary, self.model = settings()
         self.timeout=float(os.getenv('KATAGO_TIMEOUT','60'))
         self.gate=asyncio.Semaphore(1)
 
@@ -137,6 +140,19 @@ class KataGo:
         return adjudicate(room.board,room.captures,results['quick'],results['deep'])
 
     async def run(self, requests):
+        # Reuse the already loaded preview AI instead of duplicating its model
+        # in a second process on the small preview instance.
+        if os.getenv('GO13_PREVIEW') == 'true':
+            from strong_bot import settings, _ENGINE
+            if (self.binary, self.model) == settings():
+                async with asyncio.timeout(self.timeout):
+                    results = {}
+                    for request in requests:
+                        data = await _ENGINE.query(self.binary, self.model, request, timeout=self.timeout)
+                        if data.get('error') or data.get('rootInfo', {}).get('visits', 0) < request['maxVisits']:
+                            raise ValueError('Incomplete scoring analysis')
+                        results[request['id']] = data
+                    return results
         async with asyncio.timeout(self.timeout):
             async with self.gate:
                 process=await asyncio.create_subprocess_exec(self.binary,'analysis','-model',self.model,'-config',str(ROOT/'katago.cfg'),stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL,limit=2**20)
