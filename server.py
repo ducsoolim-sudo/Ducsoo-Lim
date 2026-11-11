@@ -727,8 +727,8 @@ async def test_match(request):
     if color not in ('black','white'):
         raise web.HTTPBadRequest(text='Choose black or white.')
     level=data.get('level','high')
-    if level not in ('high','medium','low'):
-        raise web.HTTPBadRequest(text='Choose high, medium or low AI level.')
+    if level != 'high':
+        raise web.HTTPBadRequest(text='Only the standard AI is available.')
     bot_role='white' if color=='black' else 'black'
     bot_token=None
     async with request.app[LOCK]:
@@ -746,7 +746,7 @@ async def test_match(request):
             raise web.HTTPServiceUnavailable(text='Unable to start test game.')
     port = request.transport.get_extra_info('sockname')[1]
     ready = asyncio.get_running_loop().create_future()
-    task = asyncio.create_task(run_bot(port,room.code,ready,try_move,board_hash,bot_role,bot_token,level))
+    task = asyncio.create_task(run_bot(port,room.code,ready,try_move,board_hash,bot_role,bot_token))
     request.app[BOT_JOBS][room.code] = task
     task.add_done_callback(lambda _: request.app[BOT_JOBS].pop(room.code,None))
     try:
