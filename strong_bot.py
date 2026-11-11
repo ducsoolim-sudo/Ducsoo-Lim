@@ -119,6 +119,16 @@ def select_action(result, state, try_move, board_hash, ko_position=None):
     raise ValueError('No legal non-pass engine move in unfinished position')
 
 
+def opponent_requested_finish(state):
+    """Repeated human passes request adjudication; never invent a final score."""
+    if state.get('passes') != 1:
+        return False
+    opponent = 'W' if state.get('botRole') == 'black' else 'B'
+    moves = re.findall(r';([BW])\[([a-m]{2}|)\]', state.get('sgf', ''))
+    requests = [point for color, point in moves if color == opponent]
+    return len(requests) >= 2 and requests[-2:] == ['', '']
+
+
 def pass_is_equivalent(best, passed, state):
     roots = [r.get('rootInfo', {}) for r in (best, passed)]
     scores = [r.get('scoreLead') for r in roots]
@@ -134,6 +144,8 @@ def pass_is_equivalent(best, passed, state):
 
 
 async def choose_action(state, try_move, board_hash, ko_position=None):
+    if opponent_requested_finish(state):
+        return {'type': 'pass'}
     # Safe completed positions must not be turned into needless dame/eye filling.
     if settled_adjudication(state['board'], state['captures']):
         return {'type': 'pass'}
