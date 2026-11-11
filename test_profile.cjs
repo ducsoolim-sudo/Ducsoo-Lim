@@ -300,3 +300,25 @@ assert(!t.timers.some(timer=>timer.delay===2200&&timer.active));
 directAI.status='finished';directAI.result={winner:'white',reason:'resign'};t.ws.message({type:'state',state:directAI});
 assert(!t.e('matchDialog').classes.has('hidden'));assert.equal(t.e('matchDialogTitle').textContent,'You lose');
 console.log('PASS AI color selection skips start popup while keeping the game result');
+
+
+(async()=>{
+ const ai=setup(undefined,{},'');
+ await new Promise(resolve=>setImmediate(resolve));
+ let release;const creation=new Promise(resolve=>{release=resolve});let requests=0;
+ ai.sandbox.fetch=async url=>url==='/api/profile'?{ok:true,json:async()=>({profile:{name:'Tester',rank:'1d'}})}:url==='/api/test-match'?(requests++,await creation):{ok:true,json:async()=>({online:0,playing:0,waiting:0,list:[]})};
+ await ai.sandbox.window.testLoadProfile();
+ ai.e('homePlay').onclick();ai.e('testMatch').onclick();ai.e('aiWhite').onclick();
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(requests,1);assert(!ai.e('aiDialog').classes.has('hidden'));assert(ai.e('shell').inert);assert(ai.e('aiBlack').disabled);assert(ai.e('aiWhite').disabled);
+ ai.e('aiBlack').onclick();assert.equal(requests,1);
+ release({ok:true,json:async()=>({room:'ABCDEFG',token:'owner',testBot:true})});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert(!ai.e('aiDialog').classes.has('hidden'));assert(ai.e('shell').inert);
+ const ws=ai.sandbox.WebSocket.last;ws.onopen();ws.message({type:'welcome',role:'white',token:'owner'});
+ assert(!ai.e('aiDialog').classes.has('hidden'));
+ const g=playing('no-menu-flash');g.testBot=true;ws.message({type:'state',state:g});
+ assert(ai.e('aiDialog').classes.has('hidden'));assert(!ai.e('shell').inert);assert(!ai.e('gameBoard').classes.has('hidden'));assert(!ai.e('aiBlack').disabled);
+ assert(!html.includes('id="aiLevel"'));assert(!html.includes('value="medium"'));assert(!html.includes('value="low"'));
+ console.log('PASS AI selection stays visible through HTTP and WebSocket loading, prevents duplicates, and opens only the ready board');
+})().catch(error=>{console.error(error);process.exitCode=1});
