@@ -479,6 +479,13 @@ class Room:
                 self.approvals.clear()
         elif kind == "dead":
             raise ValueError("Dead stones are determined automatically.")
+        elif kind == "retry_score":
+            if self.status != 'scoring' or not self.test_bot or not self.adjudication or self.adjudication.get('status') not in ('unavailable', 'review'):
+                raise ValueError('No failed score check to retry.')
+            self.adjudication = {'status': 'pending'}
+            self.scoring_notice = None
+            self.review_deadline = None
+            self.approvals.clear()
         elif kind == "approve":
             if self.status != "scoring":
                 raise ValueError("The score can only be accepted during scoring.")
@@ -877,7 +884,7 @@ async def websocket_handler(request):
                             raise ValueError("This connection no longer controls the seat. Reconnect to continue.")
                         before = room.snapshot()
                         room.act(role, data)
-                        if room.status == 'scoring' and before['status'] != 'scoring':
+                        if room.status == 'scoring' and (before['status'] != 'scoring' or data.get('type') == 'retry_score'):
                             schedule_adjudication(request.app, room)
                         try:
                             await request.app[STORE].save(room)
@@ -935,6 +942,11 @@ JOBS = web.AppKey("adjudication_jobs", set)
 
 
 def continue_unsettled(room, notice):
+    if room.test_bot:
+        room.adjudication = dict(room.adjudication or {}, status='unavailable')
+        room.review_deadline = None
+        room.scoring_notice = 'Score could not be verified. Retry the score check.'
+        return
     room.act("black" if room.solo or room.turn == 1 else "white", {"type": "resume"})
     room.scoring_notice = notice
 
