@@ -20,6 +20,12 @@ def choose_action(state, try_move, board_hash, ko_position=None):
     board = state['board']
     if settled_adjudication(board, state.get('captures', {'black': 0, 'white': 0})):
         return {'type': 'pass'}
+    if state.get('passes') == 1:
+        from scoring import automatic_dead
+        dead, uncertain = automatic_dead(board)
+        clean = [0 if i in dead else c for i, c in enumerate(board)]
+        if dead and not uncertain and settled_adjudication(clean, state.get('captures', {'black': 0, 'white': 0})):
+            return {'type': 'pass'}
     forbidden = {ko_position} if ko_position else set()
 
     def groups(position, color):
@@ -97,41 +103,8 @@ def choose_action(state, try_move, board_hash, ko_position=None):
     return {'type': 'move', 'index': max(ranked)[1]}
 
 
-def choose_level_action(state, try_move, board_hash, ko_position=None, level='high'):
-    if level == 'high':
-        return choose_action(state, try_move, board_hash, ko_position)
-    color = 1 if state.get('botRole') == 'black' else -1
-    legal = []
-    forbidden = {ko_position} if ko_position else set()
-    from scoring import adjacent, group
-    from adjudicator import settled_adjudication
-    if settled_adjudication(state['board'], state.get('captures', {'black': 0, 'white': 0})):
-        return {'type': 'pass'}
-    for index, stone in enumerate(state['board']):
-        if stone:
-            continue
-        try:
-            position, captured = try_move(state['board'], index, color, forbidden)
-        except ValueError:
-            continue
-        neighbors = list(adjacent(index))
-        if not captured and all(state['board'][n] == color for n in neighbors):
-            continue
-        _, liberties = group(position, index)
-        edge = min(index % 13, index // 13, 12-index % 13, 12-index // 13)
-        score = captured * 30 + min(len(liberties), 5) * 2 + (6 if edge in (2, 3) else 0)
-        if len(liberties) == 1:
-            score -= 60
-        legal.append((score, index))
-    if not legal:
-        return {'type': 'pass'}
-    legal.sort(reverse=True)
-    # Low explores broadly; medium uses a short list of safe tactical moves.
-    pool = legal if level == 'low' else legal[:5]
-    return {'type': 'move', 'index': random.choice(pool)[1]}
 
-
-async def run_bot(port, code, ready, try_move, board_hash, bot_role='white', bot_token=None, level='high'):
+async def run_bot(port, code, ready, try_move, board_hash, bot_role='white', bot_token=None):
     try:
         async with asyncio.timeout(1200):
             async with ClientSession() as session:
@@ -196,15 +169,15 @@ async def run_bot(port, code, ready, try_move, board_hash, bot_role='white', bot
                         elif state['status']=='playing' and state['turn']==bot_role:
                             last_action=marker
                             await asyncio.sleep(.65)
-                            if level == 'high' and strong_bot.configured():
+                            if strong_bot.configured():
                                 try:
                                     action=await strong_bot.choose_action(state,try_move,board_hash,previous_position)
                                 except (ValueError, RuntimeError, OSError, TimeoutError):
                                     # Explicit test helper only: preserve availability, never advertise a rank.
                                     logging.warning('Strong test opponent unavailable; using unrated tactical fallback')
-                                    action=await asyncio.to_thread(choose_level_action,state,try_move,board_hash,previous_position,level)
+                                    action=await asyncio.to_thread(choose_action,state,try_move,board_hash,previous_position)
                             else:
-                                action=await asyncio.to_thread(choose_level_action,state,try_move,board_hash,previous_position,level)
+                                action=await asyncio.to_thread(choose_action,state,try_move,board_hash,previous_position)
                             await send_action(action)
     except asyncio.CancelledError:
         raise
