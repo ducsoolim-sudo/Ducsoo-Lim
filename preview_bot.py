@@ -8,8 +8,10 @@ from aiohttp import ClientSession, WSMsgType
 
 
 def choose_action(state, try_move, board_hash, ko_position=None):
+    if strong_bot.opponent_requested_finish(state):
+        return {'type': 'pass'}
     if state.get('botRole') == 'black':
-        normalized = dict(state, board=[-c for c in state['board']], botRole='white')
+        normalized = dict(state, board=[-c for c in state['board']], botRole='white', sgf='')
         def play(board, index, color, forbidden):
             position, captured = try_move([-c for c in board], index, -color, forbidden)
             return [-c for c in position], captured
