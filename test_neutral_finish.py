@@ -79,3 +79,22 @@ class RepeatedPassRequests(unittest.IsolatedAsyncioTestCase):
     def test_single_pass_or_a_resumed_human_move_does_not_force_finish(self):
         for sgf in ('(;SZ[13];B[];W[dd])','(;SZ[13];B[];W[dd];B[aa];W[jj];B[])'):
             self.assertFalse(strong_bot.opponent_requested_finish({'passes':1,'botRole':'white','sgf':sgf}))
+
+class PreviewScoringConnection(unittest.IsolatedAsyncioTestCase):
+    def test_preview_uses_existing_bot_engine_when_score_config_is_absent(self):
+        import os
+        from adjudicator import KataGo
+        with patch.dict(os.environ,{'GO13_PREVIEW':'true','KATAGO_BINARY':'','KATAGO_MODEL':''}), patch.object(strong_bot,'settings',return_value=('engine','model')):
+            scorer=KataGo()
+            self.assertTrue(scorer.configured)
+            self.assertEqual((scorer.binary,scorer.model),('engine','model'))
+
+    async def test_preview_scoring_reuses_resident_engine(self):
+        import os
+        from adjudicator import KataGo
+        with patch.dict(os.environ,{'GO13_PREVIEW':'true','KATAGO_BINARY':'','KATAGO_MODEL':''}), patch.object(strong_bot,'settings',return_value=('engine','model')):
+            scorer=KataGo()
+            with patch.object(strong_bot._ENGINE,'query',new_callable=AsyncMock,side_effect=[{'rootInfo':{'visits':256}},{'rootInfo':{'visits':1024}}]) as query:
+                result=await scorer.run([{'id':'quick','maxVisits':256},{'id':'deep','maxVisits':1024}])
+                self.assertEqual(set(result),{'quick','deep'})
+                self.assertEqual(query.await_count,2)
