@@ -62,3 +62,20 @@ class PassComparison(unittest.IsolatedAsyncioTestCase):
     def test_engine_order_is_respected_even_if_list_order_differs(self):
         result={'moveInfos':[{'move':'D4','order':2},{'move':'pass','order':0}]}
         self.assertEqual(strong_bot.select_action(result,self.state(),s.try_move,s.board_hash),{'type':'pass'})
+
+
+class RepeatedPassRequests(unittest.IsolatedAsyncioTestCase):
+    async def test_repeated_human_passes_always_reach_adjudication(self):
+        from preview_bot import choose_action
+        for role, sgf in [('white','(;SZ[13];B[dd];W[jj];B[];W[aa];B[])'),
+                          ('black','(;SZ[13];B[dd];W[];B[jj];W[])')]:
+            state={'board':[0]*169,'captures':{'black':0,'white':0},'botRole':role,'passes':1,'sgf':sgf}
+            self.assertTrue(strong_bot.opponent_requested_finish(state))
+            with patch.object(strong_bot._ENGINE,'query',new_callable=AsyncMock) as query:
+                self.assertEqual(await strong_bot.choose_action(state,s.try_move,s.board_hash),{'type':'pass'})
+                query.assert_not_awaited()
+            self.assertEqual(choose_action(state,s.try_move,s.board_hash),{'type':'pass'})
+
+    def test_single_pass_or_a_resumed_human_move_does_not_force_finish(self):
+        for sgf in ('(;SZ[13];B[];W[dd])','(;SZ[13];B[];W[dd];B[aa];W[jj];B[])'):
+            self.assertFalse(strong_bot.opponent_requested_finish({'passes':1,'botRole':'white','sgf':sgf}))
