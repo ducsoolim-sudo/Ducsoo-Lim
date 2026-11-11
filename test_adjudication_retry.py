@@ -114,3 +114,16 @@ class AdjudicationSaveRetry(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(room.adjudication['status'], 'analyzing')
         self.assertIsNone(room.review_deadline)
         room.broadcast.assert_not_awaited()
+
+    async def test_ai_score_failure_never_restarts_play_and_can_retry(self):
+        app, room = self.setup_case({'status':'unavailable'})
+        room.test_bot = True
+        app[s.STORE].save = AsyncMock()
+        await self.run_job(app, room)
+        self.assertEqual(room.status,'scoring')
+        self.assertEqual(room.adjudication['status'],'unavailable')
+        self.assertIsNone(room.review_deadline)
+        with self.assertRaises(ValueError):room.act('black',{'type':'approve'})
+        room.act('black',{'type':'retry_score'})
+        self.assertEqual(room.status,'scoring')
+        self.assertEqual(room.adjudication['status'],'pending')
