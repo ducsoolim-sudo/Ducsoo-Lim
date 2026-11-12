@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#101313">
 <meta name="description" content="13GO: play 13×13 Go, watch live games, and follow your progress.">
+<link rel="icon" type="image/png" sizes="512x512" href="/app-icon-d.png">
+<link rel="apple-touch-icon" href="/app-icon-d.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="13GO">
 <title>13GO v1.1 — Small board. Big game.</title>
 <style>
 :root{--bg:#101313;--surface:#191d1d;--ink:#eeeee8;--muted:#a2aaa6;--line:#353c39;--accent:#d5e5bf;--gold:#d5e5bf;--muted:#a2aaa6;--red:#e6a393}
@@ -290,6 +294,7 @@
 .profile-stat{padding:12px 6px}
 }
 @media(max-height:600px){.studio-home-brand .app-emblem{width:72px;height:72px;margin-bottom:16px}.studio-home-app{font-size:28px}.studio-home-menu{margin-top:28px}}
+@container app (max-width:700px){.shell:not(.game-view):not(.home-view) .brand{flex-wrap:wrap;gap:12px}.shell:not(.game-view):not(.home-view) .brand-right{width:100%;justify-content:space-between}.shell:not(.game-view):not(.home-view) .brand .nav{display:flex;flex:1;justify-content:flex-end}.shell:not(.game-view):not(.home-view) .nav button{padding:10px 12px}}
 </style>
 </head>
 <body>
@@ -334,6 +339,7 @@
   </main>
   <section id="watchPage" role="tabpanel" aria-labelledby="navWatch" class="hidden"><div class="page-head"><h2>Watch</h2></div><div class="panel pad"><div class="watch-tools"><strong id="watchCount">Public games</strong><button id="refreshWatch" class="button secondary">Refresh</button></div><div id="watchRooms" aria-live="polite"></div></div></section>
   <section id="profilePage" role="tabpanel" aria-labelledby="navProfile" class="hidden"><div class="page-head"><h2>My Page</h2></div><div class="profile-layout"><section class="panel pad profile-card"><div class="profile-identity"><div id="avatar" class="avatar">P</div><div class="profile-identity-copy"><div class="identity-line"><h3 id="profileName" class="profile-title">Player</h3><span id="profileRankBadge" class="identity-tag" title="Self-selected initial rank">—</span></div><span id="accountBadge" class="badge">Guest player · Unranked</span></div></div><div class="profile-account-actions"><div id="googleLogin"></div><button id="googleLogout" class="button ghost hidden">Sign out</button><p id="accountNote" class="profile-note">Guest · Saved on this device</p></div><div class="profile-form"><label for="profileNickname" class="side-label">Display name</label><input id="profileNickname" class="nickname" maxlength="16" placeholder="Player"><label for="profileRank" class="side-label">Initial rank</label><select id="profileRank" class="nickname"><option value="">Choose rank</option><option value="18k">18 kyu</option><option value="17k">17 kyu</option><option value="16k">16 kyu</option><option value="15k">15 kyu</option><option value="14k">14 kyu</option><option value="13k">13 kyu</option><option value="12k">12 kyu</option><option value="11k">11 kyu</option><option value="10k">10 kyu</option><option value="9k">9 kyu</option><option value="8k">8 kyu</option><option value="7k">7 kyu</option><option value="6k">6 kyu</option><option value="5k">5 kyu</option><option value="4k">4 kyu</option><option value="3k">3 kyu</option><option value="2k">2 kyu</option><option value="1k">1 kyu</option><option value="1d">1 dan</option><option value="2d">2 dan</option><option value="3d">3 dan</option><option value="4d">4 dan</option><option value="5d">5 dan</option></select><p id="profilePolicy" class="profile-note"></p><button id="saveProfile" class="button primary">Save</button>        <details class="quiet-details"><summary>Settings &amp; rules</summary>
+          <label class="confirm-option"><input id="soundSetting" type="checkbox">Game sounds</label>
           <input id="nickname" type="hidden">
           <p>13×13 · Unranked · White +6.5</p><p>Japanese scoring · White +6.5. Pass twice to review the score.</p>
         </details><p id="practiceCount" class="profile-note">0 solo sessions completed</p></div></section><div><div class="profile-stats"><div class="profile-stat"><strong id="statGames">0</strong><span>Games played</span></div><div class="profile-stat"><strong id="statWins">0</strong><span>Wins</span></div><div class="profile-stat"><strong id="statLosses">0</strong><span>Losses</span></div><div class="profile-stat"><strong id="statRate">—</strong><span>Win rate</span></div></div><section class="panel pad history-panel"><div class="section-head"><h3>Recent games</h3><button id="exportHistory" class="button ghost">Export history</button></div><p id="historyEmpty" class="note" style="margin-top:20px">No games yet.</p><div class="table-wrap"><table id="historyTable" class="history hidden"><thead><tr><th>Result</th><th>Opponent</th><th>Color</th><th>Details</th><th>Date</th><th>Record</th></tr></thead><tbody id="historyRows"></tbody></table></div></section></div></div></section>
@@ -360,7 +366,9 @@
   const roles={black:'Black',white:'White',spectator:'Spectator'};
   let game=null,myRole='spectator',room=params.get('room')?.toUpperCase()||'',watching=params.get('watch')==='1',socket=null,hover=-1,toastTimeout=null,reconnectTimeout=null,retry=0,page='home',posting=false,clockReceived=Date.now(),selectedMove=null,awaitingMove=null;
   const storage={get(key){try{return localStorage.getItem(key)}catch{return null}},set(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}};
-  let audioContext=null,soundEnabled=true,brandSoundPending=!room&&!storage.get('13go:active-room'),lastCountdown=null,lastDeadlineKey=null;
+  let audioContext=null,soundEnabled=storage.get('13go:sound')!=='off',brandSoundPending=!room&&!storage.get('13go:active-room'),lastCountdown=null,lastDeadlineKey=null;
+  $('soundSetting').checked=soundEnabled;
+  $('soundSetting').onchange=()=>{soundEnabled=$('soundSetting').checked;storage.set('13go:sound',soundEnabled?'on':'off');if(!soundEnabled)stopEventCue()};
   let eventCueNodes=[],warmedAudioContext=null,audioResumePromise=null;
   function resumeForSound(replay){
     if(!audioContext||document.hidden)return;
@@ -653,6 +661,7 @@
     $('pass').disabled=!canSelectMove();
     $('placementActions').classList.toggle('hidden',!selectedMove);$('selectionHint').classList.toggle('hidden',!!game?.clock?.recovering||!awaitingMove&&socket?.readyState===WebSocket.OPEN);
     const valid=!!validSelection();$('placeMove').disabled=!valid;
+    canvas.setAttribute('aria-label',valid?'Go board. '+roles[game.turn]+' selected '+coordinate(selectedMove.index)+'. Tap again or press Enter to play.':'Go board. Select an intersection to play.');
     $('placeMove').textContent=valid?'Place '+coordinate(selectedMove.index):awaitingMove?'Sending…':'Place stone';
     $('selectionHint').textContent=game?.clock?.recovering?'':awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':'';
   }
@@ -752,12 +761,12 @@
   $('homePlay').onclick=()=>showPage('play');$('homeWatch').onclick=()=>showPage('watch');$('homeProfile').onclick=()=>showPage('profile');$('homeButton').onclick=()=>showPage('home');$('resumeGame').onclick=()=>showPage('play');
   $('navPlay').onclick=()=>showPage('play');$('navWatch').onclick=()=>showPage('watch');$('navProfile').onclick=()=>showPage('profile');$('browseWatch').onclick=()=>showPage('watch');
   let aiStarting=false;
-  function setAiStarting(value){aiStarting=value;for(const id of ['aiBlack','aiWhite'])$(id).disabled=value;$('aiStatus').classList.toggle('hidden',!value);$('aiStatus').textContent='Connecting…';$('aiDialog').setAttribute('aria-busy',String(value))}
-  function closeAiDialog(focus=true){setAiStarting(false);$('aiDialog').classList.add('hidden');$('shell').inert=false;if(focus)$('testMatch').focus?.()}
+  function setAiStarting(value){aiStarting=value;for(const id of ['aiClose','aiBlack','aiWhite'])$(id).disabled=value;$('aiStatus').classList.toggle('hidden',!value);$('aiStatus').textContent='Connecting…';$('aiDialog').setAttribute('aria-busy',String(value))}
+  function closeAiDialog(focus=true){if(aiStarting&&focus!==false)return;setAiStarting(false);$('aiDialog').classList.add('hidden');$('shell').inert=false;if(focus)$('testMatch').focus?.()}
   $('testMatch').onclick=()=>{if(posting||aiStarting||!canLeave())return;$('aiDialog').classList.remove('hidden');$('shell').inert=true;$('aiBlack').focus?.()};
   $('aiClose').onclick=closeAiDialog;
   for(const [id,color] of [['aiBlack','black'],['aiWhite','white']])$(id).onclick=()=>{if(posting||aiStarting)return;postRoom('/api/test-match',{color},$('testMatch'))};
-  $('aiDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeAiDialog()}else if(event.key==='Tab'){event.preventDefault();const buttons=[$('aiClose'),$('aiBlack'),$('aiWhite')].filter(button=>!button.disabled),at=buttons.indexOf(document.activeElement);buttons[(at+(event.shiftKey?buttons.length-1:1))%buttons.length].focus?.()}});
+  $('aiDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeAiDialog()}else if(event.key==='Tab'){event.preventDefault();const buttons=[$('aiClose'),$('aiBlack'),$('aiWhite')].filter(button=>!button.disabled),at=buttons.indexOf(document.activeElement);buttons[(at+(event.shiftKey?buttons.length-1:1))%buttons.length]?.focus?.()}});
 $('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
   $('cancelMatch').onclick=()=>{if(game?.status==='waiting'){send('cancel');$('cancelMatch').disabled=true}};
   $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('retryScore').onclick=()=>send('retry_score');$('rematch').onclick=()=>send('rematch');$('newGame').onclick=()=>{if(game?.status==='finished')leaveRoom()};
