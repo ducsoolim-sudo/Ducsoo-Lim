@@ -311,6 +311,7 @@ console.log('PASS AI color selection skips start popup while keeping the game re
  ai.e('homePlay').onclick();ai.e('testMatch').onclick();ai.e('aiWhite').onclick();
  await new Promise(resolve=>setImmediate(resolve));
  assert.equal(requests,1);assert(!ai.e('aiDialog').classes.has('hidden'));assert(ai.e('shell').inert);assert(ai.e('aiBlack').disabled);assert(ai.e('aiWhite').disabled);
+ ai.e('aiClose').onclick();ai.e('aiDialog').events.keydown({key:'Escape',preventDefault(){}});assert(!ai.e('aiDialog').classes.has('hidden'));assert(ai.e('aiClose').disabled);
  ai.e('aiBlack').onclick();assert.equal(requests,1);
  release({ok:true,json:async()=>({room:'ABCDEFG',token:'owner',testBot:true})});
  await new Promise(resolve=>setImmediate(resolve));
@@ -322,3 +323,5 @@ console.log('PASS AI color selection skips start popup while keeping the game re
  assert(!html.includes('id="aiLevel"'));assert(!html.includes('value="medium"'));assert(!html.includes('value="low"'));
  console.log('PASS AI selection stays visible through HTTP and WebSocket loading, prevents duplicates, and opens only the ready board');
 })().catch(error=>{console.error(error);process.exitCode=1});
+
+const soundPrefs=setup(null,{'13go:sound':'off'});assert.equal(soundPrefs.e('soundSetting').checked,false);soundPrefs.e('soundSetting').checked=true;soundPrefs.e('soundSetting').onchange();assert.equal(soundPrefs.values.get('13go:sound'),'on');const accessibleBoard=ready();clickPoint(accessibleBoard,84);assert(accessibleBoard.e('board').attrs['aria-label'].includes('G7'));console.log('PASS sound preferences persist and selected coordinates are accessible');
