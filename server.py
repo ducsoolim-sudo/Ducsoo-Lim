@@ -611,6 +611,43 @@ def lobby_snapshot():
     }
 
 
+# App icon D: full-bleed artwork; the OS applies its own icon mask.
+def _app_icon_png():
+    import struct
+    import zlib
+    size = 512
+    rows = bytearray()
+    stones = ((256, 168, (23, 28, 25)), (168, 344, (243, 240, 229)), (344, 344, (23, 28, 25)))
+    grid = (80, 168, 256, 344, 432)
+    for y in range(size):
+        rows.append(0)
+        for x in range(size):
+            samples = []
+            for dx, dy in ((.25, .25), (.75, .25), (.25, .75), (.75, .75)):
+                px, py = x + dx, y + dy
+                color = (189, 205, 161)
+                if 77.5 <= px <= 434.5 and 77.5 <= py <= 434.5 and (any(abs(px-g) <= 2.5 for g in grid) or any(abs(py-g) <= 2.5 for g in grid)):
+                    color = (40, 49, 37)
+                for sx, sy, stone in stones:
+                    if (px-sx)**2 + (py-sy-2)**2 <= 47**2:
+                        color = (161, 177, 138)
+                    if (px-sx)**2 + (py-sy)**2 <= 46**2:
+                        color = stone
+                samples.append(color)
+            rows.extend(sum(c[i] for c in samples)//4 for i in range(3))
+    def chunk(kind, data):
+        return struct.pack('!I', len(data)) + kind + data + struct.pack('!I', zlib.crc32(kind + data))
+    return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('!2I5B', size, size, 8, 2, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(bytes(rows), 9)) + chunk(b'IEND', b'')
+
+APP_ICON_PNG = _app_icon_png()
+
+async def app_icon(request):
+    return web.Response(body=APP_ICON_PNG, content_type='image/png', headers={'Cache-Control': 'public, max-age=86400'})
+
+async def app_manifest(request):
+    return web.json_response({'id':'/', 'name':'13GO', 'short_name':'13GO', 'start_url':'/', 'scope':'/', 'display':'standalone', 'background_color':'#101313', 'theme_color':'#101313', 'icons':[{'src':'/app-icon-d.png', 'sizes':'512x512', 'type':'image/png', 'purpose':'any'}]}, content_type='application/manifest+json')
+
+
 async def index(request):
     path = ROOT / "index.html" if (ROOT / "index.html").exists() else ROOT / "static" / "index.html"
     if os.getenv("GO13_PREVIEW") == "true":
@@ -1073,6 +1110,8 @@ def make_app(store=None):
     native_sessions.setup(app, STORE, check_rate)
     app.router.add_get("/api/profile", get_profile)
     app.router.add_post("/api/profile", edit_profile)
+    app.router.add_get("/app-icon-d.png", app_icon)
+    app.router.add_get("/manifest.webmanifest", app_manifest)
     app.router.add_get("/", index)
     app.router.add_get("/mobile-preview", mobile_preview)
     app.router.add_post("/api/rooms", create_room)
