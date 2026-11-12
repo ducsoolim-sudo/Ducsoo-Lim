@@ -401,6 +401,7 @@
   const studioSoundBytes=fetch('/static/brand-intro.wav?v=3').then(r=>r.ok?r.arrayBuffer():null).catch(()=>null);
   function loadStudioSound(){if(!studioSoundDecode&&audioContext)studioSoundDecode=studioSoundBytes.then(bytes=>bytes&&audioContext.decodeAudioData?audioContext.decodeAudioData(bytes):null).then(buffer=>{if(!buffer)return;let peak=0;for(const sample of buffer.getChannelData(0))peak=Math.max(peak,Math.abs(sample));if(peak>.001)studioSoundBuffer=buffer}).catch(()=>{});return studioSoundDecode}
   function brandSound(){
+    if(!soundEnabled)return false;
     if(window.Go13Native?.isNative)return !document.hidden&&soundEnabled&&window.Go13Native.play('intro',.85);
     if(!audioContext||audioContext.state!=='running'||document.hidden)return false;
     if(studioSoundBuffer){try{const source=audioContext.createBufferSource(),gain=audioContext.createGain();source.buffer=studioSoundBuffer;gain.gain.setValueAtTime(.85,audioContext.currentTime);source.connect(gain);gain.connect(audioContext.destination);source.start();eventCueNodes.push(source);return true}catch{}}
