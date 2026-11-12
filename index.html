@@ -275,10 +275,10 @@
 #watchPage .watch-empty{padding:28px 12px}
 #watchPage .watch-empty .button{margin:14px auto 0;min-height:44px}
 .game-view .game-only{max-width:min(1100px,max(260px,calc(100svh - 280px)))}
-.game-view .board-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding-top:10px}
+.game-view .board-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding-top:10px}
 .game-view #playActions{grid-column:1;grid-row:1;padding-top:0;border-top:0}
-.game-view #placementControls{grid-column:2;grid-row:1;margin:0;align-self:start}
-.game-view #placementControls:has(#placementActions.hidden):has(#selectionHint.hidden){display:none}
+.game-view #placementControls{grid-column:1;grid-row:auto;margin:0;align-self:start}
+.game-view #placementControls:has(#selectionHint.hidden){display:none}
 .game-view #placementActions{display:block;margin:0}
 .game-view #clearMove{min-height:52px;padding:14px 16px}
 .game-view #scoreActions,.game-view #finishActions,.game-view #reviewControls,.game-view #clockNote,.game-view #gameHint{grid-column:1/-1}
@@ -311,7 +311,7 @@
         <div id="placementControls" class="placement-controls hidden">
           <input id="confirmMoves" type="checkbox" checked hidden aria-hidden="true">
           <p id="selectionHint" class="control-hint hidden" role="status" aria-live="polite"></p>
-          <div id="placementActions" class="actions split"><button id="placeMove" class="button primary hidden" disabled>Place stone</button><button id="clearMove" class="button ghost" disabled>Clear</button></div>
+          <div id="placementActions" class="actions split"><button id="placeMove" class="button primary hidden" disabled>Place stone</button></div>
         </div>
         <div id="playActions" class="actions split"><button id="pass" class="button ghost" disabled>Pass</button><button id="resign" class="button ghost" disabled>Resign</button></div>
         <div id="scoreActions" class="actions hidden"><p id="scoringHint" class="notice">Review the score.</p><div id="scoreResult" class="result"></div><button id="approve" class="button primary">Confirm</button><button id="retryScore" class="button secondary hidden">Retry score check</button></div>
@@ -651,10 +651,10 @@
     if(selectedMove&&!validSelection())selectedMove=null;
     $('placementControls').classList.toggle('hidden',!game||game.status!=='playing'||myRole==='spectator');
     $('pass').disabled=!canSelectMove();
-    $('placementActions').classList.toggle('hidden',!selectedMove);$('selectionHint').classList.toggle('hidden',!!game?.clock?.recovering||!awaitingMove&&socket?.readyState===WebSocket.OPEN&&canSelectMove());
-    const valid=!!validSelection();$('placeMove').disabled=!valid;$('clearMove').disabled=!valid;
+    $('placementActions').classList.toggle('hidden',!selectedMove);$('selectionHint').classList.toggle('hidden',!!game?.clock?.recovering||!awaitingMove&&socket?.readyState===WebSocket.OPEN);
+    const valid=!!validSelection();$('placeMove').disabled=!valid;
     $('placeMove').textContent=valid?'Place '+coordinate(selectedMove.index):awaitingMove?'Sending…':'Place stone';
-    $('selectionHint').textContent=game?.clock?.recovering?'':awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':valid?'':!canSelectMove()?'Your opponent is thinking.':'';
+    $('selectionHint').textContent=game?.clock?.recovering?'':awaitingMove?'Waiting for the server to confirm your move.':socket?.readyState!==WebSocket.OPEN?'Reconnecting. Wait before choosing a move.':'';
   }
   function selectMove(index){
     if(!canSelectMove())return;
@@ -663,7 +663,7 @@
     selectedMove={index,gameId:game.gameId,moves:game.moves,turn:game.turn};renderPlacement();draw();
   }
   $('placeMove').onclick=()=>{if(validSelection()){const index=selectedMove.index;send('move',{index});draw()}};
-  $('clearMove').onclick=()=>{selectedMove=null;renderPlacement();draw()};
+  function clearSelection(){selectedMove=null;renderPlacement();draw()}
 
   function deadlineWarning(){
     $('deadlineCountdown').classList.add('hidden');$('moveCount').classList.remove('hidden');
@@ -748,7 +748,7 @@
     selectMove(index);
   });
 
-  canvas.addEventListener('keydown',event=>{if(!canSelectMove()||!$('confirmMoves').checked)return;const dirs={ArrowLeft:-1,ArrowRight:1,ArrowUp:-N,ArrowDown:N};if(event.key in dirs){event.preventDefault();const current=selectedMove?.index??84,col=current%N,row=Math.floor(current/N);if(event.key==='ArrowLeft'&&col===0||event.key==='ArrowRight'&&col===N-1||event.key==='ArrowUp'&&row===0||event.key==='ArrowDown'&&row===N-1)return;selectMove(current+dirs[event.key])}else if(event.key==='Enter'){event.preventDefault();$('placeMove').onclick()}else if(event.key==='Escape'){$('clearMove').onclick()}});
+  canvas.addEventListener('keydown',event=>{if(!canSelectMove()||!$('confirmMoves').checked)return;const dirs={ArrowLeft:-1,ArrowRight:1,ArrowUp:-N,ArrowDown:N};if(event.key in dirs){event.preventDefault();const current=selectedMove?.index??84,col=current%N,row=Math.floor(current/N);if(event.key==='ArrowLeft'&&col===0||event.key==='ArrowRight'&&col===N-1||event.key==='ArrowUp'&&row===0||event.key==='ArrowDown'&&row===N-1)return;selectMove(current+dirs[event.key])}else if(event.key==='Enter'){event.preventDefault();$('placeMove').onclick()}else if(event.key==='Escape'){clearSelection()}});
   $('homePlay').onclick=()=>showPage('play');$('homeWatch').onclick=()=>showPage('watch');$('homeProfile').onclick=()=>showPage('profile');$('homeButton').onclick=()=>showPage('home');$('resumeGame').onclick=()=>showPage('play');
   $('navPlay').onclick=()=>showPage('play');$('navWatch').onclick=()=>showPage('watch');$('navProfile').onclick=()=>showPage('profile');$('browseWatch').onclick=()=>showPage('watch');
   let aiStarting=false;
