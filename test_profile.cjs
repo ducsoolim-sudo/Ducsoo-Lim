@@ -33,7 +33,7 @@ function playing(id='mobile',solo=false){const g=game(id,'black',solo);g.status=
 function clickPoint(t,index){const step=52;t.e('board').events.click({clientX:48+(index%13)*step,clientY:48+Math.floor(index/13)*step})}
 function ready(role='black',solo=false,seed={}){const t=setup(null,seed);t.ws.message({type:'welcome',role,token:'owner'});t.ws.message({type:'state',state:playing('mobile',solo)});return t}
 t=ready();clickPoint(t,84);assert.equal(t.ws.sent.type,'join');assert.equal(t.e('placeMove').textContent,'Place G7');clickPoint(t,85);assert.equal(t.e('placeMove').textContent,'Place H7');clickPoint(t,85);assert.equal(t.ws.sent.type,'move');assert.equal(t.ws.sent.index,85);const n=t.ws.messages.length;t.e('placeMove').onclick();clickPoint(t,86);t.e('pass').onclick();assert.equal(t.ws.messages.length,n);assert.equal(t.e('pass').disabled,true);console.log('PASS preview then confirm, adjustment and duplicate-input guard');
-t.ws.message({type:'error',message:'Illegal move'});assert.equal(t.e('placeMove').disabled,true);clickPoint(t,0);assert.equal(t.e('placeMove').textContent,'Place A13');t.e('clearMove').onclick();t.e('placeMove').onclick();assert.equal(t.ws.messages.length,n);console.log('PASS server rejection recovery and cleared selection never sends');
+t.ws.message({type:'error',message:'Illegal move'});assert.equal(t.e('placeMove').disabled,true);clickPoint(t,0);assert.equal(t.e('placeMove').textContent,'Place A13');t.e('board').events.keydown({key:'Escape',preventDefault(){}});t.e('placeMove').onclick();assert.equal(t.ws.messages.length,n);console.log('PASS server rejection recovery and cleared selection never sends');
 t=ready();clickPoint(t,84);let changed=playing();changed.moves=1;changed.turn='white';changed.board[0]=1;t.ws.message({type:'state',state:changed});t.e('placeMove').onclick();assert.equal(t.ws.sent.type,'join');assert.equal(t.e('placeMove').disabled,true);console.log('PASS stale selection cannot play after turn changes');
 t=ready();clickPoint(t,84);t.ws.readyState=3;t.ws.onclose();t.e('placeMove').onclick();assert.equal(t.ws.sent.type,'join');console.log('PASS disconnection clears pending selection');
 t=ready('spectator');clickPoint(t,84);assert.equal(t.ws.sent.type,'join');t=ready('white');clickPoint(t,84);assert.equal(t.ws.sent.type,'join');console.log('PASS spectator and opponent-turn taps cannot place stones');
@@ -143,11 +143,11 @@ t=setup();t.ws.message({type:'welcome',role:'black',token:'owner'});let checking
 
 
 // A recovered game must look paused and reject touch/keyboard/control actions until both seats return.
-t=ready();clickPoint(t,84);assert.equal(t.e('clearMove').disabled,false);
+t=ready();clickPoint(t,84);assert.equal(t.e('placeMove').disabled,false);
 let recovering=playing('mobile');recovering.moves=8;recovering.clock={recovering:true,policy:'byoyomi-manners-v1',remaining:{black:10,white:200},mainRemaining:{black:0,white:200},periods:{black:2,white:3},running:null,turnElapsed:20};
 t.ws.message({type:'state',state:recovering});
 assert.equal(t.e('status').textContent,'Paused');assert.equal(t.e('clockNote').textContent,'Waiting for both players to reconnect.');assert.equal(t.e('blackClock').textContent,'0:10 ×2');
-assert.equal(t.e('pass').disabled,true);assert.equal(t.e('resign').disabled,true);assert.equal(t.e('clearMove').disabled,true);assert.equal(t.e('board').attrs['aria-disabled'],'true');assert(t.e('selectionHint').classes.has('hidden'));assert(!t.e('blackCard').classes.has('turn'));
+assert.equal(t.e('pass').disabled,true);assert.equal(t.e('resign').disabled,true);assert.equal(t.e('placeMove').disabled,true);assert.equal(t.e('board').attrs['aria-disabled'],'true');assert(t.e('selectionHint').classes.has('hidden'));assert(!t.e('blackCard').classes.has('turn'));
 const pausedPackets=t.ws.messages.length;clickPoint(t,84);clickPoint(t,84);t.e('board').events.keydown({key:'Enter',preventDefault(){}});t.e('pass').onclick();t.e('resign').onclick();assert.equal(t.ws.messages.length,pausedPackets);
 recovering={...recovering,status:'scoring',score:{black:2,white:8.5,winner:'white',margin:6.5,komi:6.5},adjudication:{status:'ready'}};
 t.ws.message({type:'state',state:recovering});assert.equal(t.e('approve').disabled,true);assert(t.e('scoreResult').classes.has('hidden'));t.e('approve').onclick();assert.equal(t.ws.messages.length,pausedPackets);
