@@ -635,8 +635,8 @@
     if(!game){$('status').textContent=room?'Connecting to your game…':'Your next game starts here';$('moveCount').textContent='13 × 13';$('myRole').textContent='Find an opponent for a public game, or practice both colors on your own.';$('gameHint').textContent='Black plays first. Two consecutive passes start scoring.';return}
     // Seat identity stays stable; a solo owner controls both turns.
     for(const side of ['black','white']){$(side+'Rank').textContent=rankLabel(game.players[side]?.rank);$(side+'Identity').classList.toggle('hidden',game.solo||!game.players[side])}
-    $('blackName').textContent=game.solo?'Black':game.players.black?(game.players.black.name+(game.players.black.connected?' ●':' · offline')):'Waiting';
-    $('whiteName').textContent=game.solo?'White':game.players.white?(game.players.white.name+(game.players.white.connected?' ●':' · offline')):'Waiting';
+    $('blackName').textContent=game.solo?'Black':game.players.black?(game.players.black.name+(game.players.black.connected?'':' · offline')):'Waiting';
+    $('whiteName').textContent=game.solo?'White':game.players.white?(game.players.white.name+(game.players.white.connected?'':' · offline')):'Waiting';
     $('blackCaptures').textContent='Captured '+game.captures.black;$('whiteCaptures').textContent='Captured '+game.captures.white;$('moveCount').textContent=game.moves+(game.moves===1?' move':' moves');
     $('blackCard').classList.toggle('turn',active&&!recovering&&game.turn==='black');$('whiteCard').classList.toggle('turn',active&&!recovering&&game.turn==='white');
     $('pass').textContent=game.passes===1?'Pass & score':'Pass';
