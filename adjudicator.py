@@ -81,6 +81,7 @@ def adjudicate(board, captures, first, second):
     score['winner'] = 'black' if score['black']>score['white'] else 'white'
     score['margin'] = abs(score['black']-score['white']);score['neutral']=neutral
     exact_lead = score['black']-score['white']
+    unsettled_points = len(uncertain)
     if abs(lead_a-lead_b)>.75 or abs(lead_b-exact_lead)>.75:
         reasons.append('score_disagreement')
         uncertain.update(range(169))
@@ -90,7 +91,8 @@ def adjudicate(board, captures, first, second):
     if uncertain and not reasons:
         reasons.append('ownership_uncertain')
     return dict(dead=sorted(dead),uncertain=sorted(uncertain),seki=sorted(seki),score=score,
-                status='review' if uncertain else 'ready',source='KataGo',reasons=reasons)
+                status='review' if uncertain else 'ready',source='KataGo',reasons=reasons,
+                unsettledPoints=unsettled_points)
 
 
 def settled_adjudication(board, captures):
@@ -144,7 +146,12 @@ class KataGo:
             verdict = adjudicate(room.board,room.captures,results['quick'],results['deep'])
             if verdict['status'] == 'ready':
                 return verdict
-            refined = await self.run([query(room,'refined',512)])
+            # A broadly unresolved board needs more play, not a long forced
+            # attempt to produce a final count. This can only reject a score;
+            # it never weakens the acceptance gates for a completed position.
+            if verdict.get('unsettledPoints', 0) >= 85:
+                return verdict
+            refined = await self.run([query(room,'refined',256)])
             return adjudicate(room.board,room.captures,results['deep'],refined['refined'])
 
     async def run(self, requests):

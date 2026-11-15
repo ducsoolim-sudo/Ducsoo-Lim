@@ -11,6 +11,9 @@ from adjudicator import coordinate, settled_adjudication
 
 ENGINE_LOG = logging.getLogger('go13.engine')
 ENGINE_LOG.setLevel(logging.INFO)
+if not ENGINE_LOG.handlers:
+    ENGINE_LOG.addHandler(logging.StreamHandler())
+ENGINE_LOG.propagate = False
 
 class ResidentEngine:
     """One serialized process; discard it on cancellation or protocol failure."""
