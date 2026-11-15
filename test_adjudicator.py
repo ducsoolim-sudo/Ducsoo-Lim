@@ -183,3 +183,36 @@ class EngineLifecycle(unittest.IsolatedAsyncioTestCase):
         self.room.act('black', {'type':'resume'})
         self.assertEqual(self.room.status, 'playing')
         self.assertEqual(self.room.passes, 0)
+
+    async def test_socket_resume_cancels_analysis_only_after_successful_save(self):
+        from unittest.mock import patch
+        started, released = asyncio.Event(), asyncio.Event()
+        async def blocked(snapshot):
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            finally:
+                released.set()
+        self.app[s.ENGINE].analyze = blocked
+        async with self.client.ws_connect('/ws') as socket:
+            await socket.send_json({'type':'join','room':self.room.code,'token':self.room.players['black']['token']})
+            self.assertEqual((await socket.receive_json())['type'], 'welcome')
+            self.assertEqual((await socket.receive_json())['type'], 'state')
+            s.schedule_adjudication(self.app, self.room)
+            task = self.app[s.SCORING_JOBS][self.room.code]
+            await asyncio.wait_for(started.wait(), 1)
+            with patch.object(self.app[s.STORE], 'save', AsyncMock(side_effect=RuntimeError('storage unavailable'))):
+                await socket.send_json({'type':'resume'})
+                reply = await asyncio.wait_for(socket.receive_json(), 1)
+                self.assertEqual(reply['type'], 'error')
+                self.assertEqual(self.room.status, 'scoring')
+                self.assertFalse(task.done())
+                self.assertFalse(released.is_set())
+            await socket.send_json({'type':'resume'})
+            reply = await asyncio.wait_for(socket.receive_json(), 1)
+            self.assertEqual(reply['state']['status'], 'playing')
+            await asyncio.wait_for(released.wait(), 1)
+            await asyncio.gather(task, return_exceptions=True)
+            self.assertTrue(task.cancelled())
+            self.assertNotIn(self.room.code, self.app[s.SCORING_JOBS])
+            self.assertIsNone(self.room.result)
