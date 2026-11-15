@@ -976,6 +976,7 @@ async def cleanup_loop(app):
 BOT_JOBS = web.AppKey("preview_bots", dict)
 ENGINE = web.AppKey("engine", KataGo)
 JOBS = web.AppKey("adjudication_jobs", set)
+SCORING_TIMEOUT_SECONDS = 60.0
 
 
 def continue_unsettled(room, notice):
@@ -1016,7 +1017,9 @@ def schedule_adjudication(app, room):
 
     async def run():
         try:
-            result = await app[ENGINE].analyze(snapshot)
+            # Bound the complete engine call, including queueing.
+            async with asyncio.timeout(SCORING_TIMEOUT_SECONDS):
+                result = await app[ENGINE].analyze(snapshot)
         except asyncio.CancelledError:
             raise
         except Exception:
