@@ -346,7 +346,7 @@
   <p class="foot">13GO v1.1 · 13×13 Go for everyone · Public games & live spectators<br>Games and move records are saved on the server. Your guest identity stays in this browser. Keep your game link to return.</p>
 </div></div><div id="toast" class="toast" role="status"></div>
 <div id="aiDialog" class="match-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="aiDialogTitle"><section class="ai-card"><button id="aiClose" class="ai-close" aria-label="Close">×</button><h2 id="aiDialogTitle">Play with AI</h2><div class="ai-colors"><button id="aiBlack" class="ai-color"><span class="stone black" aria-hidden="true"></span>Black</button><button id="aiWhite" class="ai-color"><span class="stone white" aria-hidden="true"></span>White</button></div><p id="aiStatus" class="note hidden" role="status" style="margin:16px 0 0">Connecting…</p></section></div>
-<div id="matchDialog" class="match-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="matchDialogTitle" aria-describedby="matchDialogDetail"><section class="match-card"><div id="matchDialogKicker" class="match-kicker"></div><h2 id="matchDialogTitle"></h2><div id="matchDialogPlayers" class="match-players"></div><p id="matchDialogDetail"></p><button id="matchDialogConfirm" class="button primary">Review</button><button id="matchDialogHome" class="button ghost hidden" style="margin-top:10px;color:#17221b">Home</button></section></div>
+<div id="matchDialog" class="match-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="matchDialogTitle" aria-describedby="matchDialogDetail"><section class="match-card"><div id="matchDialogKicker" class="match-kicker"></div><h2 id="matchDialogTitle"></h2><div id="matchDialogPlayers" class="match-players"></div><p id="matchDialogDetail"></p><button id="matchDialogConfirm" class="button primary">Review</button><button id="matchDialogAgain" class="button primary hidden" style="margin-top:10px">Play again</button><button id="matchDialogHome" class="button ghost hidden" style="margin-top:10px;color:#17221b">Home</button></section></div>
 <script src="/static/social-login.js"></script>
 <script>
 (() => {
@@ -452,14 +452,16 @@
 
   let matchDialogTimer=null,matchDialogFocus=null,matchDialogKey=null;
   function closeMatchDialog(){clearTimeout(matchDialogTimer);$('matchDialog').classList.add('hidden');$('shell').inert=false;matchDialogKey=null;matchDialogFocus?.focus?.()}
+  function playerLabel(color){return game?.testBot&&myRole!=='spectator'&&color!==myRole?'Master':game?.players[color]?.name||roles[color]}
+  async function playAgain(){if(posting||game?.status!=='finished'||!game.testBot||!['black','white'].includes(myRole))return;const color=myRole,button=$('matchDialogAgain');button.disabled=true;try{await postRoom('/api/test-match',{color},button)}finally{button.disabled=false;button.textContent='Play again'}}
   function openMatchDialog(kind){
     clearTimeout(matchDialogTimer);matchDialogFocus=document.activeElement;matchDialogKey=game.gameId+':'+kind;
     $('matchDialogKicker').textContent=game.testBot?'TEST MATCH · UNRATED':game.solo?'PRACTICE':'13GO / 13 × 13';
     const winner=roles[game.result?.winner]||'';
     $('matchDialogTitle').textContent=kind==='start'?'Ready to play':game.solo||myRole==='spectator'?winner+' wins':game.result.winner===myRole?'You win':'You lose';
     $('matchDialogDetail').textContent=kind==='start'?roles[myRole]+' · 5 min, then '+(game.clock?.byoyomiSeconds||30)+' sec × 3':game.result.reason==='score'?winner+' +'+game.result.margin:winner+' · '+detailReason(game.result.reason);
-    const players=$('matchDialogPlayers');players.replaceChildren();for(const color of ['black','white']){const row=document.createElement('div');row.className='match-player';const stone=document.createElement('span');stone.className='stone '+color;const name=document.createElement('span');name.textContent=game.players[color]?.name||roles[color];row.append(stone,name);if(!game.solo){const tags=document.createElement('span');tags.className='identity-tags';const rank=document.createElement('span');rank.className='identity-tag';rank.textContent=rankLabel(game.players[color]?.rank);rank.title='Self-selected initial rank';tags.append(rank);row.append(tags)}players.append(row)}
-    $('matchDialogConfirm').textContent=kind==='start'?'Play':'Review';$('matchDialogHome').classList.toggle('hidden',kind!=='end');$('shell').inert=true;$('matchDialog').classList.remove('hidden');$('matchDialogConfirm').focus?.();
+    const players=$('matchDialogPlayers');players.replaceChildren();for(const color of ['black','white']){const row=document.createElement('div');row.className='match-player';const stone=document.createElement('span');stone.className='stone '+color;const name=document.createElement('span');name.textContent=playerLabel(color);row.append(stone,name);if(!game.solo){const tags=document.createElement('span');tags.className='identity-tags';const rank=document.createElement('span');rank.className='identity-tag';rank.textContent=rankLabel(game.players[color]?.rank);rank.title='Self-selected initial rank';tags.append(rank);row.append(tags)}players.append(row)}
+    $('matchDialogAgain').classList.toggle('hidden',kind!=='end'||!game.testBot||myRole==='spectator');$('matchDialogAgain').disabled=posting;$('matchDialogConfirm').textContent=kind==='start'?'Play':'Review';$('matchDialogHome').classList.toggle('hidden',kind!=='end');$('shell').inert=true;$('matchDialog').classList.remove('hidden');$('matchDialogConfirm').focus?.();
     if(kind==='start')matchDialogTimer=setTimeout(closeMatchDialog,2200);
   }
   function updateMatchDialog(){
@@ -470,7 +472,7 @@
     else if(game.status!=='playing'&&game.status!=='finished'&&matchDialogKey)closeMatchDialog();
   }
   $('matchDialogConfirm').onclick=()=>{if(game?.status==='finished'&&matchDialogKey===game.gameId+':end')startReview();else closeMatchDialog()};
-  $('matchDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeMatchDialog()}else if(event.key==='Tab'){event.preventDefault();const home=$('matchDialogHome');(home.classList.contains('hidden')||document.activeElement===home?$('matchDialogConfirm'):home).focus?.()}});
+  $('matchDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeMatchDialog()}else if(event.key==='Tab'){event.preventDefault();const buttons=[$('matchDialogConfirm'),$('matchDialogAgain'),$('matchDialogHome')].filter(button=>!button.classList.contains('hidden')&&!button.disabled),at=buttons.indexOf(document.activeElement);buttons[(at+(event.shiftKey?buttons.length-1:1))%buttons.length]?.focus?.()}});
   function buildReviewFrames(sgf){
     if(typeof sgf!=='string'||sgf.length>1000000)throw new Error('Move record unavailable.');
     const nodes=[];let at=0,depth=0,node=null;
@@ -525,7 +527,7 @@
   }
   function returnHome(){leaveRoom();showPage('home');$('homePlay').focus?.()}
   $('reviewFirst').onclick=()=>reviewStep(0);$('reviewPrevious').onclick=()=>reviewStep(reviewCursor-1);$('reviewNext').onclick=()=>reviewStep(reviewCursor+1);$('reviewLast').onclick=()=>reviewStep(reviewFrames.length-1);$('reviewRange').oninput=event=>reviewStep(Number(event.target.value));$('reviewHome').onclick=returnHome;
-  $('matchDialogHome').onclick=returnHome;$('reviewGame').onclick=startReview;
+  $('matchDialogAgain').onclick=playAgain;$('matchDialogHome').onclick=returnHome;$('reviewGame').onclick=startReview;
 
   function myName(){const name=playerProfile?.name||$('nickname').value.trim().slice(0,16)||'Player';storage.set('13go:nickname',name);return name}
   function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('show'),3300)}
@@ -559,7 +561,7 @@
     if(game.solo){const sessions=readPractice();if(!sessions.includes(game.gameId)){sessions.push(game.gameId);storage.set('13go:practice',JSON.stringify(sessions))}return}
     if(accountUser){loadAccount();return}
     const records=readHistory();if(records.some(r=>r.id===game.gameId))return;
-    const opponent=game.players[myRole==='black'?'white':'black']?.name||'Player';
+    const opponent=playerLabel(myRole==='black'?'white':'black');
     records.unshift({id:game.gameId,room:game.room,opponent,color:myRole,won:game.result.winner===myRole,reason:game.result.reason,margin:game.result.margin??null,moves:game.moves,sgf:game.sgf||null,date:new Date().toISOString()});
     if(!storage.set('13go:history',JSON.stringify(records)))toast('Your browser could not save this result.');
     if(page==='profile')renderProfile();
@@ -635,8 +637,8 @@
     if(!game){$('status').textContent=room?'Connecting to your game…':'Your next game starts here';$('moveCount').textContent='13 × 13';$('myRole').textContent='Find an opponent for a public game, or practice both colors on your own.';$('gameHint').textContent='Black plays first. Two consecutive passes start scoring.';return}
     // Seat identity stays stable; a solo owner controls both turns.
     for(const side of ['black','white']){$(side+'Rank').textContent=rankLabel(game.players[side]?.rank);$(side+'Identity').classList.toggle('hidden',game.solo||!game.players[side])}
-    $('blackName').textContent=game.solo?'Black':game.players.black?(game.players.black.name+(game.players.black.connected?'':' · offline')):'Waiting';
-    $('whiteName').textContent=game.solo?'White':game.players.white?(game.players.white.name+(game.players.white.connected?'':' · offline')):'Waiting';
+    $('blackName').textContent=game.solo?'Black':game.players.black?(playerLabel('black')+(game.players.black.connected?'':' · offline')):'Waiting';
+    $('whiteName').textContent=game.solo?'White':game.players.white?(playerLabel('white')+(game.players.white.connected?'':' · offline')):'Waiting';
     $('blackCaptures').textContent='Captured '+game.captures.black;$('whiteCaptures').textContent='Captured '+game.captures.white;$('moveCount').textContent=game.moves+(game.moves===1?' move':' moves');
     $('blackCard').classList.toggle('turn',active&&!recovering&&game.turn==='black');$('whiteCard').classList.toggle('turn',active&&!recovering&&game.turn==='white');
     $('pass').textContent=game.passes===1?'Pass & score':'Pass';
@@ -650,7 +652,7 @@
     $('approve').disabled=recovering||spectator||!scoreReady||game.approvals.includes(myRole);$('approve').textContent=game.approvals.includes(myRole)?'Waiting…':'Confirm';
     $('status').classList.toggle('score-checking',!recovering&&scoring&&['pending','analyzing'].includes(game.adjudication?.status));
     $('rematch').classList.toggle('hidden',spectator);
-    $('rematch').disabled=spectator||game.rematch.includes(myRole);$('rematch').textContent=game.solo?'Practice again':game.rematch.includes(myRole)?'Rematch requested · waiting':'Request rematch';updateMatchDialog();
+    $('rematch').disabled=posting||spectator||(!game.testBot&&game.rematch.includes(myRole));$('rematch').textContent=game.testBot?'Play again':game.solo?'Practice again':game.rematch.includes(myRole)?'Rematch requested · waiting':'Request rematch';updateMatchDialog();
   }
   function coordinate(index){return 'ABCDEFGHJKLMN'[index%N]+(N-Math.floor(index/N))}
   function canSelectMove(){return game?.status==='playing'&&!game.clock?.recovering&&myRole!=='spectator'&&(game.solo||myRole===game.turn)&&socket?.readyState===WebSocket.OPEN&&!awaitingMove}
@@ -770,7 +772,7 @@
   $('aiDialog').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();closeAiDialog()}else if(event.key==='Tab'){event.preventDefault();const buttons=[$('aiClose'),$('aiBlack'),$('aiWhite')].filter(button=>!button.disabled),at=buttons.indexOf(document.activeElement);buttons[(at+(event.shiftKey?buttons.length-1:1))%buttons.length]?.focus?.()}});
 $('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').onclick=loadLobby;$('refreshWatch').onclick=loadLobby;
   $('cancelMatch').onclick=()=>{if(game?.status==='waiting'){send('cancel');$('cancelMatch').disabled=true}};
-  $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('retryScore').onclick=()=>send('retry_score');$('resumeScore').onclick=()=>send('resume');$('rematch').onclick=()=>send('rematch');$('newGame').onclick=()=>{if(game?.status==='finished')leaveRoom()};
+  $('pass').onclick=()=>{if(send('pass'))draw()};$('resign').onclick=()=>{if(confirm('Resign this game?'))send('resign')};$('approve').onclick=()=>send('approve');$('retryScore').onclick=()=>send('retry_score');$('resumeScore').onclick=()=>send('resume');$('rematch').onclick=()=>game?.testBot?playAgain():send('rematch');$('newGame').onclick=()=>{if(game?.status==='finished')leaveRoom()};
   $('saveProfile').onclick=async()=>{
     if(!playerProfile){toast('Unable to load your profile. Please retry.');return}
     const changes={},name=$('profileNickname').value.trim(),rank=$('profileRank').value;
