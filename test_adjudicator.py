@@ -164,3 +164,22 @@ class EngineLifecycle(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.room.status,'finished')
         stored=await self.app[s.STORE].load()
         self.assertEqual(stored[0]['adjudication']['status'],'ready')
+
+    async def test_server_deadline_bounds_a_hung_engine(self):
+        from unittest.mock import patch
+        self.room.test_bot = True
+        async def hung(snapshot):
+            await asyncio.Event().wait()
+        self.app[s.ENGINE].analyze = hung
+        with patch.object(s, 'SCORING_TIMEOUT_SECONDS', .02):
+            s.schedule_adjudication(self.app, self.room)
+            with self.assertLogs(level='ERROR'):
+                await asyncio.wait_for(asyncio.gather(*self.app[s.JOBS]), 1)
+        self.assertEqual(self.room.adjudication['status'], 'unavailable')
+        self.assertIsNone(self.room.result)
+        self.assertIsNone(self.room.review_deadline)
+        with self.assertRaises(ValueError):
+            self.room.act('black', {'type':'approve'})
+        self.room.act('black', {'type':'resume'})
+        self.assertEqual(self.room.status, 'playing')
+        self.assertEqual(self.room.passes, 0)
