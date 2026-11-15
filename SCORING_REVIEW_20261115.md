@@ -5,14 +5,14 @@ Changes for the isolated test service:
 - A human pass in an AI game now requests score review immediately, for either color and for both the resident engine and tactical fallback. It does not declare the position settled or approve a score.
 - Scoring uses two smaller readings (32/128 visits) with the existing confidence gates; only inconclusive positions request a 256-visit refinement. Broadly unsettled boards (at least 85 locally uncertain intersections) return review without refinement. All stages share the existing 60-second deadline.
 - Single-query refinements work with both the resident engine and separate-process protocol.
-- The preview model warms in a background one-visit search at startup, outside player clocks; shutdown cancels it.
+- The preview model prepares a real 16-visit empty-board opening at startup, outside player clocks. That engine-selected opening is cached per binary/model, revalidated against server legality, and reused for fresh Black AI games even after score cancellation restarts the engine. Nonempty positions always search normally. Shutdown cancels unfinished preparation.
 - Uncertain ownership remains `review` and is explained separately from engine/time failures. Board, SGF, retry and resume remain available; unverified winners remain hidden.
 - HTML loads explicitly as UTF-8 on Windows.
 
 Evidence:
 
 - Hosted log at 2026-11-15 02:26:13 UTC confirms a 60-second timeout while waiting for the resident scoring engine response.
-- 170 server regressions pass, including ten new finish/progressive-search/warmup checks.
+- 172 server regressions pass, including twelve new finish/progressive-search/warmup checks.
 - All browser logic suites pass; additional Master/same-color Play again and scoring-control suites pass.
 - Real killed-process restart test passes after a 31-second single-seat recovery wait.
 - Official KataGo 1.16.3 Windows Eigen and the same checksum-pinned g170 b10c128 model were exercised locally. A natural 137-move self-play game reached two passes, but score verification remained `review` after 13.45 seconds. Two artificial enclosed-death/seki stress fixtures also remained review. These failures are retained, not reclassified as passing results.

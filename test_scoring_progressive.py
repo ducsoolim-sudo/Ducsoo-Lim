@@ -93,11 +93,30 @@ class HumanFinishRequest(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(room.result)
         self.assertIsNone(room.review_deadline)
 
-    async def test_warmup_uses_one_visit(self):
+    async def test_warmup_prepares_real_engine_opening(self):
         with patch.object(strong_bot,'settings',return_value=('engine','model')), \
              patch.object(strong_bot._ENGINE,'query',new_callable=AsyncMock) as query:
             await strong_bot.warmup()
-        self.assertEqual(query.await_args.args[2]['maxVisits'],1)
+        self.assertEqual(query.await_args.args[2]['maxVisits'],16)
+
+    async def test_prepared_opening_survives_process_restart_without_new_search(self):
+        state=dict(moves=0,botRole='black',passes=0,sgf='(;SZ[13])',board=[0]*169,captures={'black':0,'white':0})
+        prepared={'moveInfos':[{'move':'D10','order':0}]}
+        with patch.dict(strong_bot._OPENINGS,{('engine','model',16):prepared},clear=True), \
+             patch.object(strong_bot,'settings',return_value=('engine','model')), \
+             patch.object(strong_bot._ENGINE,'query',new_callable=AsyncMock) as query:
+            self.assertEqual(await strong_bot.choose_action(state,server.try_move,server.board_hash),{'type':'move','index':42})
+            query.assert_not_awaited()
+
+    async def test_opening_cache_is_never_used_on_an_occupied_board(self):
+        state=dict(moves=1,botRole='white',passes=0,sgf='(;SZ[13];B[dd])',board=[0]*169,captures={'black':0,'white':0})
+        state['board'][42]=1
+        response={'moveInfos':[{'move':'K4','order':0}]}
+        with patch.dict(strong_bot._OPENINGS,{('engine','model',16):{'moveInfos':[{'move':'D10','order':0}]}},clear=True), \
+             patch.object(strong_bot,'settings',return_value=('engine','model')), \
+             patch.object(strong_bot._ENGINE,'query',new_callable=AsyncMock,return_value=response) as query:
+            self.assertEqual((await strong_bot.choose_action(state,server.try_move,server.board_hash))['index'],126)
+            query.assert_awaited_once()
 
 
 if __name__=='__main__':unittest.main()

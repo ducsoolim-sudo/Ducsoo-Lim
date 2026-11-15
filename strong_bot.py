@@ -92,6 +92,7 @@ class ResidentEngine:
 
 
 _ENGINE = ResidentEngine()
+_OPENINGS = {}
 completed_moves = 0
 
 
@@ -166,14 +167,18 @@ def opponent_requested_finish(state):
 
 
 async def warmup():
-    """Load the preview model before the first visitor's timed move."""
+    """Prepare the actual empty-board opening before a player's clock runs."""
     binary, model = settings()
     if not binary or not model:
         return
+    visits = max(16, min(256, int(os.getenv('GO13_BOT_VISITS', '16'))))
     request = dict(moves=[], rules='japanese', komi=6.5, boardXSize=13,
-                   boardYSize=13, maxVisits=1)
+                   boardYSize=13, maxVisits=visits,
+                   overrideSettings={'reportAnalysisWinratesAs': 'BLACK'})
     try:
-        await _ENGINE.query(binary, model, request, timeout=15)
+        result = await _ENGINE.query(binary, model, request, timeout=15)
+        if isinstance(result, dict) and result.get('moveInfos') and not any(result.get(key) for key in ('error','warning','warnings')):
+            _OPENINGS[(binary, model, visits)] = result
     except (ValueError, RuntimeError, OSError, TimeoutError):
         logging.warning('Preview engine warmup unavailable; retrying on demand')
 
@@ -203,6 +208,10 @@ async def choose_action(state, try_move, board_hash, ko_position=None):
     if not binary or not model:
         raise RuntimeError('Strong preview opponent is not configured')
     visits = max(16, min(256, int(os.getenv('GO13_BOT_VISITS', '16'))))
+    opening = (state.get('moves') == 0 and state.get('botRole') == 'black'
+               and not any(state['board']) and move_history(state) == [])
+    if opening and (binary, model, visits) in _OPENINGS:
+        return select_action(_OPENINGS[(binary, model, visits)], state, try_move, board_hash, ko_position)
     if state.get('passes') == 1:
         visits = max(visits, 64)
     query = dict(id='preview-move', moves=move_history(state), rules='japanese', komi=6.5,
@@ -210,6 +219,8 @@ async def choose_action(state, try_move, board_hash, ko_position=None):
                  overrideSettings={'reportAnalysisWinratesAs': 'BLACK'})
     result = await _ENGINE.query(binary, model, query)
     action = select_action(result, state, try_move, board_hash, ko_position)
+    if opening:
+        _OPENINGS[(binary, model, visits)] = result
     if state.get('passes') == 1 and action['type'] != 'pass':
         # Move choice and final score verification are separate. Compare the
         # actual value of passing, including dead stones, instead of playing
