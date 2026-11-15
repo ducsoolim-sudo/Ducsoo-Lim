@@ -135,9 +135,17 @@ class KataGo:
             return proven
         if not self.configured:
             raise RuntimeError('KataGo engine/model is not configured')
-        requests=[query(room,'quick',256),query(room,'deep',1024)]
-        results = await self.run(requests)
-        return adjudicate(room.board,room.captures,results['quick'],results['deep'])
+        # Ordinary settled games should not pay for 1280 visits up front.
+        # Keep the same ownership, uncertainty and score agreement checks at
+        # every stage; an inconclusive cheap check is never a final score.
+        async with asyncio.timeout(self.timeout):
+            requests=[query(room,'quick',32),query(room,'deep',128)]
+            results = await self.run(requests)
+            verdict = adjudicate(room.board,room.captures,results['quick'],results['deep'])
+            if verdict['status'] == 'ready':
+                return verdict
+            refined = await self.run([query(room,'refined',512)])
+            return adjudicate(room.board,room.captures,results['deep'],refined['refined'])
 
     async def run(self, requests):
         # Reuse the already loaded preview AI instead of duplicating its model
@@ -160,15 +168,16 @@ class KataGo:
                     process.stdin.write(('\n'.join(json.dumps(q) for q in requests)+'\n').encode())
                     await process.stdin.drain()
                     results={}
-                    while len(results)<2:
+                    expected = {request['id']: request['maxVisits'] for request in requests}
+                    while len(results)<len(expected):
                         line=await process.stdout.readline()
                         if not line:
                             raise RuntimeError('KataGo stopped before completing analysis')
                         data=json.loads(line)
-                        if data.get('id') in ('quick','deep') and not data.get('isDuringSearch'):
+                        if data.get('id') in expected and not data.get('isDuringSearch'):
                             if data.get('error'):
                                 raise ValueError('KataGo rejected position')
-                            requested = next(q['maxVisits'] for q in requests if q['id'] == data['id'])
+                            requested = expected[data['id']]
                             if data.get('rootInfo', {}).get('visits', 0) < requested:
                                 raise ValueError('Engine search did not reach the requested budget')
                             results[data['id']]=data

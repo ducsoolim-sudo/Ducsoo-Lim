@@ -148,13 +148,31 @@ def select_action(result, state, try_move, board_hash, ko_position=None):
 
 
 def opponent_requested_finish(state):
-    """Repeated human passes request adjudication; never invent a final score."""
+    """In AI practice a human pass requests scoring, not more cleanup moves.
+
+    This is consent to review only. The scorer still rejects unsettled positions.
+    """
     if state.get('passes') != 1:
         return False
     opponent = 'W' if state.get('botRole') == 'black' else 'B'
     moves = re.findall(r';([BW])\[([a-m]{2}|)\]', state.get('sgf', ''))
+    if state.get('testBot') and moves and moves[-1] == (opponent, ''):
+        return True
     requests = [point for color, point in moves if color == opponent]
     return len(requests) >= 2 and requests[-2:] == ['', '']
+
+
+async def warmup():
+    """Load the preview model before the first visitor's timed move."""
+    binary, model = settings()
+    if not binary or not model:
+        return
+    request = dict(moves=[], rules='japanese', komi=6.5, boardXSize=13,
+                   boardYSize=13, maxVisits=1)
+    try:
+        await _ENGINE.query(binary, model, request, timeout=15)
+    except (ValueError, RuntimeError, OSError, TimeoutError):
+        logging.warning('Preview engine warmup unavailable; retrying on demand')
 
 
 def pass_is_equivalent(best, passed, state):

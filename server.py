@@ -651,7 +651,7 @@ async def app_manifest(request):
 async def index(request):
     path = ROOT / "index.html" if (ROOT / "index.html").exists() else ROOT / "static" / "index.html"
     if os.getenv("GO13_PREVIEW") == "true":
-        html = path.read_text().replace("<title>13GO v1.1", "<title>13GO Test v1.1")
+        html = path.read_text(encoding='utf-8').replace("<title>13GO v1.1", "<title>13GO Test v1.1")
         html = html.replace('id="testMatch" class="button secondary hidden"', 'id="testMatch" class="button secondary"')
         html = html.replace('13GO / V1.1', 'TEST V1.1 · Temporary games')
         return web.Response(text=html, content_type="text/html", headers={"X-Robots-Tag": "noindex, nofollow", "Cache-Control": "no-store"})
@@ -986,9 +986,11 @@ SCORING_TIMEOUT_SECONDS = 60.0
 
 def continue_unsettled(room, notice):
     if room.test_bot:
-        room.adjudication = dict(room.adjudication or {}, status='unavailable')
+        status = 'review' if (room.adjudication or {}).get('status') == 'review' else 'unavailable'
+        room.adjudication = dict(room.adjudication or {}, status=status)
         room.review_deadline = None
-        room.scoring_notice = 'Score could not be verified. Retry the score check.'
+        room.scoring_notice = ('Some groups or territory remain unsettled. Continue playing or retry the score check.'
+                               if status == 'review' else 'Score check timed out or is unavailable. Retry or continue playing.')
         return
     room.act("black" if room.solo or room.turn == 1 else "white", {"type": "resume"})
     room.scoring_notice = notice
@@ -1103,12 +1105,18 @@ async def cleanup_context(app):
     for room in ROOMS.values():
         schedule_adjudication(app, room)
     task = asyncio.create_task(cleanup_loop(app))
+    warmup = None
+    if os.getenv('GO13_PREVIEW') == 'true' and strong_bot.configured():
+        warmup = asyncio.create_task(strong_bot.warmup())
     yield
     task.cancel()
+    if warmup is not None:
+        warmup.cancel()
+        await asyncio.gather(warmup, return_exceptions=True)
     for job in list(app[BOT_JOBS].values()):
         job.cancel()
     await asyncio.gather(*list(app[BOT_JOBS].values()),return_exceptions=True)
-    for job in app[JOBS]:
+    for job in tuple(app[JOBS]):
         job.cancel()
     await asyncio.gather(task, *app[JOBS], return_exceptions=True)
     await strong_bot.shutdown()
