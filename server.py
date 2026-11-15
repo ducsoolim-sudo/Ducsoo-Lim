@@ -929,6 +929,10 @@ async def websocket_handler(request):
                             room.restore(exc.snapshot if isinstance(exc, StaleRoom) else before)
                             await socket.send_json({"type": "error", "message": "Move not saved. Please try again."})
                             continue
+                        # Cancel only after the transition is durably saved. A
+                        # rejected resume must leave the original analysis alive.
+                        if before['status'] == 'scoring' and room.status != 'scoring':
+                            cancel_adjudication(request.app, room)
                         await room.broadcast()
             except (ValueError, json.JSONDecodeError) as exc:
                 await socket.send_json({"type": "error", "message": str(exc)})
@@ -976,6 +980,7 @@ async def cleanup_loop(app):
 BOT_JOBS = web.AppKey("preview_bots", dict)
 ENGINE = web.AppKey("engine", KataGo)
 JOBS = web.AppKey("adjudication_jobs", set)
+SCORING_JOBS = web.AppKey("room_scoring_jobs", dict)
 SCORING_TIMEOUT_SECONDS = 60.0
 
 
@@ -987,6 +992,12 @@ def continue_unsettled(room, notice):
         return
     room.act("black" if room.solo or room.turn == 1 else "white", {"type": "resume"})
     room.scoring_notice = notice
+
+
+def cancel_adjudication(app, room):
+    task = app[SCORING_JOBS].get(room.code)
+    if task is not None and not task.done():
+        task.cancel()
 
 
 def schedule_adjudication(app, room):
@@ -1063,8 +1074,16 @@ def schedule_adjudication(app, room):
             await asyncio.sleep(retry_delay)
             retry_delay = min(retry_delay * 2, 30)
     task = asyncio.create_task(run())
+    previous = app[SCORING_JOBS].get(room.code)
+    app[SCORING_JOBS][room.code] = task
+    if previous is not None and not previous.done():
+        previous.cancel()
     app[JOBS].add(task)
-    task.add_done_callback(app[JOBS].discard)
+    def finished(done):
+        app[JOBS].discard(done)
+        if app[SCORING_JOBS].get(room.code) is done:
+            app[SCORING_JOBS].pop(room.code, None)
+    task.add_done_callback(finished)
 
 
 STORE = web.AppKey("store", RoomStore)
@@ -1108,6 +1127,7 @@ def make_app(store=None):
     app[LOCK] = asyncio.Lock()
     app[ENGINE] = KataGo()
     app[JOBS] = set()
+    app[SCORING_JOBS] = {}
     app[BOT_JOBS] = {}
     auth.setup(app, STORE)
     native_sessions.setup(app, STORE, check_rate)
