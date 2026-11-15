@@ -5,8 +5,12 @@ import os
 import re
 import math
 import logging
+import time
 from pathlib import Path
 from adjudicator import coordinate, settled_adjudication
+
+ENGINE_LOG = logging.getLogger('go13.engine')
+ENGINE_LOG.setLevel(logging.INFO)
 
 class ResidentEngine:
     """One serialized process; discard it on cancellation or protocol failure."""
@@ -28,13 +32,37 @@ class ResidentEngine:
             await process.wait()
 
     async def query(self, binary, model, query, timeout=15):
+        timing = {'started': time.monotonic(), 'acquired': None, 'cold': False}
+        outcome = 'error'
+        try:
+            result = await self._query(binary, model, query, timeout, timing)
+            outcome = 'engine_error' if result.get('error') else 'ok'
+            return result
+        except asyncio.CancelledError:
+            outcome = 'cancelled'
+            raise
+        except TimeoutError:
+            outcome = 'timeout'
+            raise
+        finally:
+            ended = time.monotonic()
+            acquired = timing['acquired']
+            queue = (acquired if acquired is not None else ended) - timing['started']
+            engine = ended - acquired if acquired is not None else 0.0
+            # Durations and search budget only: no board, identity or credentials.
+            ENGINE_LOG.info('Engine timing outcome=%s cold=%s visits=%s queue=%.3f engine=%.3f total=%.3f',
+                         outcome, timing['cold'], query.get('maxVisits'), queue, engine, ended-timing['started'])
+
+    async def _query(self, binary, model, query, timeout, timing):
         # Waiting callers must not kill the process owned by another search.
         async with asyncio.timeout(timeout):
             async with self.gate:
+                timing['acquired'] = time.monotonic()
                 try:
                     config = (binary, model)
                     if (self.process is None or self.process.returncode is not None
                             or self.config != config):
+                        timing['cold'] = True
                         await self.close()
                         self.process = await asyncio.create_subprocess_exec(
                             binary, 'analysis', '-model', model, '-config',
