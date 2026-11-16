@@ -141,8 +141,14 @@ class KataGo:
         # Keep the same ownership, uncertainty and score agreement checks at
         # every stage; an inconclusive cheap check is never a final score.
         async with asyncio.timeout(self.timeout):
-            requests=[query(room,'quick',32),query(room,'deep',128)]
-            results = await self.run(requests)
+            results = await self.run([query(room,'quick',32)])
+            # A single reading may reject an unfinished position, never certify
+            # a final score. Avoid the expensive second reading when even this
+            # optimistic self-agreement leaves most of the board unsettled.
+            screening = adjudicate(room.board,room.captures,results['quick'],results['quick'])
+            if screening['status'] == 'review' and screening.get('unsettledPoints', 0) >= 85:
+                return screening
+            results.update(await self.run([query(room,'deep',128)]))
             verdict = adjudicate(room.board,room.captures,results['quick'],results['deep'])
             if verdict['status'] == 'ready':
                 return verdict
@@ -194,3 +200,4 @@ class KataGo:
                         try: process.kill()
                         except ProcessLookupError: pass
                     await process.wait()
+

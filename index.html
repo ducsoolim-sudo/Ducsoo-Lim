@@ -295,12 +295,21 @@
 }
 @media(max-height:600px){.studio-home-brand .app-emblem{width:72px;height:72px;margin-bottom:16px}.studio-home-app{font-size:28px}.studio-home-menu{margin-top:28px}}
 @container app (max-width:700px){.shell:not(.game-view):not(.home-view) .brand{flex-wrap:wrap;gap:12px}.shell:not(.game-view):not(.home-view) .brand-right{width:100%;justify-content:space-between}.shell:not(.game-view):not(.home-view) .brand .nav{display:flex;flex:1;justify-content:flex-end}.shell:not(.game-view):not(.home-view) .nav button{padding:10px 12px}}
+/* Match header signature: a distinct wordmark with a readable studio line. */
+.shell:not(.home-view) .brand .brand-lockup{display:grid;grid-template-columns:46px auto;grid-template-rows:30px 13px;column-gap:12px;row-gap:2px;align-items:center;width:max-content;max-width:100%}
+.shell:not(.home-view) .brand .app-emblem{grid-column:1;grid-row:1 / 3;width:46px;height:46px;color:#f4f5e9}
+.shell:not(.home-view) .brand .brand-type{display:block;grid-column:2;grid-row:1;width:110px;height:30px;color:#f4f5e9;line-height:0}
+.brand-wordmark{display:block;width:100%;height:100%;overflow:visible}
+.shell:not(.home-view) .brand .studio-credit{display:block;grid-column:2;grid-row:2;margin:0;font-family:'Arial Narrow','Helvetica Neue',Arial,sans-serif;font-size:10px;line-height:13px;font-weight:750;letter-spacing:2.1px;color:#c9d5bc;white-space:nowrap}
+.shell:not(.home-view) .brand .studio-credit:before{content:none}
+.shell.game-view .brand{margin-bottom:10px;min-height:48px}
+@container app (max-width:380px){.shell:not(.home-view) .brand .brand-lockup{grid-template-columns:38px auto;grid-template-rows:26px 12px;column-gap:9px;row-gap:1px}.shell:not(.home-view) .brand .app-emblem{width:38px;height:38px}.shell:not(.home-view) .brand .brand-type{width:98px;height:26px}.shell:not(.home-view) .brand .studio-credit{font-size:9px;line-height:12px;letter-spacing:1.8px}}
 </style>
 </head>
 <body>
 <div class="app-frame"><div id="shell" class="shell home-view">
   <header class="brand">
-    <div class="brand-left brand-art"><h1 class="brand-lockup" aria-label="13GO"><svg class="app-emblem" viewBox="0 0 120 120" aria-hidden="true"><path d="M34 25v70M86 25v70" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="60" cy="60" r="9" fill="currentColor"/></svg><span class="brand-type">13GO</span><span class="studio-credit">SAI STUDIO</span></h1></div>
+    <div class="brand-left brand-art"><h1 class="brand-lockup" aria-label="13GO"><svg class="app-emblem" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 23v74M88 23v74" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><circle cx="60" cy="60" r="12" fill="currentColor"/></svg><span class="brand-type"><svg class="brand-wordmark" viewBox="0 0 136 36" aria-hidden="true" focusable="false"><path d="M2 10 12 3h6v30h-8V14l-8 5Z M28 3h25l-9 12c8 1 12 4 12 9 0 7-5 10-14 10H27v-7h15c4 0 6-1 6-3s-2-3-6-3h-8v-6l7-6H28Z" fill="currentColor"/><path d="M87 11a13 13 0 1 0 0 14V19H76 M119 5a13 13 0 1 0 0 26 13 13 0 1 0 0-26Z" fill="none" stroke="currentColor" stroke-width="6.5" stroke-linecap="square" stroke-linejoin="round"/><circle cx="119" cy="18" r="3" fill="currentColor"/></svg></span><span class="studio-credit">SAI STUDIO</span></h1></div>
     <span class="brand-edition">13 × 13 / ONLINE GO</span>
     <div class="brand-right"><span id="spectatorCount" class="spectator-count hidden" aria-label="Spectators"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg><span id="spectatorNumber">0</span></span><button id="homeButton" class="home-button" aria-label="Home" title="Home"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 15 16 5l11 10v12H5Z"/><path d="M12 27V17h8v10"/></svg></button><nav class="nav" role="tablist" aria-label="Main navigation"><button id="navPlay" role="tab" aria-controls="playPage" aria-selected="false">Play</button><button id="navWatch" role="tab" aria-controls="watchPage" aria-selected="false">Watch</button><button id="navProfile" role="tab" aria-controls="profilePage" aria-selected="false">My Page</button></nav><span class="online"><span id="light" class="light"></span><span id="connection">Ready to play</span></span></div>
   </header>
@@ -535,9 +544,15 @@
   function storeToken(code,token){if(token)storage.set('13go:'+code,token)}
   function showPage(next){page=next;if(next!=='home')brandSoundPending=false;$('shell').classList.toggle('game-view',next==='play'&&!!game&&(game.status!=='waiting'||myRole==='spectator'));for(const name of ['home','play','watch','profile']){$(name+'Page').classList.toggle('hidden',name!==next);if(name!=='home')$('nav'+name[0].toUpperCase()+name.slice(1)).setAttribute('aria-selected',String(name===next))}$('shell').classList.toggle('home-view',next==='home');$('resumeGame').classList.toggle('hidden',!room);if(next==='watch')loadLobby();if(next==='profile'){renderProfile();loadProfile()}}
   let accountUser=null,accountGames=[],playerProfile=null,profileLoad=null;
+  async function requestJson(url,options={}){
+    const controller=typeof AbortController==='function'?new AbortController():null;
+    let timer;
+    const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>{reject(new Error('Connection timed out. Please try again.'));controller?.abort()},20000)});
+    try{return await Promise.race([(async()=>{const response=await fetch(url,{...options,...(controller?{signal:controller.signal}:{})});if(!response.ok)throw new Error(await response.text());return await response.json()})(),deadline])}finally{clearTimeout(timer)}
+  }
   async function loadProfile(){
     if(profileLoad)return profileLoad;
-    profileLoad=(async()=>{try{const response=await fetch('/api/profile');if(!response.ok)return false;const data=await response.json();if(!data.profile)return false;playerProfile=data.profile;$('nickname').value=playerProfile.name;storage.set('13go:nickname',playerProfile.name);if(page==='profile')renderProfile();return true}catch{return false}})();
+    profileLoad=(async()=>{try{const data=await requestJson('/api/profile');if(!data.profile)return false;playerProfile=data.profile;$('nickname').value=playerProfile.name;storage.set('13go:nickname',playerProfile.name);if(page==='profile')renderProfile();return true}catch{return false}})();
     try{return await profileLoad}finally{profileLoad=null}
   }
   function renderProfilePolicy(){
@@ -599,7 +614,7 @@
   function canLeave(){if(game?.status==='waiting'&&myRole!=='spectator'){toast('Cancel your current search first.');return false}return !game||myRole==='spectator'||game.solo||!['playing','scoring'].includes(game.status)||confirm('Leave your current game? It will stay open for your opponent.')}
   async function postRoom(url,data,button){
     if(posting||!canLeave())return;posting=true;if(url==='/api/test-match')setAiStarting(true);$('match').disabled=true;$('testMatch').disabled=true;button.textContent='Connecting…';
-    try{if(!await loadProfile())throw new Error('Unable to load your profile. Please retry.');if(url==='/api/match'&&!playerProfile.rank){showPage('profile');throw new Error('Choose your initial rank in My Page.')}const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:myName(),...data})});if(!response.ok)throw new Error(await response.text());const created=await response.json();enterRoom(created.room,created.token);toast(created.testBot?'Test opponent connected · Unrated':data.solo?'Solo practice: play both colors.':created.matched?'Opponent found. Good luck!':'Looking for an opponent. Your game is public.');loadLobby()}catch(error){if(url==='/api/test-match'){setAiStarting(false);$('aiStatus').textContent=error.message?.slice(0,100)||'Unable to start a game.';$('aiStatus').classList.remove('hidden')}toast(error.message?.slice(0,100)||'Unable to start a game.')}finally{posting=false;update()}
+    try{if(!await loadProfile())throw new Error('Unable to load your profile. Please retry.');if(url==='/api/match'&&!playerProfile.rank){showPage('profile');throw new Error('Choose your initial rank in My Page.')}const created=await requestJson(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:myName(),...data})});enterRoom(created.room,created.token);toast(created.testBot?'Test opponent connected · Unrated':data.solo?'Solo practice: play both colors.':created.matched?'Opponent found. Good luck!':'Looking for an opponent. Your game is public.');loadLobby()}catch(error){if(game?.status==='finished'&&!$('matchDialog').classList.contains('hidden'))$('matchDialogDetail').textContent=error.message?.slice(0,100)||'Unable to start a game. Please try again.';if(url==='/api/test-match'){setAiStarting(false);$('aiStatus').textContent=error.message?.slice(0,100)||'Unable to start a game.';$('aiStatus').classList.remove('hidden')}toast(error.message?.slice(0,100)||'Unable to start a game.')}finally{posting=false;update()}
   }
   function openLobbyRoom(code,watch){if(!canLeave())return;enterRoom(code,null,watch);toast(watch?'You are watching live.':'You joined this game.');window.scrollTo({top:0,behavior:'smooth'})}
   function lobbyRow(item,large=false){
@@ -792,4 +807,5 @@ $('match').onclick=()=>postRoom('/api/match',{},$('match'));$('refreshLobby').on
 
 </script>
 </body></html>
+
 

@@ -26,22 +26,22 @@ class ProgressiveScoring(unittest.IsolatedAsyncioTestCase):
         scorer.run=AsyncMock(return_value={'quick':{'reading':1},'deep':{'reading':2}})
         with patch.object(adjudicator,'adjudicate',return_value={'status':'ready'}) as judge:
             self.assertEqual((await scorer.analyze(self.room()))['status'],'ready')
-        self.assertEqual(scorer.run.await_count,1)
-        self.assertEqual([q['maxVisits'] for q in scorer.run.await_args.args[0]],[32,128])
+        self.assertEqual(scorer.run.await_count,2)
+        self.assertEqual([call.args[0][0]['maxVisits'] for call in scorer.run.await_args_list],[32,128])
         self.assertEqual(judge.call_args.args[2:],({'reading':1},{'reading':2}))
 
     async def test_uncertainty_refines_and_rechecks_both_readings(self):
         scorer=self.scorer()
-        scorer.run=AsyncMock(side_effect=[{'quick':{'reading':1},'deep':{'reading':2}},
+        scorer.run=AsyncMock(side_effect=[{'quick':{'reading':1}}, {'deep':{'reading':2}},
                                          {'refined':{'reading':3}}])
-        with patch.object(adjudicator,'adjudicate',side_effect=[{'status':'review'}, {'status':'ready'}]) as judge:
+        with patch.object(adjudicator,'adjudicate',side_effect=[{'status':'ready'}, {'status':'review'}, {'status':'ready'}]) as judge:
             self.assertEqual((await scorer.analyze(self.room()))['status'],'ready')
         self.assertEqual(scorer.run.await_args.args[0][0]['maxVisits'],256)
         self.assertEqual(judge.call_args.args[2:],({'reading':2},{'reading':3}))
 
     async def test_unresolved_position_stays_review(self):
         scorer=self.scorer()
-        scorer.run=AsyncMock(side_effect=[{'quick':{},'deep':{}},{'refined':{}}])
+        scorer.run=AsyncMock(side_effect=[{'quick':{}},{'deep':{}},{'refined':{}}])
         with patch.object(adjudicator,'adjudicate',return_value={'status':'review'}):
             self.assertEqual((await scorer.analyze(self.room()))['status'],'review')
 
@@ -51,6 +51,21 @@ class ProgressiveScoring(unittest.IsolatedAsyncioTestCase):
         with patch.object(adjudicator,'adjudicate',return_value={'status':'review','unsettledPoints':85}):
             self.assertEqual((await scorer.analyze(self.room()))['status'],'review')
         self.assertEqual(scorer.run.await_count,1)
+
+    async def test_single_reading_never_confirms_final_score(self):
+        scorer=self.scorer()
+        scorer.run=AsyncMock(side_effect=[{'quick':{'reading':1}}, {'deep':{'reading':2}}])
+        with patch.object(adjudicator,'adjudicate',return_value={'status':'ready'}) as judge:
+            await scorer.analyze(self.room())
+        self.assertEqual(scorer.run.await_count,2)
+        self.assertEqual(judge.call_args.args[2:],({'reading':1},{'reading':2}))
+
+    async def test_uncertainty_after_second_reading_skips_refinement(self):
+        scorer=self.scorer()
+        scorer.run=AsyncMock(side_effect=[{'quick':{}},{'deep':{}}])
+        with patch.object(adjudicator,'adjudicate',side_effect=[{'status':'ready'}, {'status':'review','unsettledPoints':85}]):
+            self.assertEqual((await scorer.analyze(self.room()))['status'],'review')
+        self.assertEqual(scorer.run.await_count,2)
 
     def test_uncertainty_count_precedes_global_score_disagreement(self):
         board=[1]*169;board[0]=0
@@ -120,3 +135,4 @@ class HumanFinishRequest(unittest.IsolatedAsyncioTestCase):
 
 
 if __name__=='__main__':unittest.main()
+

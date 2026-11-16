@@ -28,8 +28,29 @@ function game(id,result,solo=false){return {room:'ABCDEFG',sgf:'(;SZ[13];B[aa];W
   const second=t.e('matchDialogAgain').onclick();release({ok:true,json:async()=>({room:'NEWROOM',token:'new',testBot:true})});
   await Promise.all([first,second]);assert.equal(requests,1);assert.equal(t.e('matchDialog').classes.has('hidden'),true);
  }
+ for(const phase of ['profile','request','body']){
+  const t=setup();t.ws.message({type:'welcome',role:'white',token:'owner'});
+  const state=game('timeout-'+phase,'white');state.testBot=true;t.ws.message({type:'state',state});
+  let release,requests=0;const pending=new Promise(resolve=>release=resolve);
+  t.sandbox.fetch=async(url)=>{
+   if(url==='/api/profile')return phase==='profile'?pending:{ok:true,json:async()=>({profile:{name:'Tester',rank:'1d'}})};
+   if(url==='/api/test-match'){requests++;return phase==='request'?pending:{ok:true,json:()=>pending}};
+   return {ok:true,json:async()=>({list:[],online:0,playing:0,waiting:0})};
+  };
+  const attempt=t.e('matchDialogAgain').onclick();
+  for(let i=0;i<30;i++)await Promise.resolve();
+  const deadlines=t.timers.filter(x=>x.active&&x.delay===20000);assert.equal(deadlines.length,1);deadlines[0].callback();await attempt;
+  assert.equal(t.e('matchDialogAgain').disabled,false);assert.equal(t.e('matchDialogAgain').textContent,'Play again');assert.equal(t.e('matchDialog').classes.has('hidden'),false);
+  assert.match(t.e('matchDialogDetail').textContent,/retry|try again/i);
+  release(phase==='body'?{room:'LATE',token:'late'}:{ok:true,json:async()=>phase==='profile'?{profile:{name:'Late'}}:{room:'LATE',token:'late'}});
+  for(let i=0;i<20;i++)await Promise.resolve();
+  assert.equal(t.e('matchDialog').classes.has('hidden'),false,'late response must not switch rooms');
+  t.sandbox.fetch=async(url,options)=>url==='/api/profile'?{ok:true,json:async()=>({profile:{name:'Tester',rank:'1d'}})}:url==='/api/test-match'?(requests++,assert.equal(JSON.parse(options.body).color,'white'),{ok:true,json:async()=>({room:'RETRY',token:'new',testBot:true})}):{ok:true,json:async()=>({list:[],online:0,playing:0,waiting:0})};
+  await t.e('matchDialogAgain').onclick();assert.equal(t.e('matchDialog').classes.has('hidden'),true);assert.equal(requests,phase==='profile'?1:2);
+ }
  const spectator=setup();spectator.ws.message({type:'welcome',role:'spectator'});const s=game('watch','white');s.testBot=true;spectator.ws.message({type:'state',state:s});assert.equal(spectator.e('matchDialogAgain').classes.has('hidden'),true);
  const online=setup();online.ws.message({type:'welcome',role:'black'});online.ws.message({type:'state',state:game('human','white')});assert.equal(online.e('whiteName').textContent,'Bob');assert.equal(online.e('matchDialogAgain').classes.has('hidden'),true);
  console.log('PASS Master labels, same-color fresh AI games, duplicate-click guard and spectator/human controls');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
 
